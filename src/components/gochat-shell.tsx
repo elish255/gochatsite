@@ -1,0 +1,97 @@
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Bell, MessageCircle, Volume2, VolumeX, Wallet, X } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
+import { playSound } from "@/lib/gochat-sound";
+
+export function GochatShell({ children }: { children: React.ReactNode }) {
+  const [email, setEmail] = useState<string | null>(null);
+  const [modal, setModal] = useState<"auth" | "withdraw" | "help" | null>(null);
+  const [mode, setMode] = useState<"signup" | "login">("signup");
+  const [sound, setSound] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => setEmail(session?.user?.email ?? null));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  function notify(message: string) {
+    toast(message);
+    if (sound) playSound();
+  }
+
+  async function submitAuth(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const address = String(form.get("email") ?? "").trim();
+    const password = String(form.get("password") ?? "");
+    if (!address || password.length < 6) return notify("Weka barua pepe na nenosiri la herufi 6 au zaidi.");
+    setBusy(true);
+    const result = mode === "signup"
+      ? await supabase.auth.signUp({ email: address, password, options: { emailRedirectTo: window.location.origin } })
+      : await supabase.auth.signInWithPassword({ email: address, password });
+    setBusy(false);
+    if (result.error) return notify(result.error.message);
+    if (result.data.session) {
+      setModal(null);
+      notify("Umeingia Gochat. Karibu!");
+    } else notify("Angalia barua pepe yako kuthibitisha akaunti.");
+  }
+
+  async function googleAuth() {
+    setBusy(true);
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    setBusy(false);
+    if (result.error) notify(result.error.message);
+    else if (!result.redirected) { setModal(null); notify("Umeingia Gochat. Karibu!"); }
+  }
+
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) notify(error.message);
+    else { notify("Umetoka kwenye akaunti."); void navigate({ to: "/" }); }
+  }
+
+  return <div className="min-h-screen bg-background text-foreground">
+    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur-xl">
+      <div className="mx-auto flex h-17 max-w-6xl items-center justify-between gap-3 px-4 md:px-6">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="Gochat nyumbani">
+          <span className="grid size-9 place-items-center rounded-md bg-primary text-primary-foreground"><MessageCircle size={20} strokeWidth={2.5}/></span>
+          <span className="font-display text-xl font-extrabold">go<span className="text-primary">chat</span><span className="text-accent">.</span></span>
+        </Link>
+        <nav className="flex items-center gap-1.5 sm:gap-2">
+          <Button variant="ghost" size="icon" title="Arifa" aria-label="Arifa" onClick={() => notify(email ? "Hakuna arifa mpya kwa sasa." : "Jisajili ili kupokea arifa zako.")}><Bell /></Button>
+          <Button variant="ghost" size="icon" title={sound ? "Zima sauti" : "Washa sauti"} aria-label={sound ? "Zima sauti" : "Washa sauti"} onClick={() => { setSound(!sound); toast(sound ? "Sauti imezimwa." : "Sauti imewashwa."); if (!sound) playSound(); }}>{sound ? <Volume2 /> : <VolumeX />}</Button>
+          <Button variant="outline" size="sm" onClick={() => setModal("withdraw")}><Wallet className="hidden sm:block" /> Toa pesa</Button>
+          {email ? <Button size="sm" onClick={signOut}>Toka</Button> : <Button size="sm" onClick={() => { setMode("signup"); setModal("auth"); }}>Jisajili</Button>}
+        </nav>
+      </div>
+    </header>
+    {children}
+    <footer className="mt-16 border-t border-border bg-secondary/50">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-[1fr_auto] md:px-6">
+        <div><div className="font-display text-2xl font-extrabold">go<span className="text-primary">chat</span><span className="text-accent">.</span></div><p className="mt-2 max-w-md text-sm text-muted-foreground">Gumza na watu duniani, jifunze lugha na tamaduni, na gundua fursa za mtandaoni.</p><p className="mt-3 text-xs text-muted-foreground">Kiasi kinachoonyeshwa kwenye wasifu ni cha mfano, si salio wala ahadi ya malipo.</p></div>
+        <div className="flex flex-wrap items-start gap-2"><Button variant="outline" asChild><a href="https://chat.whatsapp.com/HJR16xnRf53J54yvIrIJwA?s=cl&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer">Jiunge na Channel</a></Button><Button variant="secondary" onClick={() => setModal("help")}>Msaada</Button></div>
+      </div>
+      <div className="border-t border-border px-4 py-4 text-center text-xs text-muted-foreground">© 2026 Gochat. Haki zote zimehifadhiwa.</div>
+    </footer>
+    <Toaster position="top-center" richColors />
+    {modal && <div className="fixed inset-0 z-50 grid place-items-center bg-overlay p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(null); }}>
+      <div role="dialog" aria-modal="true" aria-label={modal === "auth" ? "Akaunti ya Gochat" : modal === "withdraw" ? "Toa pesa" : "Msaada"} className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl">
+        <div className="mb-5 flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase text-primary">GOCHAT</p><h2 className="mt-1 font-display text-2xl font-bold">{modal === "auth" ? mode === "signup" ? "Tengeneza akaunti" : "Ingia kwenye akaunti" : modal === "withdraw" ? "Toa pesa" : "Tunahapa kukusaidia"}</h2></div><Button variant="ghost" size="icon" aria-label="Funga" onClick={() => setModal(null)}><X/></Button></div>
+        {modal === "auth" ? <>
+          <form onSubmit={submitAuth} className="space-y-4"><label className="block text-sm font-medium">Barua pepe<input name="email" type="email" required autoComplete="email" placeholder="jina@barua.com" className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 outline-none focus:border-primary" /></label><label className="block text-sm font-medium">Nenosiri<input name="password" type="password" minLength={6} required autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="Angalau herufi 6" className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 outline-none focus:border-primary" /></label><Button className="w-full" type="submit" disabled={busy}>{busy ? "Subiri..." : mode === "signup" ? "Jisajili" : "Ingia"}</Button></form>
+          <div className="my-4 text-center text-xs text-muted-foreground">AU</div><Button variant="outline" className="w-full" onClick={googleAuth} disabled={busy}>Endelea na Google</Button>
+          <Button variant="link" className="mt-3 w-full" onClick={() => setMode(mode === "signup" ? "login" : "signup")}>{mode === "signup" ? "Una akaunti? Ingia" : "Huna akaunti? Jisajili"}</Button>
+        </> : modal === "withdraw" ? <><div className="rounded-md bg-secondary p-4"><p className="text-xs text-muted-foreground">Salio linalopatikana</p><p className="font-display text-3xl font-bold">TZS 0</p></div><p className="mt-4 text-sm leading-relaxed text-muted-foreground">Hakuna mapato halisi au mfumo wa malipo uliounganishwa kwa sasa. Kiasi kwenye wasifu ni mfano tu; hatutaomba taarifa zako za malipo bila mfumo salama.</p>{!email && <Button className="mt-5 w-full" onClick={() => { setMode("signup"); setModal("auth"); }}>Jisajili kwanza</Button>}</> : <><p className="text-sm text-muted-foreground">Kwa msaada kuhusu akaunti, mazungumzo au malipo, wasiliana nasi kupitia WhatsApp.</p><Button className="mt-5" asChild><a href="https://wa.me/255743871339" target="_blank" rel="noopener noreferrer">Fungua WhatsApp</a></Button></>}
+      </div>
+    </div>}
+  </div>;
+}

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791030534834,
+      "tag": "0000_create_gochat_messages",
+      "breakpoints": true
+    }
+  ]
+}
