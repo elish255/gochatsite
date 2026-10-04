@@ -24,7 +24,7 @@ function Index() {
   const topics = ["Wote", "Utamaduni", "Kujifunza", "Burudani"];
   const filtered = useMemo(() => people.filter((person) => {
     const matchesQuery = `${person.name} ${person.topic}`.toLowerCase().includes(query.trim().toLowerCase());
-    const matchesFilter = filter === "Wote" || (filter === "Utamaduni" ? /Culture|History|Travel|Food|Swahili/i : filter === "Kujifunza" ? /Freelancing|Investing|Practice|Swahili/i : /Dance|Sports|Basketball|Art|Fashion/i).test(person.topic);
+    const matchesFilter = filter === "Wote" || (filter === "Utamaduni" ? /utamaduni|historia|safari|vyakula|Kiswahili/i : filter === "Kujifunza" ? /mtandaoni|uwekezaji|akiba|mazoezi|Kiswahili/i : /ngoma|michezo|mpira|sanaa|mitindo/i).test(person.topic);
     return matchesQuery && matchesFilter;
   }), [query, filter]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / 6));
