@@ -48,12 +48,12 @@ function ChatPage() {
   async function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const body = text.trim();
-    if (!body) return toast.error("Andika ujumbe kwanza.");
-    if (body.length > 2000) return toast.error("Ujumbe ni mrefu mno.");
+    if (!body) { toast.error("Andika ujumbe kwanza."); return; }
+    if (body.length > 2000) { toast.error("Ujumbe ni mrefu mno."); return; }
     setSending(true);
     if (userId) {
       const { data, error } = await supabase.from("chat_messages").insert({ user_id: userId, partner_id: personId, sender: "user", body }).select("id, sender, body, created_at").single();
-      if (error) { setSending(false); return toast.error("Ujumbe haukutumwa. Jaribu tena."); }
+      if (error) { setSending(false); toast.error("Ujumbe haukutumwa. Jaribu tena."); return; }
       if (data) setMessages((previous) => [...previous, data as Message]);
     } else setMessages((previous) => [...previous, { id: `${Date.now()}`, sender: "user", body, created_at: new Date().toISOString() }]);
     setText(""); setSending(false); playSound("send");

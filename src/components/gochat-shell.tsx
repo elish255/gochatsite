@@ -64,7 +64,7 @@ export function GochatShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex h-17 max-w-6xl items-center justify-between gap-3 px-4 md:px-6">
         <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="Gochat nyumbani">
           <span className="grid size-9 place-items-center rounded-md bg-primary text-primary-foreground"><MessageCircle size={20} strokeWidth={2.5}/></span>
-          <span className="font-display text-xl font-extrabold">go<span className="text-primary">chat</span><span className="text-accent">.</span></span>
+          <span className="font-display text-xl font-extrabold">Gochat<span className="text-primary">.site</span></span>
         </Link>
         <nav className="flex items-center gap-1.5 sm:gap-2">
           <Button variant="ghost" size="icon" title="Arifa" aria-label="Arifa" onClick={() => notify(email ? "Hakuna arifa mpya kwa sasa." : "Jisajili ili kupokea arifa zako.")}><Bell /></Button>

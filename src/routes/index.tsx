@@ -42,7 +42,7 @@ function Index() {
         </div>
         <div className="hidden md:block">
           <div className="grid grid-cols-2 gap-3">
-            {[people[0], people[2], people[1], people[3]].map((person, index) => <Link key={person.id} to="/chat/$personId" params={{ personId: person.id }} className={`group relative overflow-hidden rounded-md ${index === 1 || index === 3 ? "translate-y-6" : ""}`}><img src={person.image} alt={person.name} className="aspect-[4/4.3] w-full object-cover transition-transform duration-300 group-hover:scale-105"/><div className="absolute inset-x-0 bottom-0 bg-overlay px-3 py-2 text-primary-foreground"><span className="font-display font-bold">{person.name}</span><span className="ml-2 text-xs">● Online</span></div></Link>)}
+            {people.slice(0, 4).map((person, index) => <Link key={person.id} to="/chat/$personId" params={{ personId: person.id }} className={`group relative overflow-hidden rounded-md ${index === 1 || index === 3 ? "translate-y-6" : ""}`}><img src={person.image} alt={person.name} className="aspect-[4/4.3] w-full object-cover transition-transform duration-300 group-hover:scale-105"/><div className="absolute inset-x-0 bottom-0 bg-overlay px-3 py-2 text-primary-foreground"><span className="font-display font-bold">{person.name}</span><span className="ml-2 text-xs">● Online</span></div></Link>)}
           </div>
         </div>
       </div>
