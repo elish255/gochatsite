@@ -56,7 +56,9 @@ function ChatPage() {
 
   async function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (registrationRequired || localStorage.getItem(firstMessageKey) === "true") {
+    let alreadySent = registrationRequired;
+    try { alreadySent = alreadySent || localStorage.getItem(firstMessageKey) === "true"; } catch { /* Storage may be unavailable. */ }
+    if (alreadySent) {
       setRegistrationRequired(true);
       setShowRegistration(true);
       return;

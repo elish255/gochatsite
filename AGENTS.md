@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep the one-message registration gate in the browser until an external registration service supplies verifiable completion; the app cannot independently confirm registration on that site.
