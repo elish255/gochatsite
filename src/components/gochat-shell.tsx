@@ -75,6 +75,7 @@ export function GochatShell({ children }: { children: React.ReactNode }) {
       </div>
     </header>
     {children}
+    <a href="sms:0743871339?body=Nielekeze%20kuhusu%20Gochat" aria-label="Msaada" title="Msaada — Tuma SMS" className="fixed bottom-5 right-5 z-40 grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><HelpCircle size={26} /></a>
     <footer className="mt-16 border-t border-border bg-secondary/50">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-[1fr_auto] md:px-6">
         <div><div className="font-display text-2xl font-extrabold">go<span className="text-primary">chat</span><span className="text-accent">.</span></div><p className="mt-2 max-w-md text-sm text-muted-foreground">Gumza na watu duniani, jifunze lugha na tamaduni, na gundua fursa za mtandaoni.</p></div>
