@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, CreditCard, Landmark, Search, SlidersHorizontal, Star, TrendingUp, Users, WalletCards } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, CreditCard, Search, SlidersHorizontal, Star, TrendingUp, Users, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GochatShell } from "@/components/gochat-shell";
 import { money, people } from "@/lib/gochat-data";
@@ -53,8 +53,6 @@ function Index() {
             <div className="gochat-stat-card bg-emerald-600 text-white"><div className="flex min-w-0 items-center gap-1.5 font-semibold"><CreditCard className="size-4 shrink-0"/> <span>Pesa Iliyotolewa</span></div><p className="mt-2 font-display font-extrabold">TZS 0</p></div>
           </div>
           <Button size="lg" className="mt-4 h-14 w-full rounded-2xl bg-gradient-to-r from-blue-500 to-teal-500 text-base font-extrabold shadow-md hover:opacity-95" asChild><a href={registrationUrl}>Fungua Account Hapa <ArrowRight/></a></Button>
-          <div className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          
           </div>
         </div>
 
