@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, MessageCircle, Volume2, VolumeX, Wallet, X } from "lucide-react";
+import { Bell, HelpCircle, MessageCircle, Volume2, VolumeX, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -77,7 +77,7 @@ export function GochatShell({ children }: { children: React.ReactNode }) {
     {children}
     <footer className="mt-16 border-t border-border bg-secondary/50">
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-[1fr_auto] md:px-6">
-        <div><div className="font-display text-2xl font-extrabold">go<span className="text-primary">chat</span><span className="text-accent">.</span></div><p className="mt-2 max-w-md text-sm text-muted-foreground">Gumza na watu duniani, jifunze lugha na tamaduni, na gundua fursa za mtandaoni.</p><p className="mt-3 text-xs text-muted-foreground">Kiasi kinachoonyeshwa kwenye wasifu ni cha mfano, si salio wala ahadi ya malipo.</p></div>
+        <div><div className="font-display text-2xl font-extrabold">go<span className="text-primary">chat</span><span className="text-accent">.</span></div><p className="mt-2 max-w-md text-sm text-muted-foreground">Gumza na watu duniani, jifunze lugha na tamaduni, na gundua fursa za mtandaoni.</p></div>
         <div className="flex flex-wrap items-start gap-2"><Button variant="outline" asChild><a href="https://chat.whatsapp.com/HJR16xnRf53J54yvIrIJwA?s=cl&p=a&mlu=4&ilr=4" target="_blank" rel="noopener noreferrer">Jiunge na Channel</a></Button><Button variant="secondary" onClick={() => setModal("help")}>Msaada</Button></div>
       </div>
       <div className="border-t border-border px-4 py-4 text-center text-xs text-muted-foreground">© 2026 Gochat. Haki zote zimehifadhiwa.</div>
@@ -90,7 +90,7 @@ export function GochatShell({ children }: { children: React.ReactNode }) {
           <form onSubmit={submitAuth} className="space-y-4"><label className="block text-sm font-medium">Barua pepe<input name="email" type="email" required autoComplete="email" placeholder="jina@barua.com" className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 outline-none focus:border-primary" /></label><label className="block text-sm font-medium">Nenosiri<input name="password" type="password" minLength={6} required autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder="Angalau herufi 6" className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 outline-none focus:border-primary" /></label><Button className="w-full" type="submit" disabled={busy}>{busy ? "Subiri..." : mode === "signup" ? "Jisajili" : "Ingia"}</Button></form>
           <div className="my-4 text-center text-xs text-muted-foreground">AU</div><Button variant="outline" className="w-full" onClick={googleAuth} disabled={busy}>Endelea na Google</Button>
           <Button variant="link" className="mt-3 w-full" onClick={() => setMode(mode === "signup" ? "login" : "signup")}>{mode === "signup" ? "Una akaunti? Ingia" : "Huna akaunti? Jisajili"}</Button>
-        </> : modal === "withdraw" ? <><div className="rounded-md bg-secondary p-4"><p className="text-xs text-muted-foreground">Salio linalopatikana</p><p className="font-display text-3xl font-bold">TZS 0</p></div><p className="mt-4 text-sm leading-relaxed text-muted-foreground">Hakuna mapato halisi au mfumo wa malipo uliounganishwa kwa sasa. Kiasi kwenye wasifu ni mfano tu; hatutaomba taarifa zako za malipo bila mfumo salama.</p>{!email && <Button className="mt-5 w-full" onClick={() => { setMode("signup"); setModal("auth"); }}>Jisajili kwanza</Button>}</> : <><p className="text-sm text-muted-foreground">Kwa msaada kuhusu akaunti, mazungumzo au malipo, wasiliana nasi kupitia WhatsApp.</p><Button className="mt-5" asChild><a href="https://wa.me/255743871339" target="_blank" rel="noopener noreferrer">Fungua WhatsApp</a></Button></>}
+        </> : modal === "withdraw" ? <><div className="rounded-md bg-secondary p-4"><p className="text-xs text-muted-foreground">Salio linalopatikana</p><p className="font-display text-3xl font-bold">TZS 0</p></div><p className="mt-4 text-sm leading-relaxed text-muted-foreground">Hakuna mapato halisi au mfumo wa malipo uliounganishwa kwa sasa. Kiasi kwenye wasifu ni mfano tu; hatutaomba taarifa zako za malipo bila mfumo salama.</p>{!email && <Button className="mt-5 w-full" onClick={() => { setMode("signup"); setModal("auth"); }}>Jisajili kwanza</Button>}</> : <><p className="text-sm text-muted-foreground">Kwa msaada kuhusu akaunti, mazungumzo au malipo, tuma SMS kwenda namba 0743871339.</p><Button className="mt-5" asChild><a href="sms:0743871339?body=Nielekeze%20kuhusu%20Gochat">Tuma SMS</a></Button></>}
       </div>
     </div>}
   </div>;
