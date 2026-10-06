@@ -28,7 +28,7 @@ function Index() {
   const [order, setOrder] = useState(people);
   useEffect(() => {
     setOrder(shuffle(people));
-    const timer = setInterval(() => setOrder(shuffle(people)), 60_000);
+    const timer = setInterval(() => { setOrder(shuffle(people)); setPage(1); }, 60_000);
     return () => clearInterval(timer);
   }, []);
   const [query, setQuery] = useState("");
