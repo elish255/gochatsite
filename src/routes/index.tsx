@@ -57,13 +57,22 @@ function Index() {
         </div>
 
         <div className="mt-7 rounded-2xl border border-primary/10 bg-background px-5 py-8 text-center shadow-sm md:px-10 md:py-12">
-          <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-5xl md:text-6xl">Chat na Wageni,<br/><span className="text-primary">Fungua Dunia mpya.</span></h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">Chagua mtu wa kuzungumza naye, badilishana lugha na utamaduni, na gundua fursa za mtandaoni ukiwa Tanzania.</p>
-          <Button size="lg" className="mt-6" asChild><a href="#watu">Chagua wa kuchat naye <ArrowRight/></a></Button>
-        </div>
-      </div>
-    </section>
+          <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-5xl md:text-6xl">
+            Chat na Wageni,<br/>
+            <span className="text-primary">Fungua Dunia mpya.</span>
+          </h1>
 
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
+            Chagua mtu wa kuzungumza naye, badilishana lugha na utamaduni, na gundua fursa za mtandaoni ukiwa Tanzania.
+          </p>
+
+          <Button size="lg" className="mt-6" asChild>
+            <a href="#watu">
+              Chagua wa kuchat naye <ArrowRight/>
+            </a>
+          </Button>
+        </div>
+      </section>
     <main id="watu" className="mx-auto max-w-6xl px-4 py-10 md:px-6 md:py-14">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase text-primary">GUMZO LINAANZA HAPA</p><h2 className="mt-1 font-display text-3xl font-bold">Chagua mtu wa kuchat naye</h2></div></div>
       <div className="mb-5 flex flex-wrap gap-3"><label className="relative min-w-[220px] flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/><span className="sr-only">Tafuta mtu au mada</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Tafuta mtu au mada..." className="h-11 w-full rounded-md border border-input bg-card pl-10 pr-3 text-sm outline-none focus:border-primary" /></label><div className="flex items-center gap-2 overflow-x-auto"><SlidersHorizontal className="hidden size-4 text-muted-foreground sm:block"/>{topics.map((topic) => <Button key={topic} size="sm" variant={filter === topic ? "default" : "outline"} onClick={() => { setFilter(topic); setPage(1); }}>{topic}</Button>)}</div></div>
