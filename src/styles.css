@@ -101,6 +101,36 @@
   --sidebar-ring: oklch(0.704 0.04 256.788);
 }
 
+
+/* Compact three-column earnings cards on phones, matching the reference layout. */
+.gochat-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.gochat-stat-card {
+  min-width: 0;
+  height: 126px;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 12px;
+  box-shadow: 0 5px 12px rgb(15 23 42 / 0.12);
+}
+.gochat-stat-card span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.gochat-stat-card p { font-size: 20px; line-height: 1; }
+@media (min-width: 640px) {
+  .gochat-stats-grid { gap: 12px; }
+  .gochat-stat-card { height: 150px; padding: 18px; border-radius: 24px; }
+  .gochat-stat-card span { font-size: 14px; }
+  .gochat-stat-card p { font-size: 30px; }
+}
+
 .font-display { font-family: var(--font-display); }
 @keyframes gochat-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .gochat-float { animation: gochat-float 2.4s ease-in-out infinite; }
