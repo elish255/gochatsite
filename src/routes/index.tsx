@@ -26,7 +26,11 @@ function shuffle<T>(items: T[]): T[] {
 
 function Index() {
   const [order, setOrder] = useState(people);
-  useEffect(() => { setOrder(shuffle(people)); }, []);
+  useEffect(() => {
+    setOrder(shuffle(people));
+    const timer = setInterval(() => { setOrder(shuffle(people)); setPage(1); }, 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("Wote");
   const [page, setPage] = useState(1);
