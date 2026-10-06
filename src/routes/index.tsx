@@ -54,10 +54,7 @@ function Index() {
           </div>
           <Button size="lg" className="mt-4 h-14 w-full rounded-2xl bg-gradient-to-r from-blue-500 to-teal-500 text-base font-extrabold shadow-md hover:opacity-95" asChild><a href={registrationUrl}>Fungua Account Hapa <ArrowRight/></a></Button>
           <div className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h2 className="font-display text-lg font-extrabold md:text-2xl">👉 Njia Rahisi za kutoa pesa (Withdraw) zako Automatically</h2>
-            <div className="mt-4 flex flex-wrap gap-3">
-              {[["Mpesa", CreditCard], ["Mixx by Yas", CreditCard], ["Halopesa", CreditCard], ["Airtel Money", CreditCard], ["NMB", Landmark], ["CRDB", Landmark]].map(([label, Icon]) => { const IconComponent = Icon as typeof CreditCard; return <span key={String(label)} className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2.5 font-semibold text-slate-700"><IconComponent className="size-5"/> {String(label)}</span>; })}
-            </div>
+          
           </div>
         </div>
 
