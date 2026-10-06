@@ -1,0 +1,12 @@
+{
+  "name": "Gochati.site",
+  "short_name": "Gochati",
+  "description": "Chat na Wageni, Fungua Dunia mpya.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7fffc",
+  "theme_color": "#079b79",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ]
+}
