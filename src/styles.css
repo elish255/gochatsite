@@ -102,6 +102,8 @@
 }
 
 .font-display { font-family: var(--font-display); }
+@keyframes gochat-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.gochat-float { animation: gochat-float 2.4s ease-in-out infinite; }
 html { scroll-behavior: smooth; }
 body { font-family: var(--font-sans); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
