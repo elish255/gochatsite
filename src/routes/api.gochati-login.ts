@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/gochati-login")({
           const body = await request.json().catch(() => ({}));
           const username = String(body?.username || "").trim().toLowerCase();
           const password = String(body?.password || "");
-          if (!/^[a-z0-9_]{3,30}$/.test(username) || password.length < 4) {
+          if (!/^[a-z0-9_]{3,30}$/.test(username) || password.length < 6) {
             return json({ message: "Username au password si sahihi." }, 400);
           }
 
