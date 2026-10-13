@@ -1,3 +1,3 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AuthPage } from "@/components/gochat/AuthPage";
+import { AuthPage } from "@/components/chatdunia/AuthPage";
 export const Route = createFileRoute("/login")({ component: () => <AuthPage mode="login" /> });
