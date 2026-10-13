@@ -1,6 +1,6 @@
-# Gotchati
+# Gochati
 
-https://Gotchati.live/
+https://Gochati.live/
 
 Nitengenezee hii website yangu kama ilivo usibadilishe chochote, kuanzia muonekano sauti na functionality 
 
@@ -8,7 +8,7 @@ Muhimu: button zote ziwe zinafanya kazi
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://Gotchati.lovable.app
+**Live app**: https://Gochati.lovable.app
 
 ## Build with Lovable
 

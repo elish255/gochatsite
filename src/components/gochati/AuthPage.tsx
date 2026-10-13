@@ -31,7 +31,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
         });
         if (signUpError) {
           const detail = [signUpError.message, signUpError.code ? `Code: ${signUpError.code}` : ""].filter(Boolean).join(" — ");
-          if (/500|database error|trigger|duplicate key|gotchati_users/i.test(detail)) {
+          if (/500|database error|trigger|duplicate key|gochati_users/i.test(detail)) {
             throw new Error(`Usajili umeshindwa kuhifadhi taarifa kwenye database. Kama kosa linaendelea, endesha SQL ya kurekebisha usajili kwenye Supabase SQL Editor. Maelezo: ${detail}`);
           }
           throw new Error(detail);
@@ -55,7 +55,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
   }
 
   return <main className="auth-page auth-register"><section className="auth-content">
-    <img src="/gochat/logo.png" alt="Gotchati" width={88} height={88} className="mx-auto mb-4 rounded-2xl object-contain" />
+    <img src="/gochat/logo.png" alt="Gochati" width={88} height={88} className="mx-auto mb-4 rounded-2xl object-contain" />
     <h1>{register ? "Fungua Akaunti" : mode === "login" ? "Ingia kwenye Akaunti" : "Rejesha Password"}</h1>
     <p className="auth-subtitle">{register ? "Jaza taarifa zako kisha endelea kwenye ukurasa wa malipo." : "Tumia email na password ulizotumia wakati wa usajili."}</p>
     <form onSubmit={submit}>

@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       
       
-      { name: "author", content: "Gotchati" },
+      { name: "author", content: "Gochati" },
       
       
       { property: "og:type", content: "website" },

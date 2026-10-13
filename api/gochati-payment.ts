@@ -29,7 +29,7 @@ export default async function handler(req: any, res: any) {
       const amount = Number(body.amount);
       const purpose = String(body.purpose || "activation");
       if (!([16000, 32000].includes(amount)) || (purpose === "premium" && amount !== 32000) || (purpose !== "premium" && amount !== 16000)) return send(res, 400, { message: "Kiasi cha malipo si sahihi." });
-      const { data: profile, error: profileError } = await admin.from("gotchati_users").select("full_name,username,activation_paid,account_status,is_premium").eq("id", user.id).maybeSingle();
+      const { data: profile, error: profileError } = await admin.from("gochati_users").select("full_name,username,activation_paid,account_status,is_premium").eq("id", user.id).maybeSingle();
       if (profileError || !profile) return send(res, 404, { message: "Taarifa za akaunti hazijapatikana. Tafadhali wasiliana na huduma kwa wateja." });
       if (purpose === "activation" && profile.activation_paid && profile.account_status === "active") return send(res, 409, { message: "Akaunti yako tayari imewashwa." });
       if (purpose === "premium" && profile.is_premium) return send(res, 409, { message: "Akaunti yako tayari ni Premium." });
@@ -44,7 +44,7 @@ export default async function handler(req: any, res: any) {
         return send(res, 502, { message: providerData?.message || "Imeshindikana kutuma ombi la malipo. Hakikisha namba ni sahihi kisha ujaribu tena." });
       }
       const orderId = String(order.order_id);
-      const { error: insertError } = await admin.from("gotchati_payments").insert({ user_id: user.id, order_id: orderId, amount, currency: "TZS", phone, status: String(order.payment_status || "PENDING").toLowerCase() });
+      const { error: insertError } = await admin.from("gochati_payments").insert({ user_id: user.id, order_id: orderId, amount, currency: "TZS", phone, status: String(order.payment_status || "PENDING").toLowerCase() });
       if (insertError) { console.error("Could not save payment order", insertError); return send(res, 500, { message: "Ombi limetumwa lakini mfumo haukuweza kuhifadhi kumbukumbu. Wasiliana na huduma kwa wateja kabla ya kujaribu tena." }); }
       return send(res, 200, { order_id: orderId, payment_status: order.payment_status || "PENDING" });
     }
@@ -52,26 +52,26 @@ export default async function handler(req: any, res: any) {
     if (body.action === "status") {
       const orderId = String(body.order_id || "").trim();
       if (!orderId) return send(res, 400, { message: "Namba ya oda haipo." });
-      const { data: payment, error: paymentError } = await admin.from("gotchati_payments").select("id,user_id,amount,status").eq("order_id", orderId).eq("user_id", user.id).maybeSingle();
+      const { data: payment, error: paymentError } = await admin.from("gochati_payments").select("id,user_id,amount,status").eq("order_id", orderId).eq("user_id", user.id).maybeSingle();
       if (paymentError || !payment) return send(res, 404, { message: "Oda ya malipo haijapatikana." });
       const providerResponse = await fetch("https://fimipay.com/api/v1/payment/order_status", { method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ order_id: orderId }) });
       const providerData: any = await providerResponse.json().catch(() => ({}));
       const result = providerData?.data || providerData;
       if (!providerResponse.ok) { console.error("Payment provider order_status failed", providerResponse.status, providerData); return send(res, 502, { message: "Imeshindikana kuthibitisha malipo kwa sasa." }); }
       const status = String(result?.payment_status || "PENDING").toUpperCase();
-      const { error: updatePaymentError } = await admin.from("gotchati_payments").update({ status: status.toLowerCase(), provider_reference: result?.transid || null, completed_at: status === "SUCCESS" || status === "COMPLETED" ? new Date().toISOString() : null }).eq("id", payment.id);
+      const { error: updatePaymentError } = await admin.from("gochati_payments").update({ status: status.toLowerCase(), provider_reference: result?.transid || null, completed_at: status === "SUCCESS" || status === "COMPLETED" ? new Date().toISOString() : null }).eq("id", payment.id);
       if (updatePaymentError) console.error("Payment status save failed", updatePaymentError);
       if (status === "SUCCESS" || status === "COMPLETED") {
         const isPremiumPayment = Number(payment.amount) === 32000;
         const changes = isPremiumPayment ? { is_premium: true, updated_at: new Date().toISOString() } : { activation_paid: true, account_status: "active", updated_at: new Date().toISOString() };
-        const { error: activateError } = await admin.from("gotchati_users").update(changes).eq("id", user.id);
+        const { error: activateError } = await admin.from("gochati_users").update(changes).eq("id", user.id);
         if (activateError) { console.error("Account activation/upgrade failed", activateError); return send(res, 500, { message: "Malipo yamethibitishwa lakini akaunti haikuweza kusasishwa. Wasiliana na huduma kwa wateja." }); }
       }
       return send(res, 200, { payment_status: status });
     }
     return send(res, 400, { message: "Ombi halijatambulika." });
   } catch (error) {
-    console.error("Gotchati payment API error", error);
+    console.error("Gochati payment API error", error);
     return send(res, 500, { message: "Kuna hitilafu ya muda kwenye malipo. Tafadhali jaribu tena." });
   }
 }

@@ -1,6 +1,6 @@
--- Repair Gotchati signup trigger without touching shared tables.
+-- Repair Gochati signup trigger without touching shared tables.
 -- Avoids HTTP 500 when a requested username is already taken.
-create or replace function public.gotchati_create_user()
+create or replace function public.gochati_create_user()
 returns trigger
 language plpgsql
 security definer
@@ -17,12 +17,12 @@ begin
   v_base := left(v_base, 24);
   v_username := v_base;
 
-  while exists (select 1 from public.gotchati_users u where u.username = v_username and u.id <> new.id) loop
+  while exists (select 1 from public.gochati_users u where u.username = v_username and u.id <> new.id) loop
     v_suffix := v_suffix + 1;
     v_username := left(v_base, 24 - length(v_suffix::text) - 1) || '_' || v_suffix::text;
   end loop;
 
-  insert into public.gotchati_users(id, full_name, username, phone, country)
+  insert into public.gochati_users(id, full_name, username, phone, country)
   values (new.id, coalesce(new.raw_user_meta_data->>'full_name', ''), v_username, coalesce(new.raw_user_meta_data->>'phone', ''), coalesce(new.raw_user_meta_data->>'country', ''))
   on conflict (id) do update set
     full_name = excluded.full_name,
@@ -32,7 +32,7 @@ begin
 end;
 $$;
 
-drop trigger if exists gotchati_auth_user_created on auth.users;
-create trigger gotchati_auth_user_created
+drop trigger if exists gochati_auth_user_created on auth.users;
+create trigger gochati_auth_user_created
 after insert on auth.users
-for each row execute function public.gotchati_create_user();
+for each row execute function public.gochati_create_user();
