@@ -1,18 +1,18 @@
-# Dream Chat Live
+# Chatdunia
 
-Nataka unitengenezee hii website yangu dreamchat.live  weka kila kitu 
+https://chatdunia.live/
 
-Muhimu button zote ziwe zinafanya kazi, notifications toast na sounds usiache kitu chochote 
+Nitengenezee hii website yangu kama ilivo usibadilishe chochote, kuanzia muonekano sauti na functionality 
 
-Ipe jina la Gochat,  badilisha rangi na mpangilio
+Muhimu: button zote ziwe zinafanya kazi
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://gochatsite.lovable.app
+**Live app**: https://chatdunia.lovable.app
 
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/bc63e1e2-c820-47fb-96f1-55a4a9a24e1c).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/7231d02f-9b5f-494e-8416-6d7c2744f340).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.

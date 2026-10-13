@@ -14,30 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
-      chat_messages: {
+      profiles: {
         Row: {
-          body: string
+          country: string
           created_at: string
+          full_name: string
           id: string
-          partner_id: string
-          sender: string
-          user_id: string
+          phone: string
+          username: string | null
         }
         Insert: {
-          body: string
+          country?: string
           created_at?: string
-          id?: string
-          partner_id: string
-          sender: string
-          user_id: string
+          full_name?: string
+          id: string
+          phone?: string
+          username?: string | null
         }
         Update: {
-          body?: string
+          country?: string
           created_at?: string
+          full_name?: string
           id?: string
-          partner_id?: string
-          sender?: string
-          user_id?: string
+          phone?: string
+          username?: string | null
         }
         Relationships: []
       }

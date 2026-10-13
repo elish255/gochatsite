@@ -1,12 +1,1 @@
-{
-  "name": "Gochati.site",
-  "short_name": "Gochati",
-  "description": "Chat na Wageni, Fungua Dunia mpya.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#f7fffc",
-  "theme_color": "#079b79",
-  "icons": [
-    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
-  ]
-}
+{"name": "Gochat.site", "short_name": "Gochat.site", "lang": "sw", "start_url": "/", "scope": "/", "display": "standalone", "icons": [{"src": "/gochat/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}]}

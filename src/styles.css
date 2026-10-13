@@ -1,27 +1,8 @@
 @import "tailwindcss" source(none);
-@source "../src";
 @import "tw-animate-css";
-
+@source "../src";
 @custom-variant dark (&:is(.dark *));
-
-/*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
-
 @theme inline {
-  --font-sans: "DM Sans", sans-serif;
-  --font-display: "Outfit", sans-serif;
-  --color-overlay: var(--overlay);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -62,124 +43,74 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-profit: var(--profit);
+  --color-profit-2: var(--profit-2);
+  --color-balance: var(--balance);
+  --color-balance-2: var(--balance-2);
+  --color-withdraw: var(--withdraw);
+  --color-withdraw-2: var(--withdraw-2);
+  --color-success: var(--success);
+  --color-whatsapp: var(--whatsapp);
+  --color-video: var(--video);
+  --color-voice: var(--voice);
+  --color-gold: var(--gold);
+  --color-on-color: var(--on-color);
+  --color-overlay: var(--overlay);
 }
 
-:root {
-  --radius: 0.5rem;
-  --background: oklch(0.985 0.006 165);
-  --foreground: oklch(0.22 0.035 205);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.035 205);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.035 205);
-  --primary: oklch(0.53 0.14 174);
-  --primary-foreground: oklch(0.99 0.005 175);
-  --secondary: oklch(0.94 0.026 167);
-  --secondary-foreground: oklch(0.24 0.045 195);
-  --muted: oklch(0.955 0.011 176);
-  --muted-foreground: oklch(0.49 0.025 203);
-  --accent: oklch(0.72 0.16 46);
-  --accent-foreground: oklch(0.22 0.035 205);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.88 0.02 173);
-  --input: oklch(0.86 0.02 173);
-  --ring: oklch(0.53 0.14 174);
-  --overlay: oklch(0.15 0.03 205 / 65%);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
-}
-
-
-/* Compact three-column earnings cards on phones, matching the reference layout. */
-.gochat-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-.gochat-stat-card {
-  min-width: 0;
-  height: 126px;
-  overflow: hidden;
-  border-radius: 22px;
-  padding: 12px;
-  box-shadow: 0 5px 12px rgb(15 23 42 / 0.12);
-}
-.gochat-stat-card span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-}
-.gochat-stat-card p { font-size: 20px; line-height: 1; }
-@media (min-width: 640px) {
-  .gochat-stats-grid { gap: 12px; }
-  .gochat-stat-card { height: 150px; padding: 18px; border-radius: 24px; }
-  .gochat-stat-card span { font-size: 14px; }
-  .gochat-stat-card p { font-size: 30px; }
-}
-
-.font-display { font-family: var(--font-display); }
-@keyframes gochat-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-.gochat-float { animation: gochat-float 2.4s ease-in-out infinite; }
-html { scroll-behavior: smooth; }
-body { font-family: var(--font-sans); }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
-}
-
+:root{--radius:1rem;--background:oklch(98% .008 210);--foreground:oklch(21% .03 240);--card:oklch(100% 0 0);--card-foreground:oklch(21% .03 240);--popover:oklch(100% 0 0);--popover-foreground:oklch(21% .03 240);--primary:oklch(58% .15 195);--primary-foreground:oklch(99% 0 0);--secondary:oklch(95% .02 210);--secondary-foreground:oklch(25% .03 240);--muted:oklch(95% .01 210);--muted-foreground:oklch(52% .03 240);--accent:oklch(94% .04 175);--accent-foreground:oklch(25% .05 190);--destructive:oklch(57.7% .245 27.325);--destructive-foreground:oklch(98.4% .003 247.858);--border:oklch(90% .015 220);--input:oklch(90% .015 220);--ring:oklch(58% .15 195);--profit:oklch(62% .19 150);--profit-2:oklch(50% .16 152);--balance:oklch(62% .17 255);--balance-2:oklch(48% .19 275);--withdraw:oklch(68% .19 45);--withdraw-2:oklch(58% .21 25);--success:oklch(65% .19 150);--whatsapp:oklch(66% .17 150);--video:oklch(60% .22 20);--voice:oklch(62% .17 280);--gold:oklch(82% .16 85);--chart-1:oklch(64.6% .222 41.116);--chart-2:oklch(60% .118 184.704);--chart-3:oklch(39.8% .07 227.392);--chart-4:oklch(82.8% .189 84.429);--chart-5:oklch(76.9% .188 70.08);--sidebar:oklch(98.4% .003 247.858);--sidebar-foreground:oklch(12.9% .042 264.695);--sidebar-primary:oklch(20.8% .042 265.755);--sidebar-primary-foreground:oklch(98.4% .003 247.858);--sidebar-accent:oklch(96.8% .007 247.896);--sidebar-accent-foreground:oklch(20.8% .042 265.755);--sidebar-border:oklch(92.9% .013 255.508);--sidebar-ring:oklch(70.4% .04 256.788)}.dark{--background:oklch(16% .025 250);--foreground:oklch(97% .005 240);--card:oklch(22% .03 255);--card-foreground:oklch(97% .005 240);--popover:oklch(22% .03 255);--popover-foreground:oklch(97% .005 240);--primary:oklch(72% .15 190);--primary-foreground:oklch(18% .03 250);--secondary:oklch(28% .03 255);--secondary-foreground:oklch(97% .005 240);--muted:oklch(28% .03 255);--muted-foreground:oklch(72% .02 250);--accent:oklch(32% .06 190);--accent-foreground:oklch(95% .02 190);--destructive:oklch(70.4% .191 22.216);--destructive-foreground:oklch(98.4% .003 247.858);--border:oklch(100% 0 0/.1);--input:oklch(100% 0 0/.15);--ring:oklch(72% .15 190);--profit:oklch(72% .18 152);--profit-2:oklch(55% .16 165);--balance:oklch(68% .16 258);--balance-2:oklch(52% .2 285);--withdraw:oklch(75% .17 60);--withdraw-2:oklch(62% .2 30);--chart-1:oklch(48.8% .243 264.376);--chart-2:oklch(69.6% .17 162.48);--chart-3:oklch(76.9% .188 70.08);--chart-4:oklch(62.7% .265 303.9);--chart-5:oklch(64.5% .246 16.439);--sidebar:oklch(20.8% .042 265.755);--sidebar-foreground:oklch(98.4% .003 247.858);--sidebar-primary:oklch(48.8% .243 264.376);--sidebar-primary-foreground:oklch(98.4% .003 247.858);--sidebar-accent:oklch(27.9% .041 260.031);--sidebar-accent-foreground:oklch(98.4% .003 247.858);--sidebar-border:oklch(100% 0 0/.1);--sidebar-ring:oklch(55.1% .027 264.364)}
+:root { --on-color: oklch(1 0 0); --overlay: oklch(0 0 0); }
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-
-  body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-  }
+ * { border-color: var(--border); letter-spacing: 0; }
+ body { margin: 0; background: var(--background); color: var(--foreground); font-family: ui-sans-serif, system-ui, sans-serif; }
+ button, a { -webkit-tap-highlight-color: transparent; }
 }
+.animate-lop{animation:1.4s ease-in-out infinite lop}
+.animate-marquee{animation:28s linear infinite slide-marquee}
+.animate-pop-in{animation:.35s cubic-bezier(.2,.9,.3,1.3) pop-in}
+.animate-ticker{animation:20s linear infinite ticker-up}
+.card-soft{border-radius:var(--radius-2xl);background-color:var(--color-card);border:1px solid var(--color-border);box-shadow:0 10px 30px -14px oklch(20% .05 250/.35)}
+.grad-balance{background-image:linear-gradient(135deg, var(--balance), var(--balance-2))}
+.grad-brand{background-image:linear-gradient(120deg, var(--primary), var(--balance))}
+.grad-emerald{background-image:linear-gradient(135deg,oklch(75% .19 155),oklch(50% .15 190))}
+.grad-profit{background-image:linear-gradient(135deg, var(--profit), var(--profit-2))}
+.grad-royal{background-image:linear-gradient(135deg,oklch(68% .19 285),oklch(50% .2 255))}
+.grad-sunset{background-image:linear-gradient(135deg,oklch(78% .18 75),oklch(60% .22 20))}
+.grad-withdraw{background-image:linear-gradient(135deg, var(--withdraw), var(--withdraw-2))}
+@keyframes ticker-up{0%{transform:translateY(0)}to{transform:translateY(-50%)}}@keyframes slide-marquee{0%{transform:translate(0)}to{transform:translate(-50%)}}@keyframes pop-in{0%{opacity:0;transform:translateY(-14px)scale(.96)}to{opacity:1;transform:translateY(0)scale(1)}}@keyframes lop{0%,to{transform:translateY(0)rotate(0)}25%{transform:translateY(-7px)rotate(-9deg)}75%{transform:translateY(-3px)rotate(9deg)}}
+@media (prefers-reduced-motion: reduce) {
+ *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}
+
+
+/* Chatdunia authentication pages */
+.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px;background:radial-gradient(ellipse at top left,rgba(16,185,129,.18),transparent 45%),radial-gradient(ellipse at bottom right,rgba(59,130,246,.16),transparent 42%),var(--background)}
+.auth-content{width:100%;max-width:480px;margin:auto;padding:30px 26px;border:1px solid var(--color-border,var(--border));border-radius:26px;background:var(--color-card,var(--card));box-shadow:0 24px 70px rgba(0,0,0,.14)}
+.auth-content>img{display:block;object-fit:cover;box-shadow:0 8px 24px rgba(16,185,129,.2)}
+.auth-content h1{text-align:center;font-size:clamp(1.65rem,5vw,2rem);font-weight:900;letter-spacing:-.035em;line-height:1.2;margin:0 0 10px}
+.auth-subtitle{text-align:center;color:var(--muted-foreground);font-size:.92rem;line-height:1.55;margin:0 auto 24px;max-width:360px}
+.auth-content form{display:grid;gap:15px}
+.auth-field{display:grid;gap:7px;font-size:.88rem;font-weight:700}
+.auth-field>span{color:var(--foreground)}
+.auth-input{display:flex;align-items:center;min-height:48px;border:1px solid var(--color-border,var(--border));border-radius:13px;background:var(--background);transition:border-color .2s,box-shadow .2s}
+.auth-input:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 18%,transparent)}
+.auth-input input,.auth-input select{width:100%;min-width:0;min-height:46px;padding:11px 13px;border:0;outline:0;background:transparent;color:var(--foreground);font:inherit;font-weight:500}
+.auth-input select{cursor:pointer}
+.auth-input input::placeholder{color:var(--muted-foreground);opacity:.8}
+.auth-submit{width:100%;min-height:49px!important;margin-top:5px;border-radius:13px!important;background:linear-gradient(110deg,#059669,#0d9488)!important;color:white!important;font-weight:900!important;box-shadow:0 8px 18px rgba(5,150,105,.2)}
+.auth-submit:disabled{opacity:.65}
+.auth-footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:5px;margin:22px 0 0;text-align:center;color:var(--muted-foreground);font-size:.9rem}
+.auth-footer button{padding:0!important;color:var(--primary)!important;font-weight:800!important}
+.auth-error,.auth-message{padding:11px 13px;border-radius:12px;font-size:.85rem;line-height:1.5;overflow-wrap:anywhere}
+.auth-error{background:rgba(239,68,68,.1);color:#dc2626;border:1px solid rgba(239,68,68,.25)}
+.auth-message{background:rgba(16,185,129,.1);color:#059669;border:1px solid rgba(16,185,129,.25)}
+@media(max-width:480px){.auth-content{padding:25px 18px;border-radius:22px}.auth-page{padding:18px 12px}}
+/* Remove the lower duplicate customer-service panel; keep the top action. */
+main section.mt-8.grid.grid-cols-1.gap-3.sm\:grid-cols-2 > div:nth-child(2){display:none!important}
+.premium-gold{background-image:linear-gradient(135deg,#fff0a8 0%,#e4b341 32%,#b77916 68%,#f9e7a0 100%);color:#4b3205!important;border:1px solid rgba(120,78,8,.35);box-shadow:0 12px 28px -12px rgba(184,134,11,.5)}
+
+
+/* Floating support assistant migrated from the Gochat homepage */
+.gochat-float { transition: transform .18s ease, box-shadow .18s ease; }
+.gochat-float:hover { transform: translateY(-2px); }
+.gochat-float img { display: block; border-radius: 9999px; }
