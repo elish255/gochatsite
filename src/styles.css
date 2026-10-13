@@ -83,7 +83,7 @@
 }
 
 
-/* Gotchati authentication pages */
+/* Gochati authentication pages */
 .auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px;background:radial-gradient(ellipse at top left,rgba(16,185,129,.18),transparent 45%),radial-gradient(ellipse at bottom right,rgba(59,130,246,.16),transparent 42%),var(--background)}
 .auth-content{width:100%;max-width:480px;margin:auto;padding:30px 26px;border:1px solid var(--color-border,var(--border));border-radius:26px;background:var(--color-card,var(--card));box-shadow:0 24px 70px rgba(0,0,0,.14)}
 .auth-content>img{display:block;object-fit:cover;box-shadow:0 8px 24px rgba(16,185,129,.2)}
@@ -110,7 +110,7 @@ main section.mt-8.grid.grid-cols-1.gap-3.sm\:grid-cols-2 > div:nth-child(2){disp
 .premium-gold{background-image:linear-gradient(135deg,#fff0a8 0%,#e4b341 32%,#b77916 68%,#f9e7a0 100%);color:#4b3205!important;border:1px solid rgba(120,78,8,.35);box-shadow:0 12px 28px -12px rgba(184,134,11,.5)}
 
 
-/* Floating support assistant migrated from the Gotchati homepage */
+/* Floating support assistant migrated from the Gochati homepage */
 .gochat-float { transition: transform .18s ease, box-shadow .18s ease; }
 .gochat-float:hover { transform: translateY(-2px); }
 .gochat-float img { display: block; border-radius: 9999px; }

@@ -15,12 +15,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as WithdrawalRouteImport } from './routes/withdrawal'
+import { Route as ChatPersonIdRouteImport } from './routes/chat.$personId'
 
 const RegisterRoute = RegisterRouteImport.update({ id: '/register', path: '/register', getParentRoute: () => rootRouteImport } as any)
 const LoginRoute = LoginRouteImport.update({ id: '/login', path: '/login', getParentRoute: () => rootRouteImport } as any)
 const PaymentRoute = PaymentRouteImport.update({ id: '/payment', path: '/payment', getParentRoute: () => rootRouteImport } as any)
 const AdminRoute = AdminRouteImport.update({ id: '/admin', path: '/admin', getParentRoute: () => rootRouteImport } as any)
 const WithdrawalRoute = WithdrawalRouteImport.update({ id: '/withdrawal', path: '/withdrawal', getParentRoute: () => rootRouteImport } as any)
+const ChatPersonIdRoute = ChatPersonIdRouteImport.update({ id: '/chat/$personId', path: '/chat/$personId', getParentRoute: () => rootRouteImport } as any)
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -35,6 +37,7 @@ export interface FileRoutesByFullPath {
   '/payment': typeof PaymentRoute
   '/admin': typeof AdminRoute
   '/withdrawal': typeof WithdrawalRoute
+  '/chat/$personId': typeof ChatPersonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -43,6 +46,7 @@ export interface FileRoutesByTo {
   '/payment': typeof PaymentRoute
   '/admin': typeof AdminRoute
   '/withdrawal': typeof WithdrawalRoute
+  '/chat/$personId': typeof ChatPersonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -52,13 +56,14 @@ export interface FileRoutesById {
   '/payment': typeof PaymentRoute
   '/admin': typeof AdminRoute
   '/withdrawal': typeof WithdrawalRoute
+  '/chat/$personId': typeof ChatPersonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal'
+  fullPaths: '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal' | '/chat/$personId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal'
-  id: '__root__' | '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal'
+  to: '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal' | '/chat/$personId'
+  id: '__root__' | '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal' | '/chat/$personId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -68,6 +73,7 @@ export interface RootRouteChildren {
   PaymentRoute: typeof PaymentRoute
   AdminRoute: typeof AdminRoute
   WithdrawalRoute: typeof WithdrawalRoute
+  ChatPersonIdRoute: typeof ChatPersonIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -84,10 +90,11 @@ declare module '@tanstack/react-router' {
     '/payment': { id: '/payment'; path: '/payment'; fullPath: '/payment'; preLoaderRoute: typeof PaymentRouteImport; parentRoute: typeof rootRouteImport }
     '/admin': { id: '/admin'; path: '/admin'; fullPath: '/admin'; preLoaderRoute: typeof AdminRouteImport; parentRoute: typeof rootRouteImport }
     '/withdrawal': { id: '/withdrawal'; path: '/withdrawal'; fullPath: '/withdrawal'; preLoaderRoute: typeof WithdrawalRouteImport; parentRoute: typeof rootRouteImport }
+    '/chat/$personId': { id: '/chat/$personId'; path: '/chat/$personId'; fullPath: '/chat/$personId'; preLoaderRoute: typeof ChatPersonIdRouteImport; parentRoute: typeof rootRouteImport }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = { IndexRoute, RegisterRoute, LoginRoute, PaymentRoute, AdminRoute, WithdrawalRoute }
+const rootRouteChildren: RootRouteChildren = { IndexRoute, RegisterRoute, LoginRoute, PaymentRoute, AdminRoute, WithdrawalRoute, ChatPersonIdRoute }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
