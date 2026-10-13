@@ -15,5 +15,5 @@ export const Route = createFileRoute("/")({
   { property: "og:site_name", content: "Gochati" },
   { name: "twitter:card", content: "summary_large_image" },
  ] }),
- component: () => <><Gochati /><a href="tel:+255743871339" aria-label="Msaada wa Gochati" title="Msaada wa Gochati" className="gochat-float fixed bottom-5 right-5 z-50 block overflow-hidden rounded-full border-2 border-primary shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><img src={support} alt="Msaidizi wa Gochati" width={56} height={56} className="size-14 object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/avators/women-10.jpg"; }} /></a></>,
+ component: () => <><Gochati /><a href="sms:0743871339?body=Nielekeze%20kuhusu%20Gochati" aria-label="Tuma SMS kwa huduma kwa wateja" title="Tuma SMS kwa huduma kwa wateja" className="gochat-float fixed bottom-5 right-5 z-50 block overflow-hidden rounded-full border-2 border-primary shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><img src={support} alt="Msaidizi wa Gochati" width={56} height={56} className="size-14 object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/avators/women-10.jpg"; }} /></a></>,
 });

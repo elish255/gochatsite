@@ -114,3 +114,8 @@ main section.mt-8.grid.grid-cols-1.gap-3.sm\:grid-cols-2 > div:nth-child(2){disp
 .gochat-float { transition: transform .18s ease, box-shadow .18s ease; }
 .gochat-float:hover { transform: translateY(-2px); }
 .gochat-float img { display: block; border-radius: 9999px; }
+
+
+/* VIP members use a distinct diamond finish across dashboard balance cards. */
+.vip-diamond{background-image:linear-gradient(135deg,#f4fbff 0%,#b9e8ff 18%,#7f9fff 38%,#d8c5ff 58%,#8be5e9 78%,#f8fdff 100%);color:#15234a!important;border:1px solid rgba(95,126,205,.6);box-shadow:0 12px 30px -12px rgba(99,126,220,.65),inset 0 1px 0 rgba(255,255,255,.8)}
+.vip-diamond-badge{border:1px solid #8ca7ed;background:linear-gradient(110deg,#d9f4ff,#dcd4ff,#c7fbf2);color:#263a77;box-shadow:0 2px 8px rgba(110,130,210,.2)}

@@ -402,7 +402,7 @@ var Q = [
   `Hujambo? Naitwa hivyo unavyoona hapo juu, nafurahi umeingia.`,
   `Salamu kutoka huku! Naomba unieleze kidogo kuhusu wewe.`,
 ];
-function oe({ person: e, onClose: t, onPaid: n }) {
+function oe({ person: e, onClose: t, onPaid: n, active = false }) {
   let [r, i] = (0, l.useState)(null),
     [a, o] = (0, l.useState)([]),
     [s, c] = (0, l.useState)(``),
@@ -422,17 +422,33 @@ function oe({ person: e, onClose: t, onPaid: n }) {
   }, [r, e.name]),
     (0, l.useEffect)(() => {
       if (!r) return;
-      let e = setInterval(() => {
-        p((t) =>
-          t <= 1
-            ? (clearInterval(e),
-              _.current || ((_.current = !0), n(r.amount)),
-              0)
-            : t - 1,
-        );
-      }, 1e3);
-      return () => clearInterval(e);
-    }, [r, n]),
+      let interval = null;
+      let cancelled = false;
+      let sessionId = null;
+      _.current = false;
+      const startCountdown = async () => {
+        if (active) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user || cancelled) return;
+          const { data, error } = await supabase.rpc("gochati_start_earning_session", { p_amount: r.amount, p_minutes: r.minutes, p_partner: e.id });
+          if (cancelled) return;
+          if (error || !data) {
+            a((items) => [...items, { id: Date.now(), from: `them`, text: `Imeshindikana kuanza kipindi cha kulipwa. Tafadhali funga chat na ujaribu tena.` }]);
+            p(0);
+            return;
+          }
+          sessionId = data;
+        }
+        p(active ? Math.max(1, Number(r.minutes || 1)) * 60 : 60);
+        interval = setInterval(() => {
+          p((remaining) => remaining <= 1
+            ? (clearInterval(interval), _.current || ((_.current = !0), n(r.amount, sessionId)), 0)
+            : remaining - 1);
+        }, 1e3);
+      };
+      void startCountdown();
+      return () => { cancelled = true; if (interval) clearInterval(interval); };
+    }, [r, n, active, e.id]),
     (0, l.useEffect)(() => {
       g.current?.scrollIntoView({ behavior: `smooth` });
     }, [a, u]));
@@ -909,7 +925,13 @@ function de() {
     [P, F] = (0, l.useState)(null),
     [V, H] = (0, l.useState)(`desktop`),
     [accountActive, setAccountActive] = (0, l.useState)(false),
-    [isPremium, setIsPremium] = (0, l.useState)(false);
+    [isPremium, setIsPremium] = (0, l.useState)(false),
+    [isVip, setIsVip] = (0, l.useState)(false),
+    [username, setUsername] = (0, l.useState)(""),
+    [referralCount, setReferralCount] = (0, l.useState)(0),
+    [notifications, setNotifications] = (0, l.useState)([]),
+    [bannerNotification, setBannerNotification] = (0, l.useState)(null),
+    [notificationOpen, setNotificationOpen] = (0, l.useState)(false);
   ((0, l.useEffect)(() => {
     document.documentElement.classList.toggle(`dark`, e);
   }, [e]),
@@ -918,8 +940,8 @@ function de() {
       void (async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data } = await supabase.from("gochati_users").select("account_status,activation_paid,is_premium,balance").eq("id", user.id).maybeSingle();
-        if (mounted && data) { setAccountActive(data.account_status === "active"); setIsPremium(!!data.is_premium); const savedBalance = Number(data.balance || 0); r(savedBalance); a(savedBalance); w(savedBalance); }
+        const { data } = await supabase.from("gochati_users").select("account_status,activation_paid,is_premium,is_vip,referral_count,balance,username").eq("id", user.id).maybeSingle();
+        if (mounted && data) { setAccountActive(data.account_status === "active" && !!data.activation_paid); setIsPremium(!!data.is_premium); setIsVip(!!data.is_vip); setReferralCount(Number(data.referral_count || 0)); setUsername(String(data.username || "")); const savedBalance = Number(data.balance || 0); r(savedBalance); a(savedBalance); w(savedBalance); }
       })();
       return () => { mounted = false; };
     }, []),
@@ -960,13 +982,34 @@ function de() {
       }, 15e3);
       return () => clearInterval(e);
     }, []));
-  let U = (0, l.useCallback)(async (e) => {
+  (0, l.useEffect)(() => {
+    let mounted = true;
+    let timer;
+    const loadNotifications = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("gochati_notifications").select("id,message,created_at,read_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50);
+      if (!mounted || !data) return;
+      setNotifications(data);
+      setBannerNotification(data[0] && !data[0].read_at ? data[0] : null);
+    };
+    void loadNotifications();
+    timer = setInterval(() => void loadNotifications(), 20000);
+    return () => { mounted = false; clearInterval(timer); };
+  }, []);
+  const dismissNotification = async (id) => {
+    await supabase.from("gochati_notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+    setNotifications((items) => items.map((item) => item.id === id ? { ...item, read_at: new Date().toISOString() } : item));
+    setBannerNotification((current) => current?.id === id ? null : current);
+  };
+  let U = (0, l.useCallback)(async (e, sessionId = null) => {
       s(null);
       if (!accountActive) { f({ open: !0, amount: e }); return; }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { h({ id: `earned-error-${Date.now()}`, text: `Ingia kwenye akaunti yako ili kuhifadhi mapato.` }); setTimeout(() => h(null), 5000); return; }
-      const { data: savedBalance, error } = await supabase.rpc("gochati_credit_earning", { p_amount: e });
-      if (error) { h({ id: `earned-error-${Date.now()}`, text: `Imeshindwa kuhifadhi mapato: ${error.message}` }); setTimeout(() => h(null), 7000); return; }
+      if (!sessionId) { h({ id: `earned-error-${Date.now()}`, text: `Kipindi hakikuthibitishwa. Mapato hayajaongezwa.` }); setTimeout(() => h(null), 7000); return; }
+      const { data: savedBalance, error } = await supabase.rpc("gochati_complete_earning_session", { p_session_id: sessionId });
+      if (error) { h({ id: `earned-error-${Date.now()}`, text: `Mapato hayajaongezwa: ${error.message}` }); setTimeout(() => h(null), 7000); return; }
       const nextBalance = Number(savedBalance || 0);
       a(nextBalance); r(nextBalance); w(nextBalance);
       h({ id: `earned-${Date.now()}`, text: `Hongera! Malipo ya TZS ${I(e)} yamehifadhiwa kwenye balance yako.` });
@@ -1044,7 +1087,7 @@ function de() {
                     className: `text-2xl font-black tracking-normal`,
                     children: `Gochati`,
                   }),
-                  isPremium && (0, K.jsx)(`span`, { className: `inline-flex mt-1 rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-black text-amber-800`, children: `✦ PREMIUM ACCOUNT` }),
+                  (isVip || isPremium) && (0, K.jsx)(`span`, { className: `inline-flex mt-1 rounded-full px-3 py-1 text-xs font-black ${isVip ? `vip-diamond-badge` : `border border-amber-300 bg-amber-100 text-amber-800`}`, children: isVip ? `◆ VIP ACCOUNT` : `✦ PREMIUM ACCOUNT` }),
                   (0, K.jsx)(`p`, {
                     className: `text-[11px] text-muted-foreground`,
                     children: `Chati • Lipwa • Toa Pesa`,
@@ -1058,6 +1101,12 @@ function de() {
                 children: e
                   ? (0, K.jsx)(O, { className: `size-5` })
                   : (0, K.jsx)(ee, { className: `size-5` }),
+              }),
+              (0, K.jsxs)(`button`, {
+                onClick: () => setNotificationOpen(true),
+                "aria-label": `Notifications`,
+                className: `relative rounded-xl border border-border bg-card p-2.5`,
+                children: [ (0, K.jsx)(p, { className: `size-5` }), notifications.some((item) => !item.read_at) && (0, K.jsx)(`span`, { className: `absolute -right-1 -top-1 size-2.5 rounded-full bg-red-500` }) ],
               }),
             ],
           }),
@@ -1077,12 +1126,12 @@ function de() {
                 ],
               }),
               (0, K.jsxs)(`button`, {
-                onClick: () => { window.location.href = "tel:+255743871339"; },
+                onClick: () => { window.location.href = "sms:0743871339?body=Nielekeze%20kuhusu%20Gochati"; },
                 type: `button`,
                 className: `grad-withdraw flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-bold text-on-color shadow-lg`,
                 children: [
                   (0, K.jsx)(v, { className: `size-4` }),
-                  ` Customer Service · 0743871339`,
+                  ` Customer Service`,
                 ],
               }),
             ],
@@ -1096,23 +1145,35 @@ function de() {
               `Wazungu 3,490 wapo mtandaoni`,
             ],
           }),
+          bannerNotification && (0, K.jsxs)(`div`, {
+            className: `mt-3 flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4`,
+            children: [
+              (0, K.jsx)(p, { className: `mt-0.5 size-5 shrink-0 text-primary` }),
+              (0, K.jsx)(`p`, { className: `flex-1 text-sm font-semibold`, children: bannerNotification.message }),
+              (0, K.jsx)(`button`, { onClick: () => void dismissNotification(bannerNotification.id), className: `rounded-lg p-1 text-muted-foreground`, "aria-label": `Funga notification`, children: (0, K.jsx)(j, { className: `size-4` }) }),
+            ],
+          }),
+          isPremium && !isVip && referralCount < 20 && (0, K.jsxs)(`div`, {
+            className: `mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-amber-950`,
+            children: [ (0, K.jsxs)(`p`, { className: `text-sm font-semibold`, children: [`VIP: alika watu 20 (`, referralCount, `/20) au upgrade kwa TZS 35,000.`] }), (0, K.jsxs)(`div`, { className: `flex flex-wrap gap-2`, children: [ (0, K.jsx)(`button`, { onClick: () => { void navigator.clipboard?.writeText(`${window.location.origin}/register?ref=${encodeURIComponent(username)}`).then(() => y(`Link ya mwaliko imenakiliwa.`)).catch(() => y(`Nakili link hii: ${window.location.origin}/register?ref=${encodeURIComponent(username)}`)); }, className: `rounded-xl bg-overlay/20 px-3 py-2 text-xs font-bold`, children: `Nakili link ya mwaliko` }), (0, K.jsx)(`button`, { onClick: () => { window.location.href = "/payment?type=vip"; }, className: `rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-black`, children: `Upgrade VIP` }) ] }) ],
+          }),
           (0, K.jsxs)(`section`, {
             className: `mt-4 grid grid-cols-3 gap-2 sm:gap-3`,
             children: [
               (0, K.jsx)($, {
-                grad: isPremium ? `premium-gold` : `grad-emerald`,
+                grad: isVip ? `vip-diamond` : isPremium ? `premium-gold` : `grad-emerald`,
                 icon: (0, K.jsx)(te, { className: `size-5` }),
                 label: `Net Profit`,
                 value: I(n),
               }),
               (0, K.jsx)($, {
-                grad: isPremium ? `premium-gold` : `grad-royal`,
+                grad: isVip ? `vip-diamond` : isPremium ? `premium-gold` : `grad-royal`,
                 icon: (0, K.jsx)(A, { className: `size-5` }),
                 label: `Balance`,
                 value: I(i),
               }),
               (0, K.jsxs)(`div`, {
-                className: `${isPremium ? `premium-gold` : `grad-sunset`} flex min-h-[132px] flex-col justify-between rounded-2xl p-3 text-on-color shadow-lg sm:p-4`,
+                className: `${isVip ? `vip-diamond` : isPremium ? `premium-gold` : `grad-sunset`} flex min-h-[132px] flex-col justify-between rounded-2xl p-3 text-on-color shadow-lg sm:p-4`,
                 children: [
                   (0, K.jsxs)(`div`, {
                     className: `flex items-center gap-1.5 text-[11px] font-semibold opacity-90 sm:text-xs`,
@@ -1322,7 +1383,8 @@ function de() {
           }),
         ],
       }),
-      o && (0, K.jsx)(oe, { person: o, onClose: () => s(null), onPaid: U }),
+      notificationOpen && (0, K.jsx)(`div`, { className: `fixed inset-0 z-[100] flex items-center justify-center bg-overlay/70 p-4`, onMouseDown: (event) => { if (event.target === event.currentTarget) setNotificationOpen(false); }, children: (0, K.jsxs)(`section`, { role: `dialog`, "aria-modal": true, "aria-label": `Notifications`, className: `card-soft max-h-[80vh] w-full max-w-lg overflow-y-auto p-5`, children: [ (0, K.jsxs)(`div`, { className: `mb-4 flex items-center justify-between gap-3`, children: [ (0, K.jsx)(`h2`, { className: `text-xl font-black`, children: `Notifications` }), (0, K.jsx)(`button`, { onClick: () => setNotificationOpen(false), "aria-label": `Funga`, className: `rounded-lg p-2`, children: (0, K.jsx)(j, { className: `size-5` }) }) ] }), notifications.length ? notifications.map((item) => (0, K.jsxs)(`article`, { className: `mb-3 rounded-xl border border-border p-3`, children: [ (0, K.jsx)(`p`, { className: `text-sm`, children: item.message }), (0, K.jsx)(`p`, { className: `mt-2 text-xs text-muted-foreground`, children: new Date(item.created_at).toLocaleString() }), !item.read_at && (0, K.jsx)(`button`, { onClick: () => void dismissNotification(item.id), className: `mt-2 text-xs font-bold text-primary`, children: `Dismiss` }) ] }, item.id)) : (0, K.jsx)(`p`, { className: `text-sm text-muted-foreground`, children: `Bado hakuna notification.` }) ] }) }),
+      o && (0, K.jsx)(oe, { person: o, active: accountActive, onClose: () => s(null), onPaid: U }),
       c &&
         (0, K.jsx)(se, {
           person: c.person,
