@@ -1,6 +1,6 @@
-# Chatdunia
+# Gotchati
 
-https://chatdunia.live/
+https://Gotchati.live/
 
 Nitengenezee hii website yangu kama ilivo usibadilishe chochote, kuanzia muonekano sauti na functionality 
 
@@ -8,7 +8,7 @@ Muhimu: button zote ziwe zinafanya kazi
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://chatdunia.lovable.app
+**Live app**: https://Gotchati.lovable.app
 
 ## Build with Lovable
 

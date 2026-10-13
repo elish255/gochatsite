@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       
       
-      { name: "author", content: "Gochat.site" },
+      { name: "author", content: "Gotchati" },
       
       
       { property: "og:type", content: "website" },
@@ -94,8 +94,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "icon", href: "/gochat/logo.png", type: "image/png" },
-      { rel: "apple-touch-icon", href: "/gochat/logo.png" },
+      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/gochat/favicon.png"},
     ],
   }),
   shellComponent: RootShell,
