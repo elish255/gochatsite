@@ -20,12 +20,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
     const password = String(form.get("password") ?? "");
     try {
       if (register) {
+        if (password.length < 4) throw new Error("Password iwe na angalau herufi/namba 4.");
         if (password !== String(form.get("repeat_password") ?? "")) throw new Error("Password na Repeat Password hazifanani.");
         const username = value("username").toLowerCase();
         if (!/^[a-z0-9_]{3,30}$/.test(username)) throw new Error("Username iwe na herufi, namba au _ (herufi 3–30).");
         const email = value("email").toLowerCase();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Weka email halali, mfano jina@gmail.com.");
-        const referralUsername = value("referral_username").toLowerCase() || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref")?.toLowerCase() : "") || "";
+        const referralUsername = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref")?.trim().toLowerCase() || "" : "";
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: value("email").toLowerCase(), password,
           options: { data: { full_name: value("full_name"), username, phone: value("phone"), country: value("country"), referral_username: referralUsername || null } },
@@ -46,7 +47,9 @@ export function AuthPage({ mode }: { mode: Mode }) {
         const username = value("username").toLowerCase();
         const response = await fetch("/api/gochati-login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
         const sessionData = await response.json().catch(() => ({}));
-        if (!response.ok || !sessionData?.access_token || !sessionData?.refresh_token) throw new Error("Username au password si sahihi.");
+        if (!response.ok || !sessionData?.access_token || !sessionData?.refresh_token) {
+          throw new Error(typeof sessionData?.message === "string" ? sessionData.message : "Username au password si sahihi.");
+        }
         const { error: sessionError } = await supabase.auth.setSession({ access_token: sessionData.access_token, refresh_token: sessionData.refresh_token });
         if (sessionError) throw new Error("Imeshindikana kuanzisha session. Jaribu tena.");
         await navigate({ to: "/payment", replace: true });
@@ -69,13 +72,12 @@ export function AuthPage({ mode }: { mode: Mode }) {
         <label className="auth-field"><span>Email</span><div className="auth-input"><input name="email" type="email" placeholder="jina@gmail.com" autoComplete="email" required /></div></label>
         <label className="auth-field"><span>Username</span><div className="auth-input"><input name="username" placeholder="Chagua username" autoComplete="username" minLength={3} maxLength={30} required /></div></label>
         <label className="auth-field"><span>Phone number</span><div className="auth-input"><input name="phone" placeholder="0712345678" type="tel" autoComplete="tel" pattern="[+]?[0-9 ]{9,16}" required /></div></label>
-        <label className="auth-field"><span>Username ya aliyekualika (hiari)</span><div className="auth-input"><input name="referral_username" defaultValue={typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") ?? "" : ""} placeholder="Username ya rafiki aliyekualika" autoComplete="off" /></div></label>
         <label className="auth-field"><span>Choose Country</span><div className="auth-input"><select name="country" defaultValue="" required><option value="" disabled>Chagua nchi</option>{countries.map(country => <option key={country} value={country}>{country}</option>)}</select></div></label>
       </>}
       {!register && <label className="auth-field"><span>Username</span><div className="auth-input"><input name="username" autoComplete="username" placeholder="Username uliyosajili" required /></div></label>}
       {mode !== "forgot" && <>
-        <label className="auth-field"><span>Password</span><div className="auth-input"><input name="password" type="password" autoComplete={register ? "new-password" : "current-password"} minLength={8} placeholder="Password (angalau herufi 8)" required /></div></label>
-        {register && <label className="auth-field"><span>Repeat password</span><div className="auth-input"><input name="repeat_password" type="password" autoComplete="new-password" minLength={8} placeholder="Rudia password" required /></div></label>}
+        <label className="auth-field"><span>Password</span><div className="auth-input"><input name="password" type="password" autoComplete={register ? "new-password" : "current-password"} minLength={4} placeholder="Password (angalau herufi 4)" required /></div></label>
+        {register && <label className="auth-field"><span>Repeat password</span><div className="auth-input"><input name="repeat_password" type="password" autoComplete="new-password" minLength={4} placeholder="Rudia password" required /></div></label>}
       </>}
       {error && <p className="auth-error" role="alert">{error}</p>}{message && <p className="auth-message" role="status">{message}</p>}
       <Button variant="reference" type="submit" disabled={busy} className="auth-submit">{busy ? "Subiri..." : register ? "JISAJILI" : "INGIA"}</Button>
