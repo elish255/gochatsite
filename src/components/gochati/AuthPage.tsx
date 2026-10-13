@@ -20,7 +20,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     const password = String(form.get("password") ?? "");
     try {
       if (register) {
-        if (password.length < 4) throw new Error("Password iwe na angalau herufi/namba 4.");
+        if (password.length < 6) throw new Error("Password iwe na angalau herufi/namba 6.");
         if (password !== String(form.get("repeat_password") ?? "")) throw new Error("Password na Repeat Password hazifanani.");
         const username = value("username").toLowerCase();
         if (!/^[a-z0-9_]{3,30}$/.test(username)) throw new Error("Username iwe na herufi, namba au _ (herufi 3–30).");
@@ -76,8 +76,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
       </>}
       {!register && <label className="auth-field"><span>Username</span><div className="auth-input"><input name="username" autoComplete="username" placeholder="Username uliyosajili" required /></div></label>}
       {mode !== "forgot" && <>
-        <label className="auth-field"><span>Password</span><div className="auth-input"><input name="password" type="password" autoComplete={register ? "new-password" : "current-password"} minLength={4} placeholder="Password (angalau herufi 4)" required /></div></label>
-        {register && <label className="auth-field"><span>Repeat password</span><div className="auth-input"><input name="repeat_password" type="password" autoComplete="new-password" minLength={4} placeholder="Rudia password" required /></div></label>}
+        <label className="auth-field"><span>Password</span><div className="auth-input"><input name="password" type="password" autoComplete={register ? "new-password" : "current-password"} minLength={6} placeholder="Password (angalau herufi 6)" required /></div></label>
+        {register && <label className="auth-field"><span>Repeat password</span><div className="auth-input"><input name="repeat_password" type="password" autoComplete="new-password" minLength={6} placeholder="Rudia password" required /></div></label>}
       </>}
       {error && <p className="auth-error" role="alert">{error}</p>}{message && <p className="auth-message" role="status">{message}</p>}
       <Button variant="reference" type="submit" disabled={busy} className="auth-submit">{busy ? "Subiri..." : register ? "JISAJILI" : "INGIA"}</Button>
