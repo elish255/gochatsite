@@ -5,9 +5,9 @@ const send = (res: any, status: number, body: Record<string, unknown>) => res.st
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return send(res, 405, { message: "Method not allowed." });
   try {
-    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const url = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+    const anonKey = process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
+    const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
     if (!url || !anonKey || !serviceKey) {
       console.error("Gochati login API is missing Supabase environment variables", { url: !!url, anonKey: !!anonKey, serviceKey: !!serviceKey });
       return send(res, 500, { message: "Huduma ya kuingia haijawekwa sawa. Tafadhali wasiliana na huduma kwa wateja." });

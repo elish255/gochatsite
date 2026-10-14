@@ -45,3 +45,9 @@ The payment API uses SplashPay's Mobile Money collection endpoint and status-che
 Do not put SplashPay secrets in `VITE_*` variables, client-side code, GitHub, or chat messages. Apply `supabase/migrations/202610140002_gochati_splashpay.sql` in Supabase SQL Editor. No webhook is required: the frontend calls the authenticated `/api/gochati-payment` endpoint with `action: "status"`, and that server endpoint checks the payment directly through SplashPay `/payments/check-status`. The account is activated/upgraded only after the endpoint verifies the successful status, reference, amount, and currency.
 
 Test first with SplashPay test credentials and a test transaction. Do not remove old provider environment variables until the SplashPay integration has been tested in the deployed environment.
+
+
+### Malipo ya SplashPay bila Webhook
+- Reference za malipo zinatengenezwa kwa muundo `INV-...`.
+- Gochati hutuma ombi la mobile money kwa endpoint ya SplashPay na huthibitisha matokeo kwa `POST /payments/check-status`; hakuna Webhook inayohitajika.
+- Hakikisha `SPLASHPAY_API_KEY`, `SPLASHPAY_API_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, na Supabase URL/publishable key zimewekwa kwenye Vercel.

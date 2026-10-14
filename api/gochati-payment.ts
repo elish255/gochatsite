@@ -42,11 +42,11 @@ async function syncPaymentStatus(admin: any, payment: any, providerData: any) {
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return send(res, 405, { message: "Method not allowed." });
   try {
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const apiKey = process.env.SPLASHPAY_API_KEY;
-    const apiSecret = process.env.SPLASHPAY_API_SECRET;
+    const supabaseUrl = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+    const anonKey = process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || process.env["SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_ANON_KEY"];
+    const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+    const apiKey = process.env["SPLASHPAY_API_KEY"];
+    const apiSecret = process.env["SPLASHPAY_API_SECRET"];
     if (!supabaseUrl || !anonKey || !serviceKey || !apiKey || !apiSecret) {
       console.error("Missing server payment configuration", { supabaseUrl: !!supabaseUrl, anonKey: !!anonKey, serviceKey: !!serviceKey, splashKey: !!apiKey, splashSecret: !!apiSecret });
       return send(res, 500, { message: "Huduma ya malipo haijawekwa sawa. Tafadhali wasiliana na huduma kwa wateja." });
@@ -73,23 +73,23 @@ export default async function handler(req: any, res: any) {
       if (purpose === "premium" && profile.is_premium) return send(res, 409, { message: "Akaunti yako tayari ni Premium." });
       if (purpose === "vip" && profile.is_vip) return send(res, 409, { message: "Akaunti yako tayari ni VIP." });
 
-      const reference = `GOCHATI-${user.id.slice(0, 8)}-${randomUUID()}`;
+      const reference = `INV-${randomUUID()}`;
       const { data: payment, error: insertError } = await admin.from("gochati_payments").insert({ user_id: user.id, order_id: reference, amount, currency: "TZS", phone, status: "pending", purpose }).select("id,order_id,amount,purpose,user_id").single();
       if (insertError || !payment) { console.error("Could not save SplashPay payment", insertError); return send(res, 500, { message: "Imeshindikana kuhifadhi ombi la malipo. Tafadhali jaribu tena." }); }
 
       const providerResponse = await fetch(`${BASE_URL}/payments/mobile-money`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json", "X-API-KEY": apiKey, "X-API-SECRET": apiSecret, "Idempotency-Key": reference },
-        body: JSON.stringify({ amount, currency: "TZS", reference, phone, customer_name: profile.full_name || profile.username, customer_email: user.email || `${profile.username}@gochati.local`, metadata: { user_id: user.id, purpose } }),
+        body: JSON.stringify({ amount, currency: "TZS", reference, phone_number: phone, customer_name: profile.full_name || profile.username, customer_email: user.email || `${profile.username}@gochati.local`, metadata: { user_id: user.id, purpose } }),
       });
       const providerData: any = await providerResponse.json().catch(() => ({}));
       const result = providerData?.data || providerData;
-      if (!providerResponse.ok || providerData?.status !== "success" || !result?.reference) {
+      if (!providerResponse.ok || String(providerData?.status || "").toLowerCase() !== "success") {
         console.error("SplashPay payment initiation failed", providerResponse.status, providerData);
         await admin.from("gochati_payments").update({ status: "failed" }).eq("id", payment.id);
         return send(res, 502, { message: providerData?.message || "Imeshindikana kutuma ombi la malipo. Hakikisha namba ni sahihi kisha ujaribu tena." });
       }
-      await admin.from("gochati_payments").update({ status: normalizeStatus(result.status), provider_reference: result.provider_reference || null }).eq("id", payment.id);
+      await admin.from("gochati_payments").update({ status: normalizeStatus(result.status), provider_reference: result.provider_reference || result.transaction_reference || result.transaction_id || result.id || null }).eq("id", payment.id);
       return send(res, 200, { reference, payment_status: normalizeStatus(result.status), message: providerData.message || "Ombi la malipo limetumwa." });
     }
 
@@ -105,7 +105,8 @@ export default async function handler(req: any, res: any) {
       const providerData: any = await providerResponse.json().catch(() => ({}));
       if (!providerResponse.ok || providerData?.status !== "success") { console.error("SplashPay status check failed", providerResponse.status, providerData); return send(res, 502, { message: "Imeshindikana kuthibitisha malipo kwa sasa." }); }
       const result = providerData?.data || {};
-      if (Number(result.amount) !== Number(payment.amount) || String(result.currency || "").toUpperCase() !== "TZS" || String(result.reference) !== reference) return send(res, 409, { message: "Taarifa za malipo hazilingani. Wasiliana na huduma kwa wateja." });
+      const returnedReference = String(result.reference || result.merchant_reference || "");
+      if (Number(result.amount) !== Number(payment.amount) || String(result.currency || "").toUpperCase() !== "TZS" || (returnedReference && returnedReference !== reference)) return send(res, 409, { message: "Taarifa za malipo hazilingani. Wasiliana na huduma kwa wateja." });
       const status = await syncPaymentStatus(admin, payment, result);
       return send(res, 200, { payment_status: status, reference });
     }
