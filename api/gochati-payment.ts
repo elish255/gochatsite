@@ -80,7 +80,7 @@ export default async function handler(req: any, res: any) {
       const providerResponse = await fetch(`${BASE_URL}/payments/mobile-money`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json", "X-API-KEY": apiKey, "X-API-SECRET": apiSecret, "Idempotency-Key": reference },
-        body: JSON.stringify({ amount, currency: "TZS", reference, phone_number: phone, customer_name: profile.full_name || profile.username, customer_email: user.email || `${profile.username}@gochati.local`, metadata: { user_id: user.id, purpose } }),
+        body: JSON.stringify({ amount, currency: "TZS", reference, phone, customer_name: profile.full_name || profile.username, customer_email: user.email || `${profile.username}@gochati.local`, metadata: { user_id: user.id, purpose } }),
       });
       const providerData: any = await providerResponse.json().catch(() => ({}));
       const result = providerData?.data || providerData;
