@@ -1153,10 +1153,6 @@ function de() {
               (0, K.jsx)(`button`, { onClick: () => void dismissNotification(bannerNotification.id), className: `rounded-lg p-1 text-muted-foreground`, "aria-label": `Funga notification`, children: (0, K.jsx)(j, { className: `size-4` }) }),
             ],
           }),
-          isPremium && !isVip && referralCount < 20 && (0, K.jsxs)(`div`, {
-            className: `mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-amber-950`,
-            children: [ (0, K.jsxs)(`p`, { className: `text-sm font-semibold`, children: [`VIP: alika watu 20 (`, referralCount, `/20) au upgrade kwa TZS 35,000.`] }), (0, K.jsxs)(`div`, { className: `flex flex-wrap gap-2`, children: [ (0, K.jsx)(`button`, { onClick: () => { void navigator.clipboard?.writeText(`${window.location.origin}/register?ref=${encodeURIComponent(username)}`).then(() => y(`Link ya mwaliko imenakiliwa.`)).catch(() => y(`Nakili link hii: ${window.location.origin}/register?ref=${encodeURIComponent(username)}`)); }, className: `rounded-xl bg-overlay/20 px-3 py-2 text-xs font-bold`, children: `Nakili link ya mwaliko` }), (0, K.jsx)(`button`, { onClick: () => { window.location.href = "/payment?type=vip"; }, className: `rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-black`, children: `Upgrade VIP` }) ] }) ],
-          }),
           (0, K.jsxs)(`section`, {
             className: `mt-4 grid grid-cols-3 gap-2 sm:gap-3`,
             children: [
