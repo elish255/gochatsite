@@ -20,6 +20,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     const password = String(form.get("password") ?? "");
     try {
       if (register) {
+        if (!form.get("agree_terms")) throw new Error("Lazima ukubali Terms of Service kabla ya kujisajili.");
         if (password.length < 6) throw new Error("Password iwe na angalau herufi/namba 6.");
         if (password !== String(form.get("repeat_password") ?? "")) throw new Error("Password na Repeat Password hazifanani.");
         const username = value("username").toLowerCase();
@@ -79,7 +80,9 @@ export function AuthPage({ mode }: { mode: Mode }) {
         <label className="auth-field"><span>Password</span><div className="auth-input"><input name="password" type="password" autoComplete={register ? "new-password" : "current-password"} minLength={6} placeholder="Password (angalau herufi 6)" required /></div></label>
         {register && <label className="auth-field"><span>Repeat password</span><div className="auth-input"><input name="repeat_password" type="password" autoComplete="new-password" minLength={6} placeholder="Rudia password" required /></div></label>}
       </>}
-      {error && <p className="auth-error" role="alert">{error}</p>}{message && <p className="auth-message" role="status">{message}</p>}
+      {register && <label className="mt-3 mb-4 flex items-start gap-2 text-sm leading-5"><input name="agree_terms" type="checkbox" required className="mt-1 size-4 accent-primary" /><span>Nimekubali <Link to="/terms" className="font-semibold underline underline-offset-2">Terms of Service za Gochati</Link> na nimeelewa masharti ya matumizi ya huduma.</span></label>}
+      {error && <p className="auth-error" role="alert">{error}</p>}
+      {message && <p className="auth-message" role="status">{message}</p>}
       <Button variant="reference" type="submit" disabled={busy} className="auth-submit">{busy ? "Subiri..." : register ? "JISAJILI" : "INGIA"}</Button>
     </form>
     <p className="auth-footer">{register ? <>Una akaunti tayari? <Button asChild variant="reference"><Link to="/login">Ingia hapa</Link></Button></> : <>Huna akaunti? <Button asChild variant="reference"><Link to="/register">Jisajili hapa</Link></Button></>}</p>

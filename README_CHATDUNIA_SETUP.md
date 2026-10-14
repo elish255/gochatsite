@@ -12,7 +12,7 @@
 2. In Supabase Auth settings, turn **Confirm email OFF** if you want username-only signup to create a session immediately. The UI uses a non-deliverable internal alias (`username@users.Gochati.invalid`) because Supabase password auth requires an email or phone identifier; users never enter or see that alias. If email confirmation must remain on, implement a server-side username-auth flow before launch.
 3. Deploy the payment function: `supabase functions deploy gochati-payment`.
 4. Set secrets on the Supabase Edge Function runtime (not as `VITE_*` frontend variables):
-   - `FIMIPAY_SECRET_KEY` = your provider secret key
+   - Legacy setup note: payment credentials are now configured as `SPLASHPAY_API_KEY`, `SPLASHPAY_API_SECRET`, and `SPLASHPAY_WEBHOOK_SECRET` in the Gochati setup guide.
    - `SUPABASE_URL` and `SUPABASE_ANON_KEY` are normally injected by Supabase
    - `SUPABASE_SERVICE_ROLE_KEY` is required by the function and must never be exposed to the browser
 5. Use a **live** provider key only after provider verification. Test keys return simulated results and do not send a real phone prompt.

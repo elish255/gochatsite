@@ -1,7 +1,7 @@
 # Gochati.site setup
 
 ## Isolated database
-Run migrations in order in the Supabase SQL Editor for the shared database: `202610130001_gochati_isolated_schema.sql`, then `202610140001_gochati_username_vip_notifications.sql`. The second migration adds username-login lookup data, referral tracking, VIP flags, and notification dismissal support. They use only `gochati_*` objects and do not rename, drop, or write to the existing Chatdunia tables.
+Run migrations in order in the Supabase SQL Editor for the shared database: `202610130001_gochati_isolated_schema.sql`, then `202610140001_gochati_username_vip_notifications.sql`, and then `202610140002_gochati_splashpay.sql`. The second migration adds username-login lookup data, referral tracking, VIP flags, and notification dismissal support. They use only `gochati_*` objects and do not rename, drop, or write to the existing Chatdunia tables.
 
 ## Username login and referrals
 - Users sign in with their username and password. The `/api/gochati-login` endpoint privately resolves the username to its account email server-side; it does not expose account emails to the browser.
@@ -33,3 +33,15 @@ Keep the existing Supabase URL and publishable/anon key configured in Vercel. Th
 ## Paid chat timer
 - Active users' chosen chat session is started and completed through the Gochati-only SQL RPCs. The database refuses to credit the selected earning until the full configured duration has elapsed.
 - Run the new migration before testing username login, referral tracking, notifications, VIP payments, or timed earnings.
+
+## SplashPay collections integration
+The payment API uses SplashPay's Mobile Money collection endpoint and status-check endpoint. Configure these **server-only** environment variables in Vercel (Production, Preview, and Development as appropriate):
+- `SPLASHPAY_API_KEY` = merchant API key (`pk_live_...` for production)
+- `SPLASHPAY_API_SECRET` = merchant API secret (`sk_live_...` for production)
+- `SUPABASE_SERVICE_ROLE_KEY` = existing Supabase service-role key
+- `SUPABASE_URL` (or existing `VITE_SUPABASE_URL`)
+- `SUPABASE_PUBLISHABLE_KEY` (or existing `VITE_SUPABASE_PUBLISHABLE_KEY` / anon-key equivalent)
+
+Do not put SplashPay secrets in `VITE_*` variables, client-side code, GitHub, or chat messages. Apply `supabase/migrations/202610140002_gochati_splashpay.sql` in Supabase SQL Editor. No webhook is required: the frontend calls the authenticated `/api/gochati-payment` endpoint with `action: "status"`, and that server endpoint checks the payment directly through SplashPay `/payments/check-status`. The account is activated/upgraded only after the endpoint verifies the successful status, reference, amount, and currency.
+
+Test first with SplashPay test credentials and a test transaction. Do not remove old provider environment variables until the SplashPay integration has been tested in the deployed environment.
