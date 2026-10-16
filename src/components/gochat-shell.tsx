@@ -5,7 +5,7 @@ import support from "@/assets/support.jpg";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { platform } from "@/integrations/netlify/client";
 import { playSound } from "@/lib/gochat-sound";
 
 const registrationUrl = "https://moxeraagencies.com/register?ref=Mtukazi";
@@ -23,8 +23,8 @@ export function GochatShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setEmail(session?.user?.email ?? null));
+    platform.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    const { data } = platform.auth.onAuthStateChange((_event, session) => setEmail(session?.user?.email ?? null));
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -55,7 +55,7 @@ export function GochatShell({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await platform.auth.signOut();
     if (error) notify(error.message);
     else { notify("Umetoka kwenye akaunti."); void navigate({ to: "/" }); }
   }

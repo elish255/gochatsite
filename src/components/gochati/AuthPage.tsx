@@ -1,10 +1,20 @@
+import { PasswordHelp } from "./AuthCallbacks";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { platform } from "@/integrations/netlify/client";
 import { Button } from "@/components/ui/button";
 
 type Mode = "register" | "login" | "forgot" | "reset";
-const countries = ["Tanzania", "Kenya", "Uganda", "Rwanda", "Burundi", "South Sudan", "Democratic Republic of the Congo", "Somalia"];
+const countries = [
+  "Tanzania",
+  "Kenya",
+  "Uganda",
+  "Rwanda",
+  "Burundi",
+  "South Sudan",
+  "Democratic Republic of the Congo",
+  "Somalia",
+];
 
 export function AuthPage({ mode }: { mode: Mode }) {
   const [busy, setBusy] = useState(false);
@@ -14,77 +24,260 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const register = mode === "register";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError(""); setMessage("");
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
     const form = new FormData(event.currentTarget);
     const value = (key: string) => String(form.get(key) ?? "").trim();
     const password = String(form.get("password") ?? "");
     try {
       if (register) {
-        if (!form.get("agree_terms")) throw new Error("Lazima ukubali Terms of Service kabla ya kujisajili.");
+        if (!form.get("agree_terms"))
+          throw new Error("Lazima ukubali Terms of Service kabla ya kujisajili.");
         if (password.length < 6) throw new Error("Password iwe na angalau herufi/namba 6.");
-        if (password !== String(form.get("repeat_password") ?? "")) throw new Error("Password na Repeat Password hazifanani.");
+        if (password !== String(form.get("repeat_password") ?? ""))
+          throw new Error("Password na Repeat Password hazifanani.");
         const username = value("username").toLowerCase();
-        if (!/^[a-z0-9_]{3,30}$/.test(username)) throw new Error("Username iwe na herufi, namba au _ (herufi 3–30).");
+        if (!/^[a-z0-9_]{3,30}$/.test(username))
+          throw new Error("Username iwe na herufi, namba au _ (herufi 3–30).");
         const email = value("email").toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Weka email halali, mfano jina@gmail.com.");
-        const referralUsername = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref")?.trim().toLowerCase() || "" : "";
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: value("email").toLowerCase(), password,
-          options: { data: { full_name: value("full_name"), username, phone: value("phone"), country: value("country"), referral_username: referralUsername || null } },
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+          throw new Error("Weka email halali, mfano jina@gmail.com.");
+        const referralUsername =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("ref")?.trim().toLowerCase() || ""
+            : "";
+        const { data, error: signUpError } = await platform.auth.signUp({
+          email: value("email").toLowerCase(),
+          password,
+          options: {
+            data: {
+              full_name: value("full_name"),
+              username,
+              phone: value("phone"),
+              country: value("country"),
+              referral_username: referralUsername || null,
+            },
+          },
         });
-        if (signUpError) {
-          const detail = [signUpError.message, signUpError.code ? `Code: ${signUpError.code}` : ""].filter(Boolean).join(" — ");
-          if (/500|database error|trigger|duplicate key|gochati_users/i.test(detail)) {
-            throw new Error(`Usajili umeshindwa kuhifadhi taarifa kwenye database. Kama kosa linaendelea, endesha SQL ya kurekebisha usajili kwenye Supabase SQL Editor. Maelezo: ${detail}`);
-          }
-          throw new Error(detail);
-        }
+        if (signUpError) throw signUpError;
         if (!data.session) {
-          setMessage("Akaunti imetengenezwa lakini Supabase inahitaji uthibitisho wa email. Angalia inbox yako, au zima Confirm email kwenye Supabase Auth ili kuendelea moja kwa moja.");
+          setMessage(
+            "Akaunti imetengenezwa. Angalia email yako na bonyeza kiungo cha uthibitisho, kisha ingia.",
+          );
           return;
         }
         await navigate({ to: "/payment", replace: true });
       } else if (mode === "login") {
-        const username = value("username").toLowerCase();
-        const response = await fetch("/api/gochati-login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
-        const sessionData = await response.json().catch(() => ({}));
-        if (!response.ok || !sessionData?.access_token || !sessionData?.refresh_token) {
-          throw new Error(typeof sessionData?.message === "string" ? sessionData.message : "Username au password si sahihi.");
-        }
-        const { error: sessionError } = await supabase.auth.setSession({ access_token: sessionData.access_token, refresh_token: sessionData.refresh_token });
-        if (sessionError) throw new Error("Imeshindikana kuanzisha session. Jaribu tena.");
+        const { error: loginError } = await platform.auth.signInWithPassword({
+          email: value("email").toLowerCase(),
+          password,
+        });
+        if (loginError)
+          throw new Error("Email au password si sahihi. Hakikisha email imethibitishwa.");
         await navigate({ to: "/payment", replace: true });
       } else if (mode === "forgot") {
-        throw new Error("Wasiliana na huduma kwa wateja ili kusaidiwa kurejesha password ya akaunti ya username.");
+        throw new Error(
+          "Wasiliana na huduma kwa wateja ili kusaidiwa kurejesha password ya akaunti ya username.",
+        );
       } else {
         throw new Error("Fungua kiungo halali cha kurejesha password kwanza.");
       }
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Imeshindikana. Jaribu tena."); }
-    finally { setBusy(false); }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Imeshindikana. Jaribu tena.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  return <main className="auth-page auth-register"><section className="auth-content">
-    <img src="/gochat/logo.png" alt="Gochati" width={88} height={88} className="mx-auto mb-4 rounded-2xl object-contain" />
-    <h1>{register ? "Fungua Akaunti" : mode === "login" ? "Ingia kwenye Akaunti" : "Rejesha Password"}</h1>
-    <p className="auth-subtitle">{register ? "Jaza taarifa zako kisha endelea kwenye ukurasa wa malipo." : "Tumia username na password ulizotumia wakati wa usajili."}</p>
-    <form onSubmit={submit}>
-      {register && <>
-        <label className="auth-field"><span>Full name</span><div className="auth-input"><input name="full_name" placeholder="Majina yako kamili" autoComplete="name" required /></div></label>
-        <label className="auth-field"><span>Email</span><div className="auth-input"><input name="email" type="email" placeholder="jina@gmail.com" autoComplete="email" required /></div></label>
-        <label className="auth-field"><span>Username</span><div className="auth-input"><input name="username" placeholder="Chagua username" autoComplete="username" minLength={3} maxLength={30} required /></div></label>
-        <label className="auth-field"><span>Phone number</span><div className="auth-input"><input name="phone" placeholder="0712345678" type="tel" autoComplete="tel" pattern="[+]?[0-9 ]{9,16}" required /></div></label>
-        <label className="auth-field"><span>Choose Country</span><div className="auth-input"><select name="country" defaultValue="" required><option value="" disabled>Chagua nchi</option>{countries.map(country => <option key={country} value={country}>{country}</option>)}</select></div></label>
-      </>}
-      {!register && <label className="auth-field"><span>Username</span><div className="auth-input"><input name="username" autoComplete="username" placeholder="Username uliyosajili" required /></div></label>}
-      {mode !== "forgot" && <>
-        <label className="auth-field"><span>Password</span><div className="auth-input"><input name="password" type="password" autoComplete={register ? "new-password" : "current-password"} minLength={6} placeholder="Password (angalau herufi 6)" required /></div></label>
-        {register && <label className="auth-field"><span>Repeat password</span><div className="auth-input"><input name="repeat_password" type="password" autoComplete="new-password" minLength={6} placeholder="Rudia password" required /></div></label>}
-      </>}
-      {register && <label className="mt-3 mb-4 flex items-start gap-2 text-sm leading-5"><input name="agree_terms" type="checkbox" required className="mt-1 size-4 accent-primary" /><span>Nimekubali <Link to="/terms" className="font-semibold underline underline-offset-2">Terms of Service za Gochati</Link> na nimeelewa masharti ya matumizi ya huduma.</span></label>}
-      {error && <p className="auth-error" role="alert">{error}</p>}
-      {message && <p className="auth-message" role="status">{message}</p>}
-      <Button variant="reference" type="submit" disabled={busy} className="auth-submit">{busy ? "Subiri..." : register ? "JISAJILI" : "INGIA"}</Button>
-    </form>
-    <p className="auth-footer">{register ? <>Una akaunti tayari? <Button asChild variant="reference"><Link to="/login">Ingia hapa</Link></Button></> : <>Huna akaunti? <Button asChild variant="reference"><Link to="/register">Jisajili hapa</Link></Button></>}</p>
-  </section></main>;
+  return (
+    <main className="auth-page auth-register">
+      <section className="auth-content">
+        <img
+          src="/gochat/logo.png"
+          alt="Gochati"
+          width={88}
+          height={88}
+          className="mx-auto mb-4 rounded-2xl object-contain"
+        />
+        <h1>
+          {register
+            ? "Fungua Akaunti"
+            : mode === "login"
+              ? "Ingia kwenye Akaunti"
+              : "Rejesha Password"}
+        </h1>
+        <p className="auth-subtitle">
+          {register
+            ? "Jaza taarifa zako kisha endelea kwenye ukurasa wa malipo."
+            : "Tumia email na password ulizotumia wakati wa usajili."}
+        </p>
+        <form onSubmit={submit}>
+          {register && (
+            <>
+              <label className="auth-field">
+                <span>Full name</span>
+                <div className="auth-input">
+                  <input
+                    name="full_name"
+                    placeholder="Majina yako kamili"
+                    autoComplete="name"
+                    required
+                  />
+                </div>
+              </label>
+              <label className="auth-field">
+                <span>Email</span>
+                <div className="auth-input">
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="jina@gmail.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              </label>
+              <label className="auth-field">
+                <span>Username</span>
+                <div className="auth-input">
+                  <input
+                    name="username"
+                    placeholder="Chagua username"
+                    autoComplete="username"
+                    minLength={3}
+                    maxLength={30}
+                    required
+                  />
+                </div>
+              </label>
+              <label className="auth-field">
+                <span>Phone number</span>
+                <div className="auth-input">
+                  <input
+                    name="phone"
+                    placeholder="0712345678"
+                    type="tel"
+                    autoComplete="tel"
+                    pattern="[+]?[0-9 ]{9,16}"
+                    required
+                  />
+                </div>
+              </label>
+              <label className="auth-field">
+                <span>Choose Country</span>
+                <div className="auth-input">
+                  <select name="country" defaultValue="" required>
+                    <option value="" disabled>
+                      Chagua nchi
+                    </option>
+                    {countries.map((country) => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+            </>
+          )}
+          {!register && (
+            <label className="auth-field">
+              <span>Email</span>
+              <div className="auth-input">
+                <input
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="jina@gmail.com"
+                  required
+                />
+              </div>
+            </label>
+          )}
+          {mode !== "forgot" && (
+            <>
+              <label className="auth-field">
+                <span>Password</span>
+                <div className="auth-input">
+                  <input
+                    name="password"
+                    type="password"
+                    autoComplete={register ? "new-password" : "current-password"}
+                    minLength={6}
+                    placeholder="Password (angalau herufi 6)"
+                    required
+                  />
+                </div>
+              </label>
+              {register && (
+                <label className="auth-field">
+                  <span>Repeat password</span>
+                  <div className="auth-input">
+                    <input
+                      name="repeat_password"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={6}
+                      placeholder="Rudia password"
+                      required
+                    />
+                  </div>
+                </label>
+              )}
+            </>
+          )}
+          {register && (
+            <label className="mt-3 mb-4 flex items-start gap-2 text-sm leading-5">
+              <input
+                name="agree_terms"
+                type="checkbox"
+                required
+                className="mt-1 size-4 accent-primary"
+              />
+              <span>
+                Nimekubali{" "}
+                <Link to="/terms" className="font-semibold underline underline-offset-2">
+                  Terms of Service za Gochati
+                </Link>{" "}
+                na nimeelewa masharti ya matumizi ya huduma.
+              </span>
+            </label>
+          )}
+          {error && (
+            <p className="auth-error" role="alert">
+              {error}
+            </p>
+          )}
+          {message && (
+            <p className="auth-message" role="status">
+              {message}
+            </p>
+          )}
+          <Button variant="reference" type="submit" disabled={busy} className="auth-submit">
+            {busy ? "Subiri..." : register ? "JISAJILI" : "INGIA"}
+          </Button>
+        </form>
+        {!register && <PasswordHelp />}
+        <p className="auth-footer">
+          {register ? (
+            <>
+              Una akaunti tayari?{" "}
+              <Button asChild variant="reference">
+                <Link to="/login">Ingia hapa</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              Huna akaunti?{" "}
+              <Button asChild variant="reference">
+                <Link to="/register">Jisajili hapa</Link>
+              </Button>
+            </>
+          )}
+        </p>
+      </section>
+    </main>
+  );
 }

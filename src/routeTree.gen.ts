@@ -10,76 +10,141 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PaymentRouteImport } from './routes/payment'
-import { Route as AdminRouteImport } from './routes/admin'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WithdrawalRouteImport } from './routes/withdrawal'
 import { Route as ChatPersonIdRouteImport } from './routes/chat.$personId'
-import { Route as ApiGochatiLoginRouteImport } from './routes/api.gochati-login'
-
-const RegisterRoute = RegisterRouteImport.update({ id: '/register', path: '/register', getParentRoute: () => rootRouteImport } as any)
-const LoginRoute = LoginRouteImport.update({ id: '/login', path: '/login', getParentRoute: () => rootRouteImport } as any)
-const PaymentRoute = PaymentRouteImport.update({ id: '/payment', path: '/payment', getParentRoute: () => rootRouteImport } as any)
-const AdminRoute = AdminRouteImport.update({ id: '/admin', path: '/admin', getParentRoute: () => rootRouteImport } as any)
-const WithdrawalRoute = WithdrawalRouteImport.update({ id: '/withdrawal', path: '/withdrawal', getParentRoute: () => rootRouteImport } as any)
-const ChatPersonIdRoute = ChatPersonIdRouteImport.update({ id: '/chat/$personId', path: '/chat/$personId', getParentRoute: () => rootRouteImport } as any)
-const ApiGochatiLoginRoute = ApiGochatiLoginRouteImport.update({ id: '/api/gochati-login', path: '/api/gochati-login', getParentRoute: () => rootRouteImport } as any)
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentRoute = PaymentRouteImport.update({
+  id: '/payment',
+  path: '/payment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WithdrawalRoute = WithdrawalRouteImport.update({
+  id: '/withdrawal',
+  path: '/withdrawal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatPersonIdRoute = ChatPersonIdRouteImport.update({
+  id: '/chat/$personId',
+  path: '/chat/$personId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/register': typeof RegisterRoute
+  '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
-  '/admin': typeof AdminRoute
+  '/register': typeof RegisterRoute
+  '/terms': typeof TermsRoute
   '/withdrawal': typeof WithdrawalRoute
   '/chat/$personId': typeof ChatPersonIdRoute
-  '/api/gochati-login': typeof ApiGochatiLoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/register': typeof RegisterRoute
+  '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
-  '/admin': typeof AdminRoute
+  '/register': typeof RegisterRoute
+  '/terms': typeof TermsRoute
   '/withdrawal': typeof WithdrawalRoute
   '/chat/$personId': typeof ChatPersonIdRoute
-  '/api/gochati-login': typeof ApiGochatiLoginRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/register': typeof RegisterRoute
+  '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
-  '/admin': typeof AdminRoute
+  '/register': typeof RegisterRoute
+  '/terms': typeof TermsRoute
   '/withdrawal': typeof WithdrawalRoute
   '/chat/$personId': typeof ChatPersonIdRoute
-  '/api/gochati-login': typeof ApiGochatiLoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal' | '/chat/$personId' | '/api/gochati-login'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/admin'
+    | '/login'
+    | '/payment'
+    | '/register'
+    | '/terms'
+    | '/withdrawal'
+    | '/chat/$personId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal' | '/chat/$personId' | '/api/gochati-login'
-  id: '__root__' | '/' | '/register' | '/login' | '/payment' | '/admin' | '/withdrawal' | '/chat/$personId' | '/api/gochati-login'
+  to:
+    | '/'
+    | '/about'
+    | '/admin'
+    | '/login'
+    | '/payment'
+    | '/register'
+    | '/terms'
+    | '/withdrawal'
+    | '/chat/$personId'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/admin'
+    | '/login'
+    | '/payment'
+    | '/register'
+    | '/terms'
+    | '/withdrawal'
+    | '/chat/$personId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  RegisterRoute: typeof RegisterRoute
+  AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
   LoginRoute: typeof LoginRoute
   PaymentRoute: typeof PaymentRoute
-  AdminRoute: typeof AdminRoute
+  RegisterRoute: typeof RegisterRoute
+  TermsRoute: typeof TermsRoute
   WithdrawalRoute: typeof WithdrawalRoute
   ChatPersonIdRoute: typeof ChatPersonIdRoute
-  ApiGochatiLoginRoute: typeof ApiGochatiLoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -91,27 +156,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/register': { id: '/register'; path: '/register'; fullPath: '/register'; preLoaderRoute: typeof RegisterRouteImport; parentRoute: typeof rootRouteImport }
-    '/login': { id: '/login'; path: '/login'; fullPath: '/login'; preLoaderRoute: typeof LoginRouteImport; parentRoute: typeof rootRouteImport }
-    '/payment': { id: '/payment'; path: '/payment'; fullPath: '/payment'; preLoaderRoute: typeof PaymentRouteImport; parentRoute: typeof rootRouteImport }
-    '/admin': { id: '/admin'; path: '/admin'; fullPath: '/admin'; preLoaderRoute: typeof AdminRouteImport; parentRoute: typeof rootRouteImport }
-    '/withdrawal': { id: '/withdrawal'; path: '/withdrawal'; fullPath: '/withdrawal'; preLoaderRoute: typeof WithdrawalRouteImport; parentRoute: typeof rootRouteImport }
-    '/chat/$personId': { id: '/chat/$personId'; path: '/chat/$personId'; fullPath: '/chat/$personId'; preLoaderRoute: typeof ChatPersonIdRouteImport; parentRoute: typeof rootRouteImport }
-    '/api/gochati-login': { id: '/api/gochati-login'; path: '/api/gochati-login'; fullPath: '/api/gochati-login'; preLoaderRoute: typeof ApiGochatiLoginRouteImport; parentRoute: typeof rootRouteImport }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment': {
+      id: '/payment'
+      path: '/payment'
+      fullPath: '/payment'
+      preLoaderRoute: typeof PaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/withdrawal': {
+      id: '/withdrawal'
+      path: '/withdrawal'
+      fullPath: '/withdrawal'
+      preLoaderRoute: typeof WithdrawalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat/$personId': {
+      id: '/chat/$personId'
+      path: '/chat/$personId'
+      fullPath: '/chat/$personId'
+      preLoaderRoute: typeof ChatPersonIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = { IndexRoute, RegisterRoute, LoginRoute, PaymentRoute, AdminRoute, WithdrawalRoute, ChatPersonIdRoute, ApiGochatiLoginRoute }
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute,
+  LoginRoute: LoginRoute,
+  PaymentRoute: PaymentRoute,
+  RegisterRoute: RegisterRoute,
+  TermsRoute: TermsRoute,
+  WithdrawalRoute: WithdrawalRoute,
+  ChatPersonIdRoute: ChatPersonIdRoute,
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

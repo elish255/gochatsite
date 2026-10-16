@@ -1,14 +1,117 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { platform } from "@/integrations/netlify/client";
 import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/withdrawal")({ component: WithdrawalPage });
 function WithdrawalPage() {
-  const [balance, setBalance] = useState(0); const [amount, setAmount] = useState("100000"); const [phone, setPhone] = useState(""); const [history, setHistory] = useState<any[]>([]); const [notice, setNotice] = useState(""); const [active, setActive] = useState(false); const [premium, setPremium] = useState(false); const [vip, setVip] = useState(false); const [referrals, setReferrals] = useState(0); const [busy, setBusy] = useState(false); const [upgradeOpen, setUpgradeOpen] = useState(false); const [upgradeType, setUpgradeType] = useState<"premium"|"vip">("premium"); const nav = useNavigate();
-  const referralEligible = referrals >= 20; const vipEligible = vip || referralEligible;
-  useEffect(() => { void (async () => { const { data: { user } } = await supabase.auth.getUser(); if (!user) { await nav({ to: "/login", replace: true }); return; } const { data } = await supabase.from("gochati_users").select("balance,account_status,activation_paid,phone,is_premium,is_vip,referral_count").eq("id", user.id).maybeSingle(); setBalance(Number(data?.balance || 0)); setPhone(data?.phone || ""); setActive(data?.account_status === "active" && !!data?.activation_paid); setPremium(!!data?.is_premium); setVip(!!data?.is_vip); setReferrals(Number(data?.referral_count || 0)); const { data: items } = await supabase.from("gochati_withdrawals").select("id,amount,status,phone,created_at,paid_at").eq("user_id", user.id).order("created_at", { ascending: false }); setHistory(items || []); })(); }, [nav]);
-  async function request() { setNotice(""); if (!active) { setNotice("Akaunti yako haijawezeshwa kwa sasa."); return; } const n = Number(amount); if (balance < 100000 || n > balance) { setNotice("Salio halitoshi."); return; } if (n < 100000) { setNotice("Kiasi cha chini cha withdrawal ni TZS 100,000."); return; } if (!phone.trim()) { setNotice("Weka namba ya simu ya kupokea malipo."); return; } if (!premium) { setUpgradeType("premium"); setUpgradeOpen(true); return; } if (!vipEligible) { setUpgradeType("vip"); setUpgradeOpen(true); return; } setBusy(true); try { const { error } = await supabase.rpc("gochati_request_withdrawal", { p_amount: n, p_phone: phone }); if (error) throw error; setNotice("Ombi la withdrawal limetumwa na linasubiri admin."); const { data: { user } } = await supabase.auth.getUser(); if (user) { const { data } = await supabase.from("gochati_users").select("balance").eq("id", user.id).single(); setBalance(Number(data?.balance || 0)); const { data: items } = await supabase.from("gochati_withdrawals").select("id,amount,status,phone,created_at,paid_at").eq("user_id", user.id).order("created_at", { ascending: false }); setHistory(items || []); } } catch (e) { setNotice(e instanceof Error ? e.message : "Imeshindikana kutuma ombi."); } finally { setBusy(false); } }
-  return <main className="auth-page"><section className="auth-content"><h1>Withdrawal {premium && <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-sm text-amber-800">PREMIUM</span>} {vipEligible && <span className="ml-2 rounded-full bg-violet-100 px-2 py-1 text-sm text-violet-800">VIP ACCESS</span>}</h1><p className="auth-subtitle">Salio lako: <strong>TZS {balance.toLocaleString()}</strong></p>{!active && <p className="auth-error">Akaunti yako haijawezeshwa kwa sasa.</p>}<label className="auth-field"><span>Kiasi (TZS)</span><div className="auth-input"><input type="number" min="100000" step="1000" value={amount} onChange={e => setAmount(e.target.value)} /></div></label><label className="auth-field"><span>Namba ya kupokea malipo</span><div className="auth-input"><input value={phone} onChange={e => setPhone(e.target.value)} type="tel" required /></div></label><Button className="auth-submit" disabled={busy || !active} onClick={() => void request()}>{busy ? "Inatuma..." : "Omba Withdrawal"}</Button>{notice && <p role="status" className="auth-message">{notice}</p>}
-  {upgradeOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"><div role="dialog" aria-modal="true" className="w-full max-w-md rounded-2xl bg-background p-6 text-center shadow-xl"><h2 className="text-xl font-black">{upgradeType === "premium" ? "Upgrade Premium" : "Upgrade VIP"}</h2><p className="mt-4">{upgradeType === "premium" ? "Ili kuendelea na withdrawal, upgrade kwanza kwenda Premium." : "Ili kutoa pesa, upgrade kwenda VIP kwa TZS 35,000 au alika watu 20. Idadi yako sasa: " + referrals + "/20."}</p><Button className="auth-submit mt-5" onClick={() => { window.location.href = upgradeType === "premium" ? "/payment?type=premium" : "/payment?type=vip"; }}> {upgradeType === "premium" ? "UPGRADE PREMIUM — TZS 32,000" : "UPGRADE VIP — TZS 35,000"}</Button><Button variant="outline" className="mt-3 w-full" onClick={() => setUpgradeOpen(false)}>Funga</Button></div></div>}
-  <h2 className="mt-6 text-lg font-bold">Withdrawal history</h2>{history.length === 0 ? <p>Hakuna ombi la withdrawal bado.</p> : history.map(item => <article className="card-soft mt-3 p-3" key={item.id}><strong>TZS {Number(item.amount).toLocaleString()}</strong><p>Status: {item.status === "paid" ? "Paid" : item.status}</p><p>{new Date(item.created_at).toLocaleString()}</p>{item.paid_at && <p>Paid: {new Date(item.paid_at).toLocaleString()}</p>}</article>)}<Button variant="outline" className="mt-5 w-full" onClick={() => nav({ to: "/", replace: true })}>Rudi nyumbani</Button></section></main>;
+  const [balance, setBalance] = useState(0),
+    [amount, setAmount] = useState("100000"),
+    [phone, setPhone] = useState(""),
+    [history, setHistory] = useState<any[]>([]),
+    [notice, setNotice] = useState(""),
+    [active, setActive] = useState(false),
+    [busy, setBusy] = useState(false);
+  const nav = useNavigate();
+  async function load() {
+    const {
+      data: { user },
+    } = await platform.auth.getUser();
+    if (!user) {
+      await nav({ to: "/login", replace: true });
+      return;
+    }
+    const [profile, withdrawals] = await Promise.all([
+      platform.from("gochati_users").select("*").eq("id", user.id).single(),
+      platform
+        .from("gochati_withdrawals")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+    ]);
+    if (profile.error || withdrawals.error) {
+      setNotice(
+        profile.error?.message || withdrawals.error?.message || "Imeshindikana kupakia taarifa.",
+      );
+      return;
+    }
+    setBalance(Number(profile.data?.balance || 0));
+    setPhone(profile.data?.phone || "");
+    setActive(profile.data?.account_status === "active" && profile.data?.activation_paid);
+    setHistory(withdrawals.data || []);
+  }
+  useEffect(() => {
+    void load();
+  }, []);
+  async function request() {
+    setBusy(true);
+    setNotice("");
+    const { error } = await platform.rpc("gochati_request_withdrawal", {
+      p_amount: Number(amount),
+      p_phone: phone,
+    });
+    if (error) setNotice(error.message);
+    else {
+      setNotice("Ombi la majaribio limehifadhiwa. Hakuna pesa halisi inayotumwa.");
+      await load();
+    }
+    setBusy(false);
+  }
+  return (
+    <main className="auth-page">
+      <section className="auth-content">
+        <h1>Withdrawal ya majaribio</h1>
+        <p className="auth-subtitle">
+          Hii ni simulation. Balance haiwezi kutolewa kama pesa halisi. Hakuna ada ya Premium au VIP
+          inayohitajika kutuma ombi hili la majaribio.
+        </p>
+        <p>
+          Salio la majaribio: <strong>TZS {balance.toLocaleString()}</strong>
+        </p>
+        <label className="auth-field">
+          <span>Kiasi cha majaribio (TZS)</span>
+          <div className="auth-input">
+            <input
+              type="number"
+              min="100000"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+        </label>
+        <label className="auth-field">
+          <span>Namba ya simu</span>
+          <div className="auth-input">
+            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+        </label>
+        <Button className="auth-submit" disabled={busy || !active} onClick={() => void request()}>
+          {busy ? "Inahifadhi..." : "Hifadhi ombi la majaribio"}
+        </Button>
+        {notice && (
+          <p role="status" className="auth-message">
+            {notice}
+          </p>
+        )}
+        <h2 className="mt-6 text-lg font-bold">Historia ya majaribio</h2>
+        {history.length === 0 ? (
+          <p>Hakuna ombi bado.</p>
+        ) : (
+          history.map((item) => (
+            <article className="card-soft mt-3 p-3" key={item.id}>
+              <strong>TZS {Number(item.amount).toLocaleString()}</strong>
+              <p>{item.status === "paid" ? "Limekamilishwa (simulation)" : item.status}</p>
+              <p>{new Date(item.created_at).toLocaleString()}</p>
+            </article>
+          ))
+        )}
+        <Button
+          variant="outline"
+          className="mt-5 w-full"
+          onClick={() => nav({ to: "/", replace: true })}
+        >
+          Rudi nyumbani
+        </Button>
+      </section>
+    </main>
+  );
 }
