@@ -1,1 +1,15 @@
-{"name": "Gochati.online", "short_name": "Gochati.online", "lang": "sw", "start_url": "/", "scope": "/", "display": "standalone", "icons": [{"src": "/gochat/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}]}
+{
+  "id": "/",
+  "name": "GoChati",
+  "short_name": "GoChati",
+  "lang": "sw",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#101827",
+  "background_color": "#101827",
+  "icons": [
+    { "src": "/gochat/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/gochat/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
