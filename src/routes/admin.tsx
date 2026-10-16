@@ -140,32 +140,21 @@ function AdminPage() {
     setBalanceAdjustments((prev) => ({ ...prev, [id]: "" }));
     await load();
   }
-  async function notify(targetId?: string) {
+  async function notify() {
     if (!broadcast.trim()) {
       setNotice("Andika ujumbe kwanza.");
       return;
     }
-    let targets = rows;
-    if (targetId) {
-      targets = rows.filter((row) => row.id === targetId);
-    } else if (audience === "premium") {
-      targets = rows.filter((row) => row.is_premium);
-    } else if (audience === "normal") {
-      targets = rows.filter((row) => !row.is_premium);
-    } else if (audience === "active") {
-      targets = rows.filter((row) => row.account_status === "active" && row.activation_paid);
-    } else if (audience === "inactive") {
-      targets = rows.filter((row) => row.account_status !== "active" || !row.activation_paid);
-    }
-    if (!targets.length) {
-      setNotice("Hakuna watumiaji kwenye kundi hilo.");
-      return;
-    }
-    const payload = targets.map((row) => ({ user_id: row.id, message: broadcast.trim() }));
-    const { error } = await platform.from("gochati_notifications").insert(payload);
-    setNotice(error?.message || `Notification imetumwa kwa watumiaji ${targets.length}.`);
+    setSending(true);
+    const { data, error } = await platform.rpc("gochati_broadcast", {
+      audience,
+      message: broadcast.trim(),
+    });
+    setSending(false);
+    setNotice(error?.message || `Notification imetumwa kwa watumiaji ${data}.`);
     if (!error) setBroadcast("");
   }
+
   async function notifySelected() {
     if (!notifyUser || !userMessage.trim()) {
       setNotice("Andika ujumbe wa kumtumia mtumiaji.");
@@ -469,10 +458,12 @@ function AdminPage() {
                   <option value="premium">Premium users tu</option>
                   <option value="normal">Normal users tu</option>
                   <option value="active">Active users tu</option>
-                  <option value="inactive">Inactive users tu</option>
+                  <option value="inactive">Hawajalipia Activation fee</option>
                 </select>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <Button onClick={() => void notify()}>Tuma notification</Button>
+                  <Button disabled={sending} onClick={() => void notify()}>
+                    {sending ? "Inatuma..." : "Tuma notification"}
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={async () => {
@@ -713,8 +704,19 @@ function AdminPage() {
                         User: {w.user_id} · TZS {Number(w.amount).toLocaleString()} · {w.phone}
                       </p>
                       <p>
-                        Status: <strong className={w.status === "paid" ? "text-success" : "text-amber-600"}>{w.status === "paid" ? "Paid" : w.status === "pending" ? "Pending" : "Rejected"}</strong> ·{" "}
-                        {new Date(w.created_at).toLocaleString()}
+                        Makato: TZS {Number(w.fee || 0).toLocaleString()} · Baada ya makato: TZS{" "}
+                        {Number(w.net_amount ?? w.amount).toLocaleString()}
+                      </p>
+                      <p>
+                        Status:{" "}
+                        <strong className={w.status === "paid" ? "text-success" : "text-amber-600"}>
+                          {w.status === "paid"
+                            ? "Paid"
+                            : w.status === "pending"
+                              ? "Pending"
+                              : "Rejected"}
+                        </strong>{" "}
+                        · {new Date(w.created_at).toLocaleString()}
                       </p>
                       {w.status === "pending" && (
                         <Button className="mt-2" onClick={() => void markPaid(w.id)}>

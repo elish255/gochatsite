@@ -1,4 +1,5 @@
 import * as l from "react";
+import { SupportButton } from "./SupportButton";
 import { platform } from "@/integrations/netlify/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
@@ -404,7 +405,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     [a, o] = (0, l.useState)([]),
     [s, c] = (0, l.useState)(``),
     [u, d] = (0, l.useState)(!1),
-    [f, p] = (0, l.useState)(60),
+    [f, p] = (0, l.useState)(0),
     m = (0, l.useRef)(ae(e.name)),
     g = (0, l.useRef)(null),
     _ = (0, l.useRef)(!1);
@@ -436,12 +437,18 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
           }
           sessionId = data;
         }
-        p(active ? Math.max(1, Number(r.minutes || 1)) * 60 : 60);
+        const duration = Math.max(1, Number(r.minutes || 1)) * 60;
+        const deadline = Date.now() + duration * 1000;
+        p(duration);
         interval = setInterval(() => {
-          p((remaining) => remaining <= 1
-            ? (clearInterval(interval), _.current || ((_.current = !0), n(r.amount, sessionId)), 0)
-            : remaining - 1);
-        }, 1e3);
+          const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+          p(remaining);
+          if (remaining === 0 && !_.current) {
+            _.current = true;
+            clearInterval(interval);
+            void n(r.amount, sessionId);
+          }
+        }, 250);
       };
       void startCountdown();
       return () => { cancelled = true; if (interval) clearInterval(interval); };
@@ -773,7 +780,7 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         active ? (0, K.jsx)(`button`, {
           onClick: t,
           className: `grad-profit mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-lg transition active:scale-95`,
-          children: `Fungua chat`,
+          children: `Sawa`,
         }) : (0, K.jsxs)(K.Fragment, { children: [
           (0, K.jsxs)(`p`, {
             className: `mt-3 text-center text-sm leading-relaxed text-muted-foreground`,
@@ -1016,7 +1023,7 @@ function de() {
       a(nextBalance); w(nextBalance);
       const { data: profile } = await platform.from("gochati_users").select("net_income").eq("id", user.id).single();
       if (profile) r(Number(profile.net_income || 0));
-      h({ id: `earned-${Date.now()}`, text: `Salio la TZS ${I(e)} limehifadhiwa. Hizi si pesa halisi.` });
+      f({ open: true, amount: e });
       setTimeout(() => h(null), 5000);
     }, [accountActive]),
     J = (e) => {
@@ -1131,7 +1138,7 @@ function de() {
                 ],
               }),
               (0, K.jsxs)(`button`, {
-                onClick: () => { window.location.href = "sms:0743871339?body=Nielekeze%20kuhusu%20Gochati"; },
+                onClick: () => document.querySelector('[aria-label="Customer services"]')?.click(),
                 type: `button`,
                 className: `grad-withdraw flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-bold text-on-color shadow-lg`,
                 children: [

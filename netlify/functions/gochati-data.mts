@@ -6,6 +6,56 @@ export default async (req: Request) => {
     checkRequest(req);
     const { db, user, profile, isAdmin } = await authenticated(req);
     const b = await req.json();
+    if (b.rpc === "gochati_withdrawal_eligibility") {
+      const [counts] =
+        await db.sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE activation_paid AND account_status='active')::int AS active FROM gochati_users WHERE referred_by=${user.id}`;
+      return json({
+        data: {
+          is_premium: profile["is_premium"],
+          is_vip: profile["is_vip"],
+          referrals: counts?.["total"] || 0,
+          active_referrals: counts?.["active"] || 0,
+        },
+      });
+    }
+    if (b.rpc === "gochati_broadcast") {
+      assert(isAdmin, 403, "Admin pekee.");
+      const { audience, message } = b.args || {};
+      assert(
+        ["all", "active", "inactive", "premium", "normal"].includes(audience) &&
+          typeof message === "string" &&
+          message.trim().length > 0 &&
+          message.length <= 2000,
+        400,
+        "Ujumbe au kundi si sahihi.",
+      );
+      const conditions: Record<string, string> = {
+        all: "true",
+        active: "activation_paid AND account_status='active'",
+        inactive: "NOT activation_paid",
+        premium: "is_premium",
+        normal: "NOT is_premium AND NOT is_vip",
+      };
+      const client = await db.pool.connect();
+      try {
+        await client.query("BEGIN");
+        const result = await client.query(
+          `INSERT INTO gochati_notifications(user_id,message) SELECT id,$1 FROM gochati_users WHERE ${conditions[audience]}`,
+          [message.trim()],
+        );
+        await client.query(
+          "INSERT INTO gochati_admin_audit(admin_id,action,changes) VALUES($1,'send_notifications',$2)",
+          [user.id, JSON.stringify({ audience, count: result.rowCount })],
+        );
+        await client.query("COMMIT");
+        return json({ data: result.rowCount });
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
     if (b.rpc === "gochati_admin_adjust_balance") {
       assert(isAdmin, 403, "Admin pekee.");
       const { user_id: target, delta } = b.args || {};
@@ -76,8 +126,21 @@ export default async (req: Request) => {
           400,
           "Kiasi lazima kiwe zaidi ya TZS 20,000 na namba ya simu iwe sahihi.",
         );
+        const [counts] =
+          await db.sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE activation_paid AND account_status='active')::int AS active FROM gochati_users WHERE referred_by=${user.id}`;
+        assert(
+          profile["is_vip"] ||
+            (profile["is_premium"]
+              ? Number(counts?.["active"]) >= 5
+              : Number(counts?.["total"]) >= 10),
+          403,
+          profile["is_premium"]
+            ? "Alika watu 5 wawe active au upgrade kwenda VIP."
+            : "Alika watu 10 au upgrade kwenda Premium.",
+        );
+        const fee = Math.round(amount * 20) / 100;
         const rows =
-          await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} AND account_status='active' AND activation_paid RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone) SELECT id,${amount},${phone} FROM debited RETURNING id`;
+          await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} AND account_status='active' AND activation_paid RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone,fee,net_amount) SELECT id,${amount},${phone},${fee},${amount - fee} FROM debited RETURNING id`;
         assert(rows.length, 409, "Salio halitoshi.");
         return json({ data: rows[0]?.["id"] });
       }
