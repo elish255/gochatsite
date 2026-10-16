@@ -1,1 +1,1 @@
-{"name": "Gotchati", "short_name": "Gotchati", "lang": "sw", "start_url": "/", "scope": "/", "display": "standalone", "icons": [{"src": "/gochat/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}]}
+{"name": "Gochati.online", "short_name": "Gochati.online", "lang": "sw", "start_url": "/", "scope": "/", "display": "standalone", "icons": [{"src": "/gochat/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}]}

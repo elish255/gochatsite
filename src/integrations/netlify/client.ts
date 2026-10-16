@@ -1,4 +1,4 @@
-import { getUser, login, logout, signup, onAuthChange } from "@netlify/identity";
+import { getUser, login, logout, onAuthChange, hydrateSession } from "@netlify/identity";
 
 export type AppUser = {
   id: string;
@@ -27,6 +27,17 @@ export async function api(body: Record<string, unknown>) {
   if (!response.ok) throw new Error(value.message || "Imeshindikana kuhifadhi taarifa.");
   return value.data;
 }
+async function authRequest(body: Record<string, unknown>) {
+  if (await getUser()) await logout();
+  const response = await fetch("/api/gochati-auth", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.message || "Imeshindikana kuingia.");
+  return hydrateSession();
+}
 // A small query interface keeps the existing browser experience independent of storage.
 class Query implements PromiseLike<any> {
   private operation = "select";
@@ -35,6 +46,7 @@ class Query implements PromiseLike<any> {
   private one = false;
   private sort: { column: string; ascending: boolean } | undefined;
   private count = 100;
+  private searchTerm = "";
   constructor(private table: string) {}
   select(_columns?: string) {
     return this;
@@ -49,6 +61,10 @@ class Query implements PromiseLike<any> {
   }
   limit(count: number) {
     this.count = count;
+    return this;
+  }
+  search(value: string) {
+    this.searchTerm = value;
     return this;
   }
   maybeSingle() {
@@ -82,6 +98,7 @@ class Query implements PromiseLike<any> {
         one: this.one,
         sort: this.sort,
         limit: this.count,
+        search: this.searchTerm,
       }),
     ).then(onfulfilled, onrejected);
   }
@@ -91,17 +108,28 @@ export const platform = {
     getUser: async () => ({ data: { user: normalize(await getUser()) }, error: null }),
     signInWithPassword: ({ email, password }: { email: string; password: string }) =>
       result(() => login(email, password)),
+    signInWithUsername: ({ username, password }: { username: string; password: string }) =>
+      result(() => authRequest({ action: "login", username, password })),
     signUp: async ({
       email,
       password,
       options,
+      agreeTerms,
     }: {
       email: string;
       password: string;
       options: { data: Record<string, unknown> };
+      agreeTerms: boolean;
     }) => {
       try {
-        const user = await signup(email, password, options.data);
+        const user = await authRequest({
+          action: "register",
+          email,
+          password,
+          username: options.data["username"],
+          metadata: options.data,
+          agree_terms: agreeTerms,
+        });
         return { data: { user: normalize(user), session: await getUser() }, error: null };
       } catch (cause) {
         return {

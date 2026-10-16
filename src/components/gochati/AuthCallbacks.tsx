@@ -86,7 +86,7 @@ export function PasswordHelp() {
   if (!open)
     return (
       <Button type="button" variant="ghost" onClick={() => setOpen(true)}>
-        Umesahau password?
+        Forgot password? / Umesahau password?
       </Button>
     );
   return (
@@ -95,7 +95,7 @@ export function PasswordHelp() {
         e.preventDefault();
         setBusy(true);
         try {
-          await requestPasswordRecovery(email);
+          await requestPasswordRecovery(email.trim().toLowerCase());
           setNotice("Kama email imesajiliwa, angalia inbox kwa kiungo cha kurejesha password.");
         } catch {
           setNotice("Ombi halijatumwa. Jaribu tena.");
@@ -105,13 +105,21 @@ export function PasswordHelp() {
       }}
       className="mt-4"
     >
+      <p className="text-sm text-muted-foreground">
+        Weka email ya usajili. Utapokea kiungo cha kuweka password mpya.
+      </p>
       <label className="auth-field">
         <span>Email ya kurejesha password</span>
         <div className="auth-input">
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
       </label>
-      <Button disabled={busy}>Tuma kiungo</Button>
+      <Button type="submit" disabled={busy}>
+        {busy ? "Inatuma..." : "Tuma kiungo cha password mpya"}
+      </Button>
+      <Button type="button" variant="ghost" disabled={busy} onClick={() => setOpen(false)}>
+        Ghairi
+      </Button>
       {notice && <p role="status">{notice}</p>}
     </form>
   );

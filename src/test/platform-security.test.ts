@@ -33,6 +33,25 @@ beforeEach(() => {
   });
 });
 describe("Account API access", () => {
+  it("forbids ordinary users from searching the user directory", async () => {
+    expect(
+      (await handler(request({ table: "gochati_users", operation: "select", search: "Amina" })))
+        .status,
+    ).toBe(403);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+  it("lets administrators search names, usernames and phone numbers with parameters", async () => {
+    const current = await mocks.authenticated();
+    mocks.authenticated.mockResolvedValue({ ...current, isAdmin: true });
+    const response = await handler(
+      request({ table: "gochati_users", operation: "select", search: "amina_" }),
+    );
+    expect(response.status).toBe(200);
+    expect(mocks.query.mock.calls[0]?.[0]).toContain(
+      "full_name ILIKE $1 OR username ILIKE $1 OR phone ILIKE $1",
+    );
+    expect(mocks.query.mock.calls[0]?.[1]).toEqual(["%amina\\_%", 100]);
+  });
   it("rejects cross-origin mutations before authentication", async () => {
     expect(
       (
