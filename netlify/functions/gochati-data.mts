@@ -83,7 +83,7 @@ export default async (req: Request) => {
         );
         const rows =
           await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone) SELECT id,${amount},${phone} FROM debited RETURNING id`;
-        assert(rows.length, 409, "Salio la majaribio halitoshi.");
+        assert(rows.length, 409, "Salio halitoshi.");
         return json({ data: rows[0]?.["id"] });
       }
       assert(false, 400, "Ombi halijatambulika.");
@@ -120,6 +120,12 @@ export default async (req: Request) => {
     }
     let query = "";
     if (b.operation === "select") {
+      if (b.search) {
+        assert(isAdmin && table === "gochati_users", 403, "Admin pekee.");
+        assert(typeof b.search === "string" && b.search.length <= 100, 400, "Utafutaji si sahihi.");
+        const term = param(`%${b.search.trim().replace(/[\\%_]/g, "\\$&")}%`);
+        clauses.push(`(full_name ILIKE ${term} OR username ILIKE ${term} OR phone ILIKE ${term})`);
+      }
       assert(table !== "gochati_admin_audit" || isAdmin, 403, "Admin pekee.");
       let order = "created_at DESC";
       if (b.sort) {

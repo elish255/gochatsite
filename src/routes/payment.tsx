@@ -183,14 +183,14 @@ function PaymentPage() {
     <main className="auth-page">
       <section className="auth-content">
         <img
-          src="/gochat/logo.png"
+          src="/gochat/logo.svg"
           alt="Gochati"
           width={64}
           height={64}
           className="mx-auto mb-4 rounded-2xl"
         />
         <p className="auth-message">
-          Ada hizi ni malipo halisi ya huduma. Balance na withdrawal za chat ni majaribio na hazitoi
+          Ada hizi ni malipo halisi ya huduma. Balance na withdrawal za chat hazitoi
           pesa halisi.
         </p>
         <h1>
@@ -202,7 +202,7 @@ function PaymentPage() {
         </h1>
         <p className="auth-subtitle">
           {vipMode
-            ? "Lipa TZS 35,000 kwa kiwango cha VIP. Ada hii si uwekezaji wala malipo ya kutoa salio la majaribio."
+            ? "Lipa TZS 35,000 kwa kiwango cha VIP. Ada hii si uwekezaji wala malipo ya kutoa salio."
             : premiumMode
               ? "Lipa TZS 32,000 kubadilisha akaunti yako kuwa Premium."
               : "Lipa TZS 16,000 ili kuwasha akaunti yako na kuendelea kutumia huduma."}

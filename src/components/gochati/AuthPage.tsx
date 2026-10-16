@@ -51,6 +51,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
         const { data, error: signUpError } = await platform.auth.signUp({
           email: value("email").toLowerCase(),
           password,
+          agreeTerms: !!form.get("agree_terms"),
           options: {
             data: {
               full_name: value("full_name"),
@@ -63,19 +64,17 @@ export function AuthPage({ mode }: { mode: Mode }) {
         });
         if (signUpError) throw signUpError;
         if (!data.session) {
-          setMessage(
-            "Akaunti imetengenezwa. Angalia email yako na bonyeza kiungo cha uthibitisho, kisha ingia.",
+          throw new Error(
+            "Akaunti imehifadhiwa. Ingia kwa username na password ili kuendelea kwenye malipo.",
           );
-          return;
         }
         await navigate({ to: "/payment", replace: true });
       } else if (mode === "login") {
-        const { error: loginError } = await platform.auth.signInWithPassword({
-          email: value("email").toLowerCase(),
+        const { error: loginError } = await platform.auth.signInWithUsername({
+          username: value("username").toLowerCase(),
           password,
         });
-        if (loginError)
-          throw new Error("Email au password si sahihi. Hakikisha email imethibitishwa.");
+        if (loginError) throw new Error("Username au password si sahihi.");
         await navigate({ to: "/payment", replace: true });
       } else if (mode === "forgot") {
         throw new Error(
@@ -95,7 +94,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     <main className="auth-page auth-register">
       <section className="auth-content">
         <img
-          src="/gochat/logo.png"
+          src="/gochat/logo.svg"
           alt="Gochati"
           width={88}
           height={88}
@@ -111,7 +110,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
         <p className="auth-subtitle">
           {register
             ? "Jaza taarifa zako kisha endelea kwenye ukurasa wa malipo."
-            : "Tumia email na password ulizotumia wakati wa usajili."}
+            : "Tumia username na password ulizotumia wakati wa usajili."}
         </p>
         <form onSubmit={submit}>
           {register && (
@@ -184,13 +183,15 @@ export function AuthPage({ mode }: { mode: Mode }) {
           )}
           {!register && (
             <label className="auth-field">
-              <span>Email</span>
+              <span>Username</span>
               <div className="auth-input">
                 <input
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="jina@gmail.com"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  placeholder="Username yako"
                   required
                 />
               </div>

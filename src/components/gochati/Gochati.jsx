@@ -2,7 +2,8 @@ import * as l from "react";
 import { platform } from "@/integrations/netlify/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
-const logoAsset = { url: "/gochat/logo.png" };
+import { ActivationRequiredDialog } from "./ActivationRequiredDialog";
+const logoAsset = { url: "/gochat/logo.svg" };
 import { ArrowRight as f, BellRing as p, CircleCheck as m, Clock as h, Download as g, EllipsisVertical as _, Headphones as v, MessageCircle as y, MessageSquare as b, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
 const portraits = Object.fromEntries(Array.from({ length: 52 }, (_, index) => { const n = Math.floor(index / 2) + 10; const gender = index % 2 === 0 ? "women" : "men"; return [`person-${index + 1}`, `/avators/${gender}-${n}.jpg`]; }));
 function render(factory, type, props, key) {
@@ -170,7 +171,7 @@ var G = [
       name: `Rehema Said`,
       place: `Tanga`,
       stars: 5,
-      text: `Ninafurahia mazungumzo ya majaribio na kujifunza kuhusu tamaduni.`,
+      text: `Ninafurahia mazungumzo na kujifunza kuhusu tamaduni.`,
     },
     {
       name: `Daniel Kimaro`,
@@ -753,6 +754,7 @@ function se({ person: e, kind: t, onClose: n }) {
   );
 }
 function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
+  if (!active) return <ActivationRequiredDialog open onClose={t} />;
   return (0, K.jsx)(`div`, {
     className: `fixed inset-0 z-[80] flex items-center justify-center bg-overlay/60 p-4 backdrop-blur-sm`,
     children: (0, K.jsxs)(`div`, {
@@ -770,7 +772,7 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         }),
         (0, K.jsx)(`h3`, {
           className: `text-center text-lg font-bold`,
-          children: active ? `Hongera! Malipo yako ya ${I(e || 0)} yamewekwa kwenye balance.` : (e ? `Hongera! Umepokea malipo yako ya ${I(e)}` : `Akaunti yako haijawa hai`),
+          children: active ? `Salio la ${I(e || 0)} limehifadhiwa; hakuna pesa halisi iliyotumwa.` : `Akaunti yako haijawa hai`,
         }),
         active ? (0, K.jsx)(`button`, {
           onClick: t,
@@ -779,7 +781,7 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         }) : (0, K.jsxs)(K.Fragment, { children: [
           (0, K.jsxs)(`p`, {
             className: `mt-3 text-center text-sm leading-relaxed text-muted-foreground`,
-            children: [`Ili kupokea malipo haya yaingie kwenye namba yako ya simu, lazima uwe na akaunti iliyo hai (active account). Bonyeza hapa chini kufungua na ku-activate akaunti yako kwa kulipia `, (0, K.jsx)(`span`, { className: `font-bold text-foreground`, children: `TZS 16,000` }), `.`],
+            children: [`Huduma hii inahitaji akaunti iliyo hai (active account). Ada ya activation ni `, (0, K.jsx)(`span`, { className: `font-bold text-foreground`, children: `TZS 16,000` }), `. Kulipa ada hakuwezeshi kutoa salio kama pesa halisi.`],
           }),
           (0, K.jsxs)(`a`, { href: L, className: `grad-withdraw mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-lg transition active:scale-95`, children: [`Fungua na Activate Akaunti Hapa `, (0, K.jsx)(f, { className: `size-4` })] }),
         ]}),
@@ -1012,7 +1014,7 @@ function de() {
       if (error) { h({ id: `earned-error-${Date.now()}`, text: `Mapato hayajaongezwa: ${error.message}` }); setTimeout(() => h(null), 7000); return; }
       const nextBalance = Number(savedBalance || 0);
       a(nextBalance); r(nextBalance); w(nextBalance);
-      h({ id: `earned-${Date.now()}`, text: `Salio la majaribio la TZS ${I(e)} limehifadhiwa. Hizi si pesa halisi.` });
+      h({ id: `earned-${Date.now()}`, text: `Salio la TZS ${I(e)} limehifadhiwa. Hizi si pesa halisi.` });
       setTimeout(() => h(null), 5000);
     }, [accountActive]),
     J = (e) => {
@@ -1085,7 +1087,7 @@ function de() {
                 children: [
                   (0, K.jsx)(`h1`, {
                     className: `text-2xl font-black tracking-normal`,
-                    children: `Gochati`,
+                    children: `gochati.online`,
                   }),
                   (isVip || isPremium) && (0, K.jsx)(`span`, { className: `inline-flex mt-1 rounded-full px-3 py-1 text-xs font-black ${isVip ? `vip-diamond-badge` : `border border-amber-300 bg-amber-100 text-amber-800`}`, children: isVip ? `◆ VIP ACCOUNT` : `✦ PREMIUM ACCOUNT` }),
                   (0, K.jsx)(`p`, {
@@ -1183,7 +1185,7 @@ function de() {
                     children: I(C),
                   }),
                   (0, K.jsx)(`button`, {
-                    onClick: () => { window.location.href = "/withdrawal"; },
+                    onClick: () => { if (!accountActive) { f({ open: !0, amount: null }); return; } window.location.href = "/withdrawal"; },
                     className: `rounded-xl bg-overlay/30 px-2 py-2 text-[11px] font-bold sm:text-xs`,
                     children: `Toa Pesa`,
                   }),

@@ -4,15 +4,15 @@ import support from "@/assets/support.jpg";
 import { AboutGochati } from "@/components/gochati/AboutGochati";
 
 export const Route = createFileRoute("/")({
- head: () => ({ links: [{ rel: "canonical", href: "https://gochati.site/" }], meta: [
+ head: () => ({ links: [{ rel: "canonical", href: "https://gochati.online/" }], meta: [
   { title: "Gochati — Mazungumzo na Wageni" },
   { name: "description", content: "Gochati ni jukwaa la kuchati na wageni kutoka nje ya nchi, kujifunza na kufurahia mazungumzo ya kimataifa." },
   { name: "keywords", content: "Gochati, Gochati, kuchati na wageni, chat na kulipwa" },
   { name: "robots", content: "index, follow, max-image-preview:large" },
   { property: "og:title", content: "Gochati — Mazungumzo ya Mtandaoni" },
-  { property: "og:description", content: "Furahia mazungumzo ya majaribio na ujifunze kuhusu tamaduni." },
+  { property: "og:description", content: "Furahia mazungumzo na ujifunze kuhusu tamaduni." },
   { property: "og:type", content: "website" },
-  { property: "og:url", content: "https://gochati.site/" },
+  { property: "og:url", content: "https://gochati.online/" },
   { property: "og:site_name", content: "Gochati" },
   { name: "twitter:card", content: "summary_large_image" },
  ] }),
