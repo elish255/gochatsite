@@ -125,27 +125,109 @@ describe("Account API access", () => {
   });
 });
 describe("Earning and withdrawal rules", () => {
-  it.each([[1, 5000], [5, 25000]])("accepts %i minute sessions for %i", async (minutes, amount) => {
+  it.each([
+    [1, 5000],
+    [5, 25000],
+  ])("accepts %i minute sessions for %i", async (minutes, amount) => {
     mocks.sql.mockResolvedValue([{ id: "session" }]);
-    const response = await handler(request({ rpc: "gochati_start_earning_session", args: { p_minutes: minutes, p_amount: amount, p_partner: "person-1" } }));
+    const response = await handler(
+      request({
+        rpc: "gochati_start_earning_session",
+        args: { p_minutes: minutes, p_amount: amount, p_partner: "person-1" },
+      }),
+    );
     expect(response.status).toBe(200);
   });
-  it.each([[10, 25000], [1, 25000], [5, 100000]])("rejects unsupported session %i / %i", async (minutes, amount) => {
-    const response = await handler(request({ rpc: "gochati_start_earning_session", args: { p_minutes: minutes, p_amount: amount, p_partner: "person-1" } }));
+  it.each([
+    [10, 25000],
+    [1, 25000],
+    [5, 100000],
+  ])("rejects unsupported session %i / %i", async (minutes, amount) => {
+    const response = await handler(
+      request({
+        rpc: "gochati_start_earning_session",
+        args: { p_minutes: minutes, p_amount: amount, p_partner: "person-1" },
+      }),
+    );
     expect(response.status).toBe(400);
     expect(mocks.sql).not.toHaveBeenCalled();
   });
   it.each([20000, 0, 25000.5])("rejects withdrawal amount %i", async (amount) => {
-    expect((await handler(request({ rpc: "gochati_request_withdrawal", args: { p_amount: amount, p_phone: "0712345678" } }))).status).toBe(400);
+    expect(
+      (
+        await handler(
+          request({
+            rpc: "gochati_request_withdrawal",
+            args: { p_amount: amount, p_phone: "0712345678" },
+          }),
+        )
+      ).status,
+    ).toBe(400);
     expect(mocks.sql).not.toHaveBeenCalled();
   });
+  it.each([
+    { is_premium: false, total: 9, active: 5 },
+    { is_premium: true, total: 10, active: 4 },
+  ])(
+    "enforces membership referral requirements on the server %j",
+    async ({ is_premium, total, active }) => {
+      const current = await mocks.authenticated();
+      mocks.authenticated.mockResolvedValue({
+        ...current,
+        profile: { ...current.profile, is_premium },
+      });
+      mocks.sql.mockResolvedValueOnce([{ total, active }]);
+      expect(
+        (
+          await handler(
+            request({
+              rpc: "gochati_request_withdrawal",
+              args: { p_amount: 25000, p_phone: "0712345678" },
+            }),
+          )
+        ).status,
+      ).toBe(403);
+      expect(mocks.sql).toHaveBeenCalledTimes(1);
+    },
+  );
+  it("blocks non-admin broadcasts", async () => {
+    expect(
+      (
+        await handler(
+          request({ rpc: "gochati_broadcast", args: { audience: "all", message: "Habari" } }),
+        )
+      ).status,
+    ).toBe(403);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it("accepts a funded withdrawal above 20,000", async () => {
-    mocks.sql.mockResolvedValue([{ id: "withdrawal" }]);
-    expect((await handler(request({ rpc: "gochati_request_withdrawal", args: { p_amount: 25000, p_phone: "0712345678" } }))).status).toBe(200);
+    mocks.sql
+      .mockResolvedValueOnce([{ total: 10, active: 5 }])
+      .mockResolvedValueOnce([{ id: "withdrawal" }]);
+    expect(
+      (
+        await handler(
+          request({
+            rpc: "gochati_request_withdrawal",
+            args: { p_amount: 25000, p_phone: "0712345678" },
+          }),
+        )
+      ).status,
+    ).toBe(200);
   });
   it("rejects insufficient funds without creating a request", async () => {
-    mocks.sql.mockResolvedValue([]);
-    expect((await handler(request({ rpc: "gochati_request_withdrawal", args: { p_amount: 25000, p_phone: "0712345678" } }))).status).toBe(409);
+    mocks.sql.mockResolvedValueOnce([{ total: 10, active: 5 }]).mockResolvedValueOnce([]);
+    expect(
+      (
+        await handler(
+          request({
+            rpc: "gochati_request_withdrawal",
+            args: { p_amount: 25000, p_phone: "0712345678" },
+          }),
+        )
+      ).status,
+    ).toBe(409);
   });
 });
 describe("SplashPay verification", () => {

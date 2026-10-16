@@ -38,7 +38,7 @@ export default async (req: Request) => {
         403,
         "Akaunti imesimamishwa.",
       );
-      const prices: Record<string, number> = { activation: 16000, premium: 32000, vip: 35000 };
+      const prices: Record<string, number> = { activation: 16000, premium: 32000, vip: 35500 };
       const purpose = String(b.purpose),
         amount = prices[purpose];
       assert(amount && Number(b.amount) === amount, 400, "Ada si sahihi.");
