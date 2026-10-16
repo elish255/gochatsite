@@ -93,10 +93,9 @@ function PaymentPage() {
               ? "Malipo yamefanikiwa. Akaunti yako imebadilishwa kuwa Premium."
               : "Malipo yamefanikiwa. Akaunti yako imewashwa.",
         );
-        if (premiumMode || vipMode)
-          setTimeout(() => {
-            window.location.href = "/";
-          }, 900);
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 900);
       } else if (
         ["cancelled", "user_cancelled", "rejected", "failed", "expired"].includes(status)
       ) {
@@ -155,10 +154,9 @@ function PaymentPage() {
                   ? "Malipo yamefanikiwa. Akaunti yako imebadilishwa kuwa Premium."
                   : "Malipo yamefanikiwa. Akaunti yako imewashwa.",
             );
-            if (premiumMode || vipMode)
-              setTimeout(() => {
-                window.location.href = "/";
-              }, 900);
+            setTimeout(() => {
+              window.location.href = "/";
+            }, 900);
             return;
           }
           if (["cancelled", "user_cancelled", "rejected", "failed", "expired"].includes(status)) {
@@ -189,9 +187,6 @@ function PaymentPage() {
           height={64}
           className="mx-auto mb-4 rounded-2xl"
         />
-        <p className="auth-message">
-          Ada hizi ni malipo halisi ya huduma. Balance na withdrawal za chat hazitoi pesa halisi.
-        </p>
         <h1>
           {vipMode
             ? "Upgrade VIP Account"
@@ -201,7 +196,7 @@ function PaymentPage() {
         </h1>
         <p className="auth-subtitle">
           {vipMode
-            ? "Lipa TZS 35,500 kwa kiwango cha VIP. Ada hii si uwekezaji wala malipo ya kutoa salio."
+            ? "Lipa TZS 35,500 kwa kiwango cha VIP."
             : premiumMode
               ? "Lipa TZS 32,000 kubadilisha akaunti yako kuwa Premium."
               : "Lipa TZS 16,000 ili kuwasha akaunti yako na kuendelea kutumia huduma."}

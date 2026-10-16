@@ -71,7 +71,7 @@ export default async (req: Request) => {
       try {
         await client.query("BEGIN");
         const { rows } = await client.query(
-          "UPDATE gochati_users SET balance=balance+$1,updated_at=now() WHERE id=$2 AND balance+$1 BETWEEN 0 AND 9999999999 RETURNING balance",
+          "UPDATE gochati_users SET balance=balance+$1,net_income=net_income+GREATEST($1,0),updated_at=now() WHERE id=$2 AND balance+$1 BETWEEN 0 AND 9999999999 RETURNING balance",
           [delta, target],
         );
         assert(rows[0], 409, "Salio halitoshi au akaunti haijapatikana.");
@@ -141,7 +141,7 @@ export default async (req: Request) => {
         const fee = Math.round(amount * 20) / 100;
         const rows =
           await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} AND account_status='active' AND activation_paid RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone,fee,net_amount) SELECT id,${amount},${phone},${fee},${amount - fee} FROM debited RETURNING id`;
-        assert(rows.length, 409, "Salio halitoshi.");
+        assert(rows.length, 409, "SALIO HALITOSHI");
         return json({ data: rows[0]?.["id"] });
       }
       assert(false, 400, "Ombi halijatambulika.");

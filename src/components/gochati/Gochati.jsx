@@ -428,7 +428,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
         if (active) {
           const { data: { user } } = await platform.auth.getUser();
           if (!user || cancelled) return;
-          const { data, error } = await platform.rpc("gochati_start_earning_session", { p_amount: r.amount, p_minutes: r.minutes, p_partner: e.id });
+          const { data, error } = await platform.rpc("gochati_start_earning_session", { p_amount: r.amount, p_minutes: r.minutes, p_partner: `person-${e.id}` });
           if (cancelled) return;
           if (error || !data) {
             o((items) => [...items, { id: Date.now(), from: `them`, text: `Imeshindikana kuanza kipindi cha kulipwa. Tafadhali funga chat na ujaribu tena.` }]);
@@ -621,9 +621,9 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     }),
   });
 }
-function se({ person: e, kind: t, onClose: n }) {
+function se({ person: e, kind: t, onClose: n, active = false }) {
   let [r, i] = (0, l.useState)(!1),
-    [a, o] = (0, l.useState)(5),
+    [a, o] = (0, l.useState)(3),
     s = (0, l.useRef)(null),
     c = (0, l.useRef)(null),
     [u, d] = (0, l.useState)(!1),
@@ -667,7 +667,7 @@ function se({ person: e, kind: t, onClose: n }) {
       let e = setInterval(() => o((e) => (e > 0 ? e - 1 : 0)), 1e3),
         t = setTimeout(() => {
           (f(), i(!0));
-        }, 5e3);
+        }, 3e3);
       return () => {
         (clearInterval(e), clearTimeout(t));
       };
@@ -715,9 +715,9 @@ function se({ person: e, kind: t, onClose: n }) {
                 children: [
                   (0, K.jsx)(`p`, {
                     className: `mt-3 text-sm font-semibold text-destructive`,
-                    children: `Huwezi kutumia huduma hii mpaka uwe na account hai.`,
+                    children: active ? `Imeshindwa Kuanzisha, Endelea Kuchat` : `Huwezi kutumia huduma hii mpaka uwe na account hai.`,
                   }),
-                  (0, K.jsx)(`a`, {
+                  !active && (0, K.jsx)(`a`, {
                     href: L,
                     className: `grad-withdraw mt-4 block w-full rounded-xl px-4 py-3 text-sm font-bold text-on-color`,
                     children: `Fungua Account Hapa`,
@@ -784,7 +784,7 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         }) : (0, K.jsxs)(K.Fragment, { children: [
           (0, K.jsxs)(`p`, {
             className: `mt-3 text-center text-sm leading-relaxed text-muted-foreground`,
-            children: [`Huduma hii inahitaji akaunti iliyo hai (active account). Ada ya activation ni `, (0, K.jsx)(`span`, { className: `font-bold text-foreground`, children: `TZS 16,000` }), `. Kulipa ada hakuwezeshi kutoa salio kama pesa halisi.`],
+            children: [`Huduma hii inahitaji akaunti iliyo hai (active account). Ada ya activation ni `, (0, K.jsx)(`span`, { className: `font-bold text-foreground`, children: `TZS 16,000` }), `. Jisajili sasa ili kutumia huduma ya mazungumzo. Salio na withdrawal ni mfano wa matumizi ya mfumo.`],
           }),
           (0, K.jsxs)(`a`, { href: L, className: `grad-withdraw mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-lg transition active:scale-95`, children: [`Fungua na Activate Akaunti Hapa `, (0, K.jsx)(f, { className: `size-4` })] }),
         ]}),
@@ -1278,20 +1278,6 @@ function de() {
                   (0, K.jsxs)(`div`, {
                     className: `mt-3 grid gap-2`,
                     children: [
-                      (0, K.jsx)(`a`, {
-                        href: `https://wa.me/${R}`,
-                        target: `_blank`,
-                        rel: `noopener noreferrer`,
-                        className: `rounded-xl bg-overlay/30 px-3 py-2.5 text-center text-xs font-bold`,
-                        children: `WhatsApp: +255 770 490 075`,
-                      }),
-                      (0, K.jsx)(`a`, {
-                        href: z,
-                        target: `_blank`,
-                        rel: `noopener noreferrer`,
-                        className: `rounded-xl bg-on-color/20 px-3 py-2.5 text-center text-xs font-bold`,
-                        children: `Jiunge na Channel ya WhatsApp`,
-                      }),
                       (0, K.jsxs)(`a`, {
                         href: `sms:${B}`,
                         className: `flex items-center justify-center gap-2 rounded-xl bg-overlay/40 px-3 py-2.5 text-center text-xs font-bold`,
@@ -1398,6 +1384,7 @@ function de() {
         (0, K.jsx)(se, {
           person: c.person,
           kind: c.kind,
+          active: accountActive,
           onClose: () => u(null),
         }),
       M &&
@@ -1438,4 +1425,4 @@ function $({ grad: e, icon: t, label: n, value: r }) {
     ],
   });
 }
-export { de as Gochati };
+export { de as Gochati, oe as ChatSession, se as CallDialog };

@@ -59,11 +59,23 @@ describe("Withdrawal account access", () => {
         "/register",
       );
       fireEvent.click(screen.getByRole("button", { name: "Funga" }));
-      fireEvent.click(screen.getByRole("button", { name: "Hifadhi ombi" }));
+      fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
       expect(await screen.findByRole("dialog")).toBeInTheDocument();
       expect(mocks.rpc).not.toHaveBeenCalled();
     },
   );
+
+  it("shows insufficient balance in red", async () => {
+    Object.assign(mocks.profile, { account_status: "active", activation_paid: true });
+    const Page = Route.options.component as () => React.JSX.Element;
+    render(<Page />);
+    await screen.findByText("TZS 800,000");
+    fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), { target: { value: "800001" } });
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+    expect(screen.getByRole("status")).toHaveTextContent("SALIO HALITOSHI");
+    expect(screen.getByRole("status")).toHaveClass("text-destructive");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
 
   it.each(["20000", "800001", "25000.5"])("blocks invalid withdrawal amount %s", async (amount) => {
     Object.assign(mocks.profile, { account_status: "active", activation_paid: true });
@@ -71,7 +83,7 @@ describe("Withdrawal account access", () => {
     render(<Page />);
     await screen.findByText("TZS 800,000");
     fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), { target: { value: amount } });
-    fireEvent.click(screen.getByRole("button", { name: "Hifadhi ombi" }));
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
     expect(mocks.rpc).not.toHaveBeenCalled();
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
@@ -87,7 +99,7 @@ describe("Withdrawal account access", () => {
       const Page = Route.options.component as () => React.JSX.Element;
       render(<Page />);
       await screen.findByText("TZS 800,000");
-      fireEvent.click(screen.getByRole("button", { name: "Hifadhi ombi" }));
+      fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
       expect(await screen.findByRole("dialog")).toHaveTextContent("Vigezo vya withdrawal");
       expect(screen.getByRole("link", { name: "Upgrade" })).toHaveAttribute(
         "href",
@@ -115,7 +127,7 @@ describe("Withdrawal account access", () => {
     render(<Page />);
     await screen.findByText("TZS 800,000");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Hifadhi ombi" }));
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
     await waitFor(() =>
       expect(mocks.rpc).toHaveBeenCalledWith("gochati_request_withdrawal", expect.any(Object)),
     );
