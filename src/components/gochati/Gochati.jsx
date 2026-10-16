@@ -1,5 +1,5 @@
 import * as l from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { platform } from "@/integrations/netlify/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
 const logoAsset = { url: "/gochat/logo.png" };
@@ -170,7 +170,7 @@ var G = [
       name: `Rehema Said`,
       place: `Tanga`,
       stars: 5,
-      text: `Mwanzoni nilidhani ni utapeli, lakini pesa iliingia M-Pesa ndani ya dakika 5.`,
+      text: `Ninafurahia mazungumzo ya majaribio na kujifunza kuhusu tamaduni.`,
     },
     {
       name: `Daniel Kimaro`,
@@ -428,9 +428,9 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       _.current = false;
       const startCountdown = async () => {
         if (active) {
-          const { data: { user } } = await supabase.auth.getUser();
+          const { data: { user } } = await platform.auth.getUser();
           if (!user || cancelled) return;
-          const { data, error } = await supabase.rpc("gochati_start_earning_session", { p_amount: r.amount, p_minutes: r.minutes, p_partner: e.id });
+          const { data, error } = await platform.rpc("gochati_start_earning_session", { p_amount: r.amount, p_minutes: r.minutes, p_partner: e.id });
           if (cancelled) return;
           if (error || !data) {
             a((items) => [...items, { id: Date.now(), from: `them`, text: `Imeshindikana kuanza kipindi cha kulipwa. Tafadhali funga chat na ujaribu tena.` }]);
@@ -938,9 +938,9 @@ function de() {
     (0, l.useEffect)(() => {
       let mounted = true;
       void (async () => {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await platform.auth.getUser();
         if (!user) return;
-        const { data } = await supabase.from("gochati_users").select("account_status,activation_paid,is_premium,is_vip,referral_count,balance,username").eq("id", user.id).maybeSingle();
+        const { data } = await platform.from("gochati_users").select("account_status,activation_paid,is_premium,is_vip,referral_count,balance,username").eq("id", user.id).maybeSingle();
         if (mounted && data) { setAccountActive(data.account_status === "active" && !!data.activation_paid); setIsPremium(!!data.is_premium); setIsVip(!!data.is_vip); setReferralCount(Number(data.referral_count || 0)); setUsername(String(data.username || "")); const savedBalance = Number(data.balance || 0); r(savedBalance); a(savedBalance); w(savedBalance); }
       })();
       return () => { mounted = false; };
@@ -986,9 +986,9 @@ function de() {
     let mounted = true;
     let timer;
     const loadNotifications = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await platform.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from("gochati_notifications").select("id,message,created_at,read_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50);
+      const { data } = await platform.from("gochati_notifications").select("id,message,created_at,read_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50);
       if (!mounted || !data) return;
       setNotifications(data);
       setBannerNotification(data[0] && !data[0].read_at ? data[0] : null);
@@ -998,21 +998,21 @@ function de() {
     return () => { mounted = false; clearInterval(timer); };
   }, []);
   const dismissNotification = async (id) => {
-    await supabase.from("gochati_notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+    await platform.from("gochati_notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
     setNotifications((items) => items.map((item) => item.id === id ? { ...item, read_at: new Date().toISOString() } : item));
     setBannerNotification((current) => current?.id === id ? null : current);
   };
   let U = (0, l.useCallback)(async (e, sessionId = null) => {
       s(null);
       if (!accountActive) { f({ open: !0, amount: e }); return; }
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await platform.auth.getUser();
       if (!user) { h({ id: `earned-error-${Date.now()}`, text: `Ingia kwenye akaunti yako ili kuhifadhi mapato.` }); setTimeout(() => h(null), 5000); return; }
       if (!sessionId) { h({ id: `earned-error-${Date.now()}`, text: `Kipindi hakikuthibitishwa. Mapato hayajaongezwa.` }); setTimeout(() => h(null), 7000); return; }
-      const { data: savedBalance, error } = await supabase.rpc("gochati_complete_earning_session", { p_session_id: sessionId });
+      const { data: savedBalance, error } = await platform.rpc("gochati_complete_earning_session", { p_session_id: sessionId });
       if (error) { h({ id: `earned-error-${Date.now()}`, text: `Mapato hayajaongezwa: ${error.message}` }); setTimeout(() => h(null), 7000); return; }
       const nextBalance = Number(savedBalance || 0);
       a(nextBalance); r(nextBalance); w(nextBalance);
-      h({ id: `earned-${Date.now()}`, text: `Hongera! Malipo ya TZS ${I(e)} yamehifadhiwa kwenye balance yako.` });
+      h({ id: `earned-${Date.now()}`, text: `Salio la majaribio la TZS ${I(e)} limehifadhiwa. Hizi si pesa halisi.` });
       setTimeout(() => h(null), 5000);
     }, [accountActive]),
     J = (e) => {

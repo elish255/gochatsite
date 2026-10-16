@@ -2,6 +2,8 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
+    "netlify/**/*.ts",
+    "netlify/**/*.mts",
     "vite.config.ts",
     "vitest.config.ts",
     "eslint.config.js"

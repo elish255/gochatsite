@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { GochatShell } from "@/components/gochat-shell";
 import { money, people } from "@/lib/gochat-data";
 import { playSound } from "@/lib/gochat-sound";
-import { supabase } from "@/integrations/supabase/client";
+import { platform } from "@/integrations/netlify/client";
 
 export const Route = createFileRoute("/chat/$personId")({
   head: ({ params }) => ({ meta: [
@@ -41,11 +41,11 @@ function ChatPage() {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getUser().then(async ({ data }) => {
+    platform.auth.getUser().then(async ({ data }) => {
       if (!active) return;
       setUserId(data.user?.id ?? null);
       if (data.user) {
-        const { data: history } = await supabase.from("chat_messages").select("id, sender, body, created_at").eq("partner_id", personId).order("created_at", { ascending: true });
+        const { data: history } = await platform.from("chat_messages").select("id, sender, body, created_at").eq("partner_id", personId).order("created_at", { ascending: true });
         if (active && history) setMessages(history as Message[]);
       }
     });
@@ -68,7 +68,7 @@ function ChatPage() {
     if (body.length > 2000) { toast.error("Ujumbe ni mrefu mno."); return; }
     setSending(true);
     if (userId) {
-      const { data, error } = await supabase.from("chat_messages").insert({ user_id: userId, partner_id: personId, sender: "user", body }).select("id, sender, body, created_at").single();
+      const { data, error } = await platform.from("chat_messages").insert({ user_id: userId, partner_id: personId, sender: "user", body }).select("id, sender, body, created_at").single();
       if (error) { setSending(false); toast.error("Ujumbe haukutumwa. Jaribu tena."); return; }
       if (data) setMessages((previous) => [...previous, data as Message]);
     } else setMessages((previous) => [...previous, { id: `${Date.now()}`, sender: "user", body, created_at: new Date().toISOString() }]);
