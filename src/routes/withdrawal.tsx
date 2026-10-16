@@ -85,7 +85,7 @@ function WithdrawalPage() {
       return;
     }
     if (value > balance) {
-      setNotice("Kiasi kinazidi salio lako.");
+      setNotice("SALIO HALITOSHI");
       return;
     }
     if (!/^[+\d ]{9,16}$/.test(phone.trim())) {
@@ -121,7 +121,7 @@ function WithdrawalPage() {
     <main className="auth-page">
       <section className="auth-content">
         <h1>Withdrawal</h1>
-        <p className="auth-subtitle">Ombi la withdrawal · salio la majaribio.</p>
+        <p className="auth-subtitle">Salio na withdrawal ni mfano wa matumizi ya mfumo.</p>
         <p>
           Salio: <strong>TZS {balance.toLocaleString()}</strong>
         </p>
@@ -164,10 +164,10 @@ function WithdrawalPage() {
           </div>
         </label>
         <Button className="auth-submit" disabled={busy || !ready} onClick={() => void request()}>
-          {busy ? "Inahifadhi..." : "Hifadhi ombi"}
+          {busy ? "Inahifadhi..." : "Withdrawal"}
         </Button>
         {notice && (
-          <p role="status" className="auth-message">
+          <p role="status" className={notice === "SALIO HALITOSHI" ? "auth-error text-destructive" : "auth-message"}>
             {notice}
           </p>
         )}
@@ -213,12 +213,9 @@ function WithdrawalPage() {
           <DialogTitle>Vigezo vya withdrawal</DialogTitle>
           <DialogDescription>
             {eligibility?.is_premium
-              ? `Alika watu 5 wawe active (${eligibility?.active_referrals || 0}/5) au upgrade kwenda VIP kwa TZS 35,500.`
-              : `Alika watu 10 (${eligibility?.referrals || 0}/10) au upgrade kwenda Premium kwa TZS 32,000.`}
+              ? `Alika watu 5 wawe active (${eligibility?.active_referrals || 0}/5) au upgrade kwenda VIP`
+              : `Alika watu 10 (${eligibility?.referrals || 0}/10) au upgrade kwenda Premium`}
           </DialogDescription>
-          <p className="text-xs text-muted-foreground">
-            Upgrade ni huduma ya akaunti; salio la chat ni la majaribio.
-          </p>
           <Button asChild>
             <a href={eligibility?.is_premium ? "/payment?type=vip" : "/payment?type=premium"}>
               Upgrade
@@ -243,7 +240,7 @@ function WithdrawalPage() {
             {receipt?.status === "paid" ? "Ombi limekamilishwa" : "Ombi limepokelewa"}
           </DialogTitle>
           <DialogDescription className="text-center">
-            Risiti ya majaribio ·{" "}
+            Transaction Receipt ·{" "}
             {receipt?.status === "paid"
               ? "Paid"
               : receipt?.status === "rejected"

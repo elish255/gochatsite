@@ -115,7 +115,7 @@ export default async (req: Request) => {
                 ? "is_premium"
                 : "activation_paid";
           await client.query(
-            `UPDATE gochati_users SET "${column}"=true,${payment["purpose"] === "activation" ? "account_status=CASE WHEN account_status='pending' THEN 'active' ELSE account_status END," : ""}updated_at=now() WHERE id=$1`,
+            `UPDATE gochati_users SET "${column}"=true,${column === "activation_paid" ? "" : "activation_paid=true,"}account_status=CASE WHEN account_status='pending' THEN 'active' ELSE account_status END,updated_at=now() WHERE id=$1`,
             [payment["user_id"]],
           );
         }

@@ -12,7 +12,8 @@ export function verifiedPaymentStatus(
     409,
     "Taarifa za malipo hazilingani. Wasiliana na admin.",
   );
-  const status = String(result.status || "").toLowerCase();
+  const providerStatus = String(result.status || "").toLowerCase();
+  const status = providerStatus === "successful" ? "success" : providerStatus;
   assert(
     ["pending", "success", "failed", "cancelled", "expired", "rejected", "user_cancelled"].includes(
       status,

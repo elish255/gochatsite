@@ -125,6 +125,13 @@ describe("Account API access", () => {
   });
 });
 describe("Earning and withdrawal rules", () => {
+  it("normalizes SplashPay successful status after verifying transaction details", () => {
+    expect(verifiedPaymentStatus(
+      { order_id: "INV-example", amount: 16000 },
+      { reference: "INV-example", amount: 16000, currency: "TZS", status: "successful" },
+    )).toBe("success");
+  });
+
   it.each([
     [1, 5000],
     [5, 25000],

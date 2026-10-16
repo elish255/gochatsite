@@ -36,15 +36,6 @@ export function SupportButton({ floating = false }: { floating?: boolean }) {
           <Button asChild>
             <a href="sms:0743871339?body=Nielekeze%20kuhusu%20Gochat">Tuma SMS</a>
           </Button>
-          <Button variant="outline" asChild>
-            <a
-              href="https://wa.me/255770490075?text=Nielekeze%20kuhusu%20Gochat"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              WhatsApp
-            </a>
-          </Button>
         </DialogContent>
       </Dialog>
     </>

@@ -7,8 +7,7 @@ export function ActivationRequiredDialog({ open, onClose }: { open: boolean; onC
       <DialogContent className="rounded-2xl sm:max-w-md">
         <DialogTitle>Akaunti yako haijawa hai</DialogTitle>
         <DialogDescription>
-          Huduma hii inahitaji akaunti iliyo hai (active account). Ada ya activation ni TZS 16,000.
-          Kulipa ada hakuwezeshi kutoa salio kama pesa halisi.
+          Huduma hii inahitaji akaunti iliyo hai (active account). Jisajili sasa na lipia ada ya activation ya TZS 16,000 ili kutumia huduma ya mazungumzo. Salio na withdrawal ni mfano wa matumizi ya mfumo.
         </DialogDescription>
         <Button asChild><a href="/register">Fungua na Activate Akaunti Hapa</a></Button>
         <Button variant="outline" onClick={onClose}>Funga</Button>
