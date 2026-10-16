@@ -49,12 +49,7 @@ export default async (req: Request) => {
         const amount = Number(a.p_amount),
           minutes = Number(a.p_minutes);
         assert(
-          Number.isInteger(amount) &&
-            amount > 0 &&
-            amount <= 100000 &&
-            Number.isInteger(minutes) &&
-            minutes > 0 &&
-            minutes <= 120 &&
+          ((minutes === 1 && amount === 5000) || (minutes === 5 && amount === 25000)) &&
             /^person-\d{1,2}$/.test(a.p_partner),
           400,
           "Kipindi si sahihi.",
@@ -66,7 +61,7 @@ export default async (req: Request) => {
       }
       if (b.rpc === "gochati_complete_earning_session") {
         const rows =
-          await db.sql`WITH completed AS (UPDATE gochati_earning_sessions SET completed_at=now() WHERE id=${a.p_session_id} AND user_id=${user.id} AND completed_at IS NULL AND created_at + minutes * interval '1 minute' <= now() RETURNING amount) UPDATE gochati_users SET balance=balance+(SELECT amount FROM completed), updated_at=now() WHERE id=${user.id} AND EXISTS(SELECT 1 FROM completed) RETURNING balance`;
+          await db.sql`WITH completed AS (UPDATE gochati_earning_sessions SET completed_at=now() WHERE id=${a.p_session_id} AND user_id=${user.id} AND completed_at IS NULL AND created_at + minutes * interval '1 minute' <= now() RETURNING amount) UPDATE gochati_users SET balance=balance+(SELECT amount FROM completed), net_income=net_income+(SELECT amount FROM completed), updated_at=now() WHERE id=${user.id} AND EXISTS(SELECT 1 FROM completed) RETURNING balance`;
         if (rows[0]) return json({ data: rows[0]["balance"] });
         const existing =
           await db.sql`SELECT id FROM gochati_earning_sessions WHERE id=${a.p_session_id} AND user_id=${user.id} AND completed_at IS NOT NULL`;
@@ -77,12 +72,12 @@ export default async (req: Request) => {
         const amount = Number(a.p_amount),
           phone = String(a.p_phone || "");
         assert(
-          Number.isFinite(amount) && amount >= 100000 && /^[+\d ]{9,16}$/.test(phone),
+          Number.isSafeInteger(amount) && amount > 20000 && /^[+\d ]{9,16}$/.test(phone),
           400,
-          "Kiasi au simu si sahihi.",
+          "Kiasi lazima kiwe zaidi ya TZS 20,000 na namba ya simu iwe sahihi.",
         );
         const rows =
-          await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone) SELECT id,${amount},${phone} FROM debited RETURNING id`;
+          await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} AND account_status='active' AND activation_paid RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone) SELECT id,${amount},${phone} FROM debited RETURNING id`;
         assert(rows.length, 409, "Salio halitoshi.");
         return json({ data: rows[0]?.["id"] });
       }
@@ -166,8 +161,11 @@ export default async (req: Request) => {
         );
       for (const key of ["activation_paid", "is_premium", "is_vip"])
         if (key in p) assert(typeof p[key] === "boolean", 400, "Thamani si sahihi.");
-      if (p.status !== undefined)
-        assert(["paid", "rejected"].includes(p.status), 400, "Hali si sahihi.");
+      if (table === "gochati_withdrawals") {
+        assert(p.status === "paid", 400, "Chagua Paid kukamilisha ombi.");
+        p.paid_at = new Date().toISOString();
+        clauses.push("status='pending'");
+      }
       if (table === "gochati_notifications") p.read_at = new Date().toISOString();
       query = `UPDATE "${table}" SET ${Object.entries(p)
         .map(([k, v]) => `"${k}"=${param(v)}`)

@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Route } from "@/routes/withdrawal";
 
 const mocks = vi.hoisted(() => ({
-  profile: { account_status: "inactive", activation_paid: false, balance: 800000 },
+  profile: { account_status: "inactive", activation_paid: false, balance: 800000, phone: "0712345678" },
+  history: [] as any[],
   rpc: vi.fn(),
   navigate: vi.fn(),
 }));
@@ -17,13 +18,13 @@ vi.mock("@/integrations/netlify/client", () => ({
     rpc: mocks.rpc,
     from: () => ({ select: () => ({ eq: () => ({
       single: async () => ({ data: mocks.profile }),
-      order: async () => ({ data: [] }),
+      order: async () => ({ data: mocks.history }),
     }) }) }),
   },
 }));
 
 afterEach(cleanup);
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => { vi.clearAllMocks(); mocks.history = []; });
 
 describe("Withdrawal account access", () => {
   it.each([
@@ -39,6 +40,26 @@ describe("Withdrawal account access", () => {
     fireEvent.click(screen.getByRole("button", { name: "Hifadhi ombi" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it.each(["20000", "800001", "25000.5"])("blocks invalid withdrawal amount %s", async (amount) => {
+    Object.assign(mocks.profile, { account_status: "active", activation_paid: true });
+    const Page = Route.options.component as () => React.JSX.Element;
+    render(<Page />);
+    await screen.findByText("TZS 800,000");
+    fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), { target: { value: amount } });
+    fireEvent.click(screen.getByRole("button", { name: "Hifadhi ombi" }));
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("shows Paid history in green without an activation dialog", async () => {
+    Object.assign(mocks.profile, { account_status: "active", activation_paid: true });
+    mocks.history = [{ id: "withdrawal", amount: 25000, status: "paid", created_at: "2026-10-16T12:00:00Z" }];
+    const Page = Route.options.component as () => React.JSX.Element;
+    render(<Page />);
+    expect(await screen.findByText("Paid")).toHaveClass("text-success");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("allows an active paid account to request withdrawal without the dialog", async () => {

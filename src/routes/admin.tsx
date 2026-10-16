@@ -713,12 +713,12 @@ function AdminPage() {
                         User: {w.user_id} · TZS {Number(w.amount).toLocaleString()} · {w.phone}
                       </p>
                       <p>
-                        Status: <strong>{w.status}</strong> ·{" "}
+                        Status: <strong className={w.status === "paid" ? "text-success" : "text-amber-600"}>{w.status === "paid" ? "Paid" : w.status === "pending" ? "Pending" : "Rejected"}</strong> ·{" "}
                         {new Date(w.created_at).toLocaleString()}
                       </p>
                       {w.status === "pending" && (
                         <Button className="mt-2" onClick={() => void markPaid(w.id)}>
-                          Kamilisha ombi
+                          Weka Paid
                         </Button>
                       )}
                     </article>

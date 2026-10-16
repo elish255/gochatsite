@@ -14,11 +14,7 @@ function render(factory, type, props, key) {
 const runtime = { Fragment, jsx: (type, props, key) => render(reactJsx, type, props, key), jsxs: (type, props, key) => render(reactJsxs, type, props, key) };
 const M = [
     { label: `Dakika 1`, minutes: 1, amount: 5e3 },
-    { label: `Dakika 10`, minutes: 10, amount: 25e3 },
-    { label: `Dakika 20`, minutes: 20, amount: 3e4 },
-    { label: `Dakika 45`, minutes: 45, amount: 67e3 },
-    { label: `Saa 1`, minutes: 60, amount: 12e4 },
-    { label: `Masaa 2`, minutes: 120, amount: 15e4 },
+    { label: `Dakika 5`, minutes: 5, amount: 25e3 },
   ],
   N = [
     `Emma`,
@@ -434,7 +430,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
           const { data, error } = await platform.rpc("gochati_start_earning_session", { p_amount: r.amount, p_minutes: r.minutes, p_partner: e.id });
           if (cancelled) return;
           if (error || !data) {
-            a((items) => [...items, { id: Date.now(), from: `them`, text: `Imeshindikana kuanza kipindi cha kulipwa. Tafadhali funga chat na ujaribu tena.` }]);
+            o((items) => [...items, { id: Date.now(), from: `them`, text: `Imeshindikana kuanza kipindi cha kulipwa. Tafadhali funga chat na ujaribu tena.` }]);
             p(0);
             return;
           }
@@ -927,6 +923,7 @@ function de() {
     [P, F] = (0, l.useState)(null),
     [V, H] = (0, l.useState)(`desktop`),
     [accountActive, setAccountActive] = (0, l.useState)(false),
+    [accountReady, setAccountReady] = (0, l.useState)(false),
     [isPremium, setIsPremium] = (0, l.useState)(false),
     [isVip, setIsVip] = (0, l.useState)(false),
     [username, setUsername] = (0, l.useState)(""),
@@ -939,13 +936,16 @@ function de() {
   }, [e]),
     (0, l.useEffect)(() => {
       let mounted = true;
-      void (async () => {
+      const loadAccount = async () => {
         const { data: { user } } = await platform.auth.getUser();
-        if (!user) return;
-        const { data } = await platform.from("gochati_users").select("account_status,activation_paid,is_premium,is_vip,referral_count,balance,username").eq("id", user.id).maybeSingle();
-        if (mounted && data) { setAccountActive(data.account_status === "active" && !!data.activation_paid); setIsPremium(!!data.is_premium); setIsVip(!!data.is_vip); setReferralCount(Number(data.referral_count || 0)); setUsername(String(data.username || "")); const savedBalance = Number(data.balance || 0); r(savedBalance); a(savedBalance); w(savedBalance); }
-      })();
-      return () => { mounted = false; };
+        if (!user) { if (mounted) setAccountReady(true); return; }
+        const { data } = await platform.from("gochati_users").select("account_status,activation_paid,is_premium,is_vip,referral_count,balance,net_income,username").eq("id", user.id).maybeSingle();
+        if (mounted && data) { setAccountActive(data.account_status === "active" && !!data.activation_paid); setIsPremium(!!data.is_premium); setIsVip(!!data.is_vip); setReferralCount(Number(data.referral_count || 0)); setUsername(String(data.username || "")); const savedBalance = Number(data.balance || 0); r(Number(data.net_income || 0)); a(savedBalance); w(savedBalance); setAccountReady(true); }
+      };
+      void loadAccount();
+      window.addEventListener("focus", loadAccount);
+      const refresh = setInterval(loadAccount, 20000);
+      return () => { mounted = false; clearInterval(refresh); window.removeEventListener("focus", loadAccount); };
     }, []),
     (0, l.useEffect)(() => {
       S(Array.from({ length: 8 }, () => W()));
@@ -1013,11 +1013,14 @@ function de() {
       const { data: savedBalance, error } = await platform.rpc("gochati_complete_earning_session", { p_session_id: sessionId });
       if (error) { h({ id: `earned-error-${Date.now()}`, text: `Mapato hayajaongezwa: ${error.message}` }); setTimeout(() => h(null), 7000); return; }
       const nextBalance = Number(savedBalance || 0);
-      a(nextBalance); r(nextBalance); w(nextBalance);
+      a(nextBalance); w(nextBalance);
+      const { data: profile } = await platform.from("gochati_users").select("net_income").eq("id", user.id).single();
+      if (profile) r(Number(profile.net_income || 0));
       h({ id: `earned-${Date.now()}`, text: `Salio la TZS ${I(e)} limehifadhiwa. Hizi si pesa halisi.` });
       setTimeout(() => h(null), 5000);
     }, [accountActive]),
     J = (e) => {
+      if (!accountReady) return;
       if (!e.online) {
         (y(
           `${e.name} yupo Offline kwa sasa. Huwezi kuchati wala kulipwa mpaka awe Online.`,
@@ -1161,7 +1164,7 @@ function de() {
               (0, K.jsx)($, {
                 grad: isVip ? `vip-diamond` : isPremium ? `premium-gold` : `grad-emerald`,
                 icon: (0, K.jsx)(te, { className: `size-5` }),
-                label: `Net Profit`,
+                label: `Net Income`,
                 value: I(n),
               }),
               (0, K.jsx)($, {
@@ -1185,6 +1188,7 @@ function de() {
                     children: I(C),
                   }),
                   (0, K.jsx)(`button`, {
+                    disabled: !accountReady,
                     onClick: () => { if (!accountActive) { f({ open: !0, amount: null }); return; } window.location.href = "/withdrawal"; },
                     className: `rounded-xl bg-overlay/30 px-2 py-2 text-[11px] font-bold sm:text-xs`,
                     children: `Toa Pesa`,
@@ -1193,7 +1197,7 @@ function de() {
               }),
             ],
           }),
-          !accountActive && (0, K.jsxs)(`a`, {
+          accountReady && !accountActive && (0, K.jsxs)(`a`, {
             href: L,
             className: `grad-brand mt-3 flex items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold text-on-color shadow-lg`,
             children: [
