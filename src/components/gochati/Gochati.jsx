@@ -970,11 +970,19 @@ function de() {
           (e.preventDefault(), (T.current = e), k(!0));
         },
         t = () => {
-          (k(!1), (T.current = null));
+          (k(!1), (T.current = null), F(`GoChati tayari imewekwa kwenye kifaa chako.`), N(!0));
         };
+      if (window.matchMedia(`(display-mode: standalone)`).matches || navigator.standalone) {
+        F(`GoChati tayari imewekwa kwenye kifaa chako.`);
+      }
+      window.addEventListener(`beforeinstallprompt`, e);
+      window.addEventListener(`appinstalled`, t);
+      if (`serviceWorker` in navigator) {
+        navigator.serviceWorker.register(`/sw.js`, { scope: `/` }).catch(() => {
+          F(`Usakinishaji wa moja kwa moja haujapatikana. Tumia menyu ya kivinjari kuweka GoChati kwenye home screen.`);
+        });
+      }
       return (
-        window.addEventListener(`beforeinstallprompt`, e),
-        window.addEventListener(`appinstalled`, t),
         () => {
           (window.removeEventListener(`beforeinstallprompt`, e),
             window.removeEventListener(`appinstalled`, t));
@@ -1038,17 +1046,26 @@ function de() {
       s(e);
     },
     Y = async () => {
-      if (!T.current) {
-        N(!0);
+      N(!0);
+      if (window.matchMedia(`(display-mode: standalone)`).matches || navigator.standalone) {
+        F(`GoChati tayari imewekwa kwenye kifaa chako.`);
         return;
       }
-      await T.current.prompt();
-      let e = await T.current.userChoice;
-      ((T.current = null),
-        k(!1),
-        e.outcome === `accepted` &&
-          F(`Vizuri! Gochati imewekwa kwenye home screen ya simu yako.`),
-        N(!0));
+      if (!T.current) {
+        return;
+      }
+      const installPrompt = T.current;
+      T.current = null;
+      k(!1);
+      try {
+        await installPrompt.prompt();
+        const choice = await installPrompt.userChoice;
+        F(choice.outcome === `accepted`
+          ? `Ombi la kusakinisha GoChati limekubaliwa. Thibitisha kwenye kifaa chako.`
+          : `Usakinishaji umeghairiwa. Unaweza kutumia menyu ya kivinjari kusakinisha GoChati.`);
+      } catch {
+        F(`Usakinishaji haujakamilika. Tumia menyu ya kivinjari kusakinisha GoChati.`);
+      }
     };
   return (0, K.jsxs)(`main`, {
     className: `min-h-screen bg-background pb-10`,
@@ -1126,7 +1143,7 @@ function de() {
             className: `grid grid-cols-2 gap-3`,
             children: [
               (0, K.jsxs)(`button`, {
-                onClick: () => N(!0),
+                onClick: Y,
                 className: `grad-profit flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-bold text-on-color shadow-lg`,
                 children: [
                   (0, K.jsx)(g, { className: `size-4` }),
@@ -1250,7 +1267,7 @@ function de() {
                     children: `Weka app kwenye home screen ya simu yako.`,
                   }),
                   (0, K.jsxs)(`button`, {
-                    onClick: () => N(!0),
+                    onClick: Y,
                     className: `mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-overlay/30 px-3 py-2.5 text-xs font-bold`,
                     children: [
                       (0, K.jsx)(g, { className: `size-4` }),

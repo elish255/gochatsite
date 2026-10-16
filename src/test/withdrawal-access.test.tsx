@@ -53,12 +53,14 @@ describe("Withdrawal account access", () => {
       Object.assign(mocks.profile, profile);
       const Page = Route.options.component as () => React.JSX.Element;
       render(<Page />);
-      expect(await screen.findByRole("dialog")).toHaveTextContent("Akaunti yako haijawa hai");
-      expect(screen.getByRole("link", { name: "Fungua na Activate Akaunti Hapa" })).toHaveAttribute(
+      expect(await screen.findByRole("dialog")).toHaveTextContent("HUWEZI KUTOA PESA");
+      expect(screen.getByRole("dialog")).toHaveTextContent("Huwezi kutoa pesa kwa sasa kwa sababu huna kiasi cha kutosha cha kupokea huduma hii.");
+      expect(screen.getByRole("dialog")).toHaveTextContent("Jisajili kwa mtaji wa 16,000, kisha kamilisha chat angalau moja ili uweze kulipwa kwa kuwafundisha wazungu Kiswahili.");
+      expect(screen.getByRole("link", { name: /JISAJILI SASA/ })).toHaveAttribute(
         "href",
         "/register",
       );
-      fireEvent.click(screen.getByRole("button", { name: "Funga" }));
+      fireEvent.click(screen.getByRole("button", { name: "Rudi nyuma" }));
       fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
       expect(await screen.findByRole("dialog")).toBeInTheDocument();
       expect(mocks.rpc).not.toHaveBeenCalled();
