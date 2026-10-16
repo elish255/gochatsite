@@ -1,3 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-export const Route = createFileRoute("/about")({ component: AboutPage });
-function AboutPage() { return <main className="auth-page"><article className="auth-content" style={{maxWidth:760,textAlign:"left"}}><h1>About Us — Kuhusu Gochati</h1><p className="auth-subtitle">Gochati inaunganisha watu kupitia mazungumzo ya mtandaoni.</p><p>Gochati ni jukwaa la mawasiliano linalolenga kuwasaidia watu kukutana, kuzungumza na kujifunza kutoka kwa watu wa maeneo mbalimbali duniani kupitia mazungumzo ya mtandaoni.</p><h2>Dhamira yetu</h2><p>Kutoa mazingira rahisi ya mawasiliano, kuhimiza mazungumzo yenye heshima na kuwapa watumiaji uzoefu unaoeleweka na salama.</p><h2>Usalama na uwajibikaji</h2><p>Tunawahimiza watumiaji kulinda taarifa zao binafsi, kuheshimu wengine, kufuata sheria na kuripoti matumizi mabaya. Taarifa za malipo na salio hushughulikiwa kulingana na hali inayothibitishwa na mfumo na masharti ya huduma.</p><h2>Wasiliana nasi</h2><p>Kwa maswali au msaada, tumia kitufe cha Customer Service kwenye Gochati.</p><p className="mt-6"><Link to="/terms" className="underline">Soma Terms of Service</Link> · <Link to="/" className="underline">Rudi Homepage</Link></p></article></main> }
+import { AboutGochati } from "@/components/gochati/AboutGochati";
+import { Button } from "@/components/ui/button";
+
+export const Route = createFileRoute("/about")({
+  head: () => ({ meta: [{ title: "Kuhusu Gochati — Mazungumzo na Kiswahili" }, { name: "description", content: "Fahamu Gochati, dhamira yetu ya kuunganisha watu kupitia Kiswahili na namna ya kupata msaada." }] }),
+  component: AboutPage,
+});
+
+function AboutPage() {
+  return (
+    <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:py-14">
+      <div className="mx-auto max-w-5xl">
+        <nav aria-label="Urambazaji" className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <Button variant="outline" asChild><Link to="/">Rudi mwanzo</Link></Button>
+          <Link to="/terms" className="text-sm text-muted-foreground underline underline-offset-4">Masharti ya matumizi</Link>
+        </nav>
+        <AboutGochati page />
+        <p className="mt-6 text-sm text-muted-foreground">© {new Date().getFullYear()} Gochati. Haki zote zimehifadhiwa.</p>
+      </div>
+    </main>
+  );
+}
