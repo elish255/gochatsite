@@ -6,13 +6,14 @@ import { ActivationRequiredDialog } from "@/components/gochati/ActivationRequire
 export const Route = createFileRoute("/withdrawal")({ component: WithdrawalPage });
 function WithdrawalPage() {
   const [balance, setBalance] = useState(0),
-    [amount, setAmount] = useState("100000"),
+    [amount, setAmount] = useState("25000"),
     [phone, setPhone] = useState(""),
     [history, setHistory] = useState<any[]>([]),
     [notice, setNotice] = useState(""),
     [active, setActive] = useState(false),
     [activationOpen, setActivationOpen] = useState(false),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [ready, setReady] = useState(false);
   const nav = useNavigate();
   async function load() {
     const {
@@ -37,26 +38,36 @@ function WithdrawalPage() {
       return;
     }
     setBalance(Number(profile.data?.balance || 0));
-    setPhone(profile.data?.phone || "");
+    setPhone((current) => current || profile.data?.phone || "");
     const accountActive = profile.data?.account_status === "active" && !!profile.data?.activation_paid;
     setActive(accountActive);
     setActivationOpen(!accountActive);
     setHistory(withdrawals.data || []);
+    setReady(true);
   }
   useEffect(() => {
     void load();
+    const timer = setInterval(() => void load(), 15000);
+    const refresh = () => void load();
+    window.addEventListener("focus", refresh);
+    return () => { clearInterval(timer); window.removeEventListener("focus", refresh); };
   }, []);
   async function request() {
+    if (!ready || busy) return;
     if (!active) { setActivationOpen(true); return; }
+    const value = Number(amount);
+    if (!Number.isSafeInteger(value) || value <= 20000) { setNotice("Kiasi lazima kiwe zaidi ya TZS 20,000."); return; }
+    if (value > balance) { setNotice("Kiasi kinazidi salio lako."); return; }
+    if (!/^[+\d ]{9,16}$/.test(phone.trim())) { setNotice("Weka namba sahihi ya simu."); return; }
     setBusy(true);
     setNotice("");
     const { error } = await platform.rpc("gochati_request_withdrawal", {
       p_amount: Number(amount),
-      p_phone: phone,
+      p_phone: phone.trim(),
     });
     if (error) setNotice(error.message);
     else {
-      setNotice("Ombi limehifadhiwa. Hakuna pesa halisi inayotumwa.");
+      setNotice("Ombi limehifadhiwa kama Pending hadi admin aliweke Paid. Hakuna pesa halisi inayotumwa.");
       await load();
     }
     setBusy(false);
@@ -72,12 +83,16 @@ function WithdrawalPage() {
         <p>
           Salio: <strong>TZS {balance.toLocaleString()}</strong>
         </p>
+        <p className="mt-3 text-sm text-muted-foreground">Kiasi lazima kiwe zaidi ya TZS 20,000 na kisizidi salio lako.</p>
         <label className="auth-field">
           <span>Kiasi (TZS)</span>
           <div className="auth-input">
             <input
               type="number"
-              min="100000"
+              min="20001"
+              max={balance}
+              step="1"
+              aria-label="Kiasi (TZS)"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
@@ -86,10 +101,10 @@ function WithdrawalPage() {
         <label className="auth-field">
           <span>Namba ya simu</span>
           <div className="auth-input">
-            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <input aria-label="Namba ya simu" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
         </label>
-        <Button className="auth-submit" disabled={busy} onClick={() => void request()}>
+        <Button className="auth-submit" disabled={busy || !ready} onClick={() => void request()}>
           {busy ? "Inahifadhi..." : "Hifadhi ombi"}
         </Button>
         {notice && (
@@ -104,7 +119,7 @@ function WithdrawalPage() {
           history.map((item) => (
             <article className="card-soft mt-3 p-3" key={item.id}>
               <strong>TZS {Number(item.amount).toLocaleString()}</strong>
-              <p>{item.status === "paid" ? "Limekamilishwa; hakuna pesa iliyotumwa" : item.status}</p>
+              <p className={item.status === "paid" ? "text-success font-bold" : "text-amber-600 font-semibold"}>{item.status === "paid" ? "Paid" : item.status === "pending" ? "Pending" : "Rejected"}</p>
               <p>{new Date(item.created_at).toLocaleString()}</p>
             </article>
           ))
