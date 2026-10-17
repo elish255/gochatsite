@@ -94,7 +94,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     <main className="auth-page auth-register">
       <section className="auth-content">
         <img
-          src="/gochat/logo.svg"
+          src="/gochat/logo.png"
           alt="Gochati"
           width={88}
           height={88}

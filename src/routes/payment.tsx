@@ -181,7 +181,7 @@ function PaymentPage() {
     <main className="auth-page">
       <section className="auth-content">
         <img
-          src="/gochat/logo.svg"
+          src="/gochat/logo.png"
           alt="Gochati"
           width={64}
           height={64}

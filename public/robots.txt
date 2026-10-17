@@ -7,4 +7,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://gochati.site/sitemap.xml
+Sitemap: https://gochati.online/sitemap.xml
