@@ -241,7 +241,7 @@ function AdminPage() {
       <main className="auth-page">
         <section className="auth-content">
           <img
-            src="/gochat/logo.svg"
+            src="/gochat/logo.png"
             alt="Gochati.online"
             width={88}
             height={88}
@@ -292,7 +292,7 @@ function AdminPage() {
     <main className="admin-workspace">
       <aside className="admin-sidebar">
         <a href="/" className="admin-brand">
-          <img src="/gochat/logo.svg" alt="Gochati.online" width={42} height={42} />
+          <img src="/gochat/logo.png" alt="Gochati.online" width={42} height={42} />
           <span>
             gochati<span className="text-primary">.online</span>
             <small>ADMIN CONSOLE</small>
