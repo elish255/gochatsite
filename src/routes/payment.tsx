@@ -1,3 +1,4 @@
+import { logoUrl } from "@/lib/gochati-media";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { platform } from "@/integrations/netlify/client";
@@ -181,7 +182,7 @@ function PaymentPage() {
     <main className="auth-page">
       <section className="auth-content">
         <img
-          src="/gochat/logo.png"
+          src={logoUrl}
           alt="Gochati"
           width={64}
           height={64}

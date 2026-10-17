@@ -1,3 +1,4 @@
+import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "./AuthCallbacks";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -94,7 +95,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     <main className="auth-page auth-register">
       <section className="auth-content">
         <img
-          src="/gochat/logo.png"
+          src={logoUrl}
           alt="Gochati"
           width={88}
           height={88}

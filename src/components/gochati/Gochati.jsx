@@ -4,9 +4,8 @@ import { platform } from "@/integrations/netlify/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
 import { ActivationRequiredDialog } from "./ActivationRequiredDialog";
-const logoAsset = { url: "/gochat/logo.png" };
+import { logoUrl, portraits, portraitFallback } from "@/lib/gochati-media";
 import { ArrowRight as f, BellRing as p, CircleCheck as m, Clock as h, Download as g, EllipsisVertical as _, Headphones as v, MessageCircle as y, MessageSquare as b, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
-const portraits = Object.fromEntries(Array.from({ length: 52 }, (_, index) => { const n = Math.floor(index / 2) + 10; const gender = index % 2 === 0 ? "women" : "men"; return [`person-${index + 1}`, `/avators/${gender}-${n}.jpg`]; }));
 function render(factory, type, props, key) {
  if (type === "button") return factory(Button, { ...props, variant: "reference", size: "reference" }, key);
  if (type === "a") return factory(Button, { variant: "reference", size: "reference", asChild: true, children: factory("a", props) }, key);
@@ -43,6 +42,7 @@ const M = [
     `Alice`,
     `Ella`,
     `Mia`,
+    `Eva`,
   ],
   P = [
     `Lucas`,
@@ -70,6 +70,7 @@ const M = [
     `Hugo`,
     `Max`,
     `Sven`,
+    `Oscar`,
   ],
   F = [
     [`Germany`, `🇩🇪`],
@@ -98,14 +99,15 @@ const M = [
       r = n ? N : P,
       i = r[Math.floor(t / 2) % r.length],
       [a, o] = F[t % F.length],
-      s = (Math.floor(t / 2) % 60) + 10;
+      portraitKey = `person-${t + 1}`;
     return {
       id: t + 1,
       name: i,
       age: 22 + ((t * 7) % 26),
       country: a,
       flag: o,
-      photo: portraits[`person-${t + 1}`],
+      photo: portraits[portraitKey],
+      fallbackPhoto: portraitFallback(portraitKey),
       online: t % 3 != 2,
       rate: M[t % M.length],
     };
@@ -202,7 +204,7 @@ function q({ person: e, onChat: t, onCall: n }) {
             children: [
               (0, K.jsx)(`img`, {
                 src: e.photo,
-                onError: (event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/avators/women-10.jpg"; },
+                onError: (event) => { if (event.currentTarget.getAttribute("src") !== e.fallbackPhoto) event.currentTarget.src = e.fallbackPhoto; },
                 alt: `${e.name} kutoka ${e.country}`,
                 loading: `lazy`,
                 className: `size-16 rounded-full border-2 border-primary/40 object-cover`,
@@ -481,6 +483,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
           children: [
             (0, K.jsx)(`img`, {
               src: e.photo,
+              onError: (event) => { if (event.currentTarget.getAttribute("src") !== e.fallbackPhoto) event.currentTarget.src = e.fallbackPhoto; },
               alt: e.name,
               className: `size-11 rounded-full border-2 border-on-color/70 object-cover`,
             }),
@@ -695,6 +698,7 @@ function se({ person: e, kind: t, onClose: n, active = false }) {
                     }),
                   (0, K.jsx)(`img`, {
                     src: e.photo,
+                    onError: (event) => { if (event.currentTarget.getAttribute("src") !== e.fallbackPhoto) event.currentTarget.src = e.fallbackPhoto; },
                     alt: e.name,
                     className: `absolute bottom-2 right-2 size-14 rounded-lg border border-on-color/30 object-cover`,
                   }),
@@ -702,7 +706,7 @@ function se({ person: e, kind: t, onClose: n, active = false }) {
               })
             : (0, K.jsx)(`img`, {
                 src: e.photo,
-                onError: (event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/avators/women-10.jpg"; },
+                onError: (event) => { if (event.currentTarget.getAttribute("src") !== e.fallbackPhoto) event.currentTarget.src = e.fallbackPhoto; },
                 alt: e.name,
                 className: `mx-auto size-24 rounded-full border-4 border-primary/40 object-cover`,
               }),
@@ -811,7 +815,7 @@ function le({
           children: (0, K.jsx)(j, { className: `size-4` }),
         }),
         (0, K.jsx)(`img`, {
-          src: logoAsset.url,
+          src: logoUrl,
           alt: `Nembo ya Gochati`,
           width: 72,
           height: 72,
@@ -1103,11 +1107,11 @@ function de() {
             className: `flex items-center gap-3 py-5`,
             children: [
               (0, K.jsx)(`img`, {
-                src: logoAsset.url,
+                src: logoUrl,
                 alt: `Nembo ya Gochati`,
-                width: 44,
-                height: 44,
-                className: `size-11 rounded-2xl shadow-md`,
+                width: 56,
+                height: 56,
+                className: `size-14 rounded-2xl object-contain shadow-md`,
               }),
               (0, K.jsxs)(`div`, {
                 className: `flex-1`,
