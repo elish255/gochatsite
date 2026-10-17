@@ -1,3 +1,4 @@
+import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -241,7 +242,7 @@ function AdminPage() {
       <main className="auth-page">
         <section className="auth-content">
           <img
-            src="/gochat/logo.png"
+            src={logoUrl}
             alt="Gochati.online"
             width={88}
             height={88}
@@ -292,7 +293,7 @@ function AdminPage() {
     <main className="admin-workspace">
       <aside className="admin-sidebar">
         <a href="/" className="admin-brand">
-          <img src="/gochat/logo.png" alt="Gochati.online" width={42} height={42} />
+          <img src={logoUrl} alt="Gochati.online" width={42} height={42} />
           <span>
             gochati<span className="text-primary">.online</span>
             <small>ADMIN CONSOLE</small>
