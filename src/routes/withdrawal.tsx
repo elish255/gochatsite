@@ -121,7 +121,6 @@ function WithdrawalPage() {
     <main className="auth-page">
       <section className="auth-content">
         <h1>Withdrawal</h1>
-        <p className="auth-subtitle">Salio na withdrawal ni mfano wa matumizi ya mfumo.</p>
         <p>
           Salio: <strong>TZS {balance.toLocaleString()}</strong>
         </p>
