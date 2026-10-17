@@ -1,7 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/terms")({ component: TermsPage });
+export const Route = createFileRoute("/terms")({
+  head: () => ({
+    links: [{ rel: "canonical", href: "https://gochati.online/terms" }],
+    meta: [
+      { title: "Masharti ya Matumizi — Gochati" },
+      {
+        name: "description",
+        content:
+          "Soma masharti ya matumizi ya Gochati kuhusu akaunti, usalama, faragha na matumizi ya huduma za mazungumzo.",
+      },
+      { name: "robots", content: "index, follow, max-image-preview:large" },
+    ],
+  }),
+  component: TermsPage,
+});
 function TermsPage() {
   return (
     <main className="auth-page">
