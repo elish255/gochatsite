@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 type Audience = "all" | "premium" | "normal" | "active" | "inactive";
+type SmsAudience = Audience | "vip";
 function AdminPage() {
   const [section, setSection] = useState("users");
   const [search, setSearch] = useState("");
@@ -33,6 +34,9 @@ function AdminPage() {
   const [notifyUser, setNotifyUser] = useState<{ id: string; name: string } | null>(null);
   const [userMessage, setUserMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [smsAudience, setSmsAudience] = useState<SmsAudience>("inactive");
+  const [smsMessage, setSmsMessage] = useState("Habari [username], karibu GOCHATI. Wezesha akaunti yako kupitia https://gochati.online/login");
+  const [smsSending, setSmsSending] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -154,6 +158,48 @@ function AdminPage() {
     setSending(false);
     setNotice(error?.message || `Notification imetumwa kwa watumiaji ${data}.`);
     if (!error) setBroadcast("");
+  }
+
+  const smsRecipients = useMemo(() => rows.filter((u) => {
+    const active = u.account_status === "active" && u.activation_paid;
+    if (smsAudience === "all") return true;
+    if (smsAudience === "premium") return Boolean(u.is_premium);
+    if (smsAudience === "normal") return !u.is_premium && !u.is_vip;
+    if (smsAudience === "active") return active;
+    if (smsAudience === "inactive") return !active;
+    return Boolean(u.is_vip);
+  }), [rows, smsAudience]);
+
+  async function sendSms() {
+    if (!smsMessage.trim()) {
+      setNotice("Andika ujumbe wa SMS kwanza.");
+      return;
+    }
+    if (!smsRecipients.length) {
+      setNotice("Hakuna watumiaji kwenye kundi ulilochagua.");
+      return;
+    }
+    if (smsRecipients.length > 500) {
+      setNotice("Kundi lina watumiaji zaidi ya 500. Chagua kundi dogo.");
+      return;
+    }
+    if (!window.confirm(`Unataka kutuma SMS kwa watumiaji ${smsRecipients.length}? Gharama za SMS zinaweza kutozwa.`)) return;
+    setSmsSending(true);
+    setNotice("");
+    try {
+      const response = await fetch("/api/gochati-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send", audience: smsAudience, message: smsMessage.trim() }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Imeshindwa kutuma SMS.");
+      setNotice(`SMS zimewekwa kwenye foleni: ${result.queued}; zilizoshindwa: ${result.failed}; jumla: ${result.total}.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Hitilafu ya kutuma SMS.");
+    } finally {
+      setSmsSending(false);
+    }
   }
 
   async function notifySelected() {
@@ -478,6 +524,30 @@ function AdminPage() {
                   </Button>
                 </div>
               </div>
+            )}
+            {section === "messages" && (
+              <section className="card-soft mt-4 p-4">
+                <h2 className="text-xl font-bold">Tuma SMS kupitia DARSMS</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Sender ID: AJIRA PLUS. Tumia [username] ili kila mtumiaji apokee ujumbe wenye username yake.</p>
+                <label className="mt-3 block text-sm font-semibold">Kundi la watumiaji</label>
+                <select className="mt-1 w-full rounded-xl border p-3 bg-background text-foreground" value={smsAudience} onChange={(e) => setSmsAudience(e.target.value as SmsAudience)}>
+                  <option value="inactive">Not Active (hawajalipia au hawajawezeshwa)</option>
+                  <option value="active">Active</option>
+                  <option value="premium">Premium users</option>
+                  <option value="vip">VIP users</option>
+                  <option value="normal">Normal users</option>
+                  <option value="all">Watumiaji wote</option>
+                </select>
+                <p className="mt-2 text-sm">Watumiaji watakaopokea: <strong>{smsRecipients.length}</strong></p>
+                <label className="mt-3 block text-sm font-semibold">Namba za simu (zimetenganishwa kwa koma)</label>
+                <textarea readOnly value={smsRecipients.map((u) => u.phone).filter(Boolean).join(", ")} className="mt-1 min-h-24 w-full rounded-xl border p-3 bg-background text-foreground" aria-label="Namba za simu za kundi lililochaguliwa" />
+                <label className="mt-3 block text-sm font-semibold">Ujumbe wa SMS</label>
+                <textarea maxLength={1200} value={smsMessage} onChange={(e) => setSmsMessage(e.target.value)} className="mt-1 min-h-32 w-full rounded-xl border p-3 bg-background text-foreground" placeholder="Habari [username], ..." />
+                <p className="mt-1 text-xs text-muted-foreground">Ujumbe utatumwa kila mpokeaji mmoja mmoja. [username] itabadilishwa kwa username yake. Kikomo: 500 SMS kwa ombi.</p>
+                <Button className="mt-3" disabled={smsSending || !smsRecipients.length || !smsMessage.trim()} onClick={() => void sendSms()}>
+                  {smsSending ? "Inatuma SMS..." : `Send SMS (${smsRecipients.length})`}
+                </Button>
+              </section>
             )}
             {notifyUser && (
               <div

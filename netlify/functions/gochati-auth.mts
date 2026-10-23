@@ -3,6 +3,7 @@ import { getDatabase } from "@netlify/database";
 import { admin, login, verifyRequestOrigin } from "@netlify/identity";
 import type { Config, Context } from "@netlify/functions";
 import { assert, checkRequest, fail, HttpError, json } from "../lib/platform.js";
+import { sendDarsms } from "../lib/darsms.js";
 
 export default async (req: Request, context: Context) => {
   try {
@@ -95,8 +96,26 @@ export default async (req: Request, context: Context) => {
       await admin.deleteUser(user.id);
       throw error;
     }
+    // Registration is complete before SMS is attempted. SMS provider failure must not
+    // roll back a valid account or make the user submit registration again.
+    let sms = "not_configured";
+    if (process.env.DARSMS_API_KEY) {
+      const message = `Hongera! ${username} Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh 16000 uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login`;
+      try {
+        await sendDarsms(data.phone, message);
+        sms = "queued";
+      } catch (error) {
+        sms = "failed";
+        console.error("[GOCHATI][REGISTRATION_SMS] failed", {
+          userId: user.id,
+          reason: error instanceof Error ? error.message : "Unknown DARSMS error",
+        });
+      }
+    } else {
+      console.warn("[GOCHATI][REGISTRATION_SMS] DARSMS_API_KEY is not configured");
+    }
     await login(email, password);
-    return json({ data: true }, 201);
+    return json({ data: true, sms }, 201);
   } catch (error) {
     return fail(error);
   }
