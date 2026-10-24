@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 export const Route = createFileRoute("/withdrawal")({ component: WithdrawalPage });
 function WithdrawalPage() {
   const [balance, setBalance] = useState(0),
-    [amount, setAmount] = useState("25000"),
+    [amount, setAmount] = useState("100000"),
     [phone, setPhone] = useState(""),
     [history, setHistory] = useState<any[]>([]),
     [notice, setNotice] = useState(""),
@@ -80,8 +80,9 @@ function WithdrawalPage() {
       return;
     }
     const value = Number(amount);
-    if (!Number.isSafeInteger(value) || value <= 20000) {
-      setNotice("Kiasi lazima kiwe zaidi ya TZS 20,000.");
+    const minAmount = eligibility?.is_premium ? 500000 : 100000;
+    if (!Number.isSafeInteger(value) || value < minAmount) {
+      setNotice(`Minimum withdrawal ni TZS ${minAmount.toLocaleString()}.`);
       return;
     }
     if (value > balance) {

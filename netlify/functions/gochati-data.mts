@@ -122,7 +122,7 @@ export default async (req: Request) => {
         const amount = Number(a.p_amount),
           phone = String(a.p_phone || "");
         assert(
-          Number.isSafeInteger(amount) && amount > 20000 && /^[+\d ]{9,16}$/.test(phone),
+          Number.isSafeInteger(amount) && amount >= (profile.is_premium ? 500000 : 100000) && /^[+\\d ]{9,16}$/.test(phone),
           400,
           "Kiasi lazima kiwe zaidi ya TZS 20,000 na namba ya simu iwe sahihi.",
         );
