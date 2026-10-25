@@ -3,6 +3,7 @@ import { getDatabase } from "@netlify/database";
 import { admin, login, verifyRequestOrigin } from "@netlify/identity";
 import type { Config, Context } from "@netlify/functions";
 import { assert, checkRequest, fail, HttpError, json } from "../lib/platform.js";
+import { sendDarsms } from "../lib/darsms.js";
 
 export default async (req: Request, context: Context) => {
   try {
@@ -95,6 +96,16 @@ export default async (req: Request, context: Context) => {
       await admin.deleteUser(user.id);
       throw error;
     }
+    // Start only after both account records exist; SMS failure must not undo signup.
+    context.waitUntil(
+      sendDarsms(
+        data.phone,
+        `Hongera! ${username} Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh 16000 uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login`,
+      ).catch(() => {
+        // Provider errors may contain sensitive details; keep logs generic.
+        console.error("Registration SMS delivery failed.");
+      }),
+    );
     await login(email, password);
     return json({ data: true }, 201);
   } catch (error) {

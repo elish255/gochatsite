@@ -6,7 +6,10 @@ const mocks = vi.hoisted(() => ({
   login: vi.fn(),
   createUser: vi.fn(),
   deleteUser: vi.fn(),
+  sendDarsms: vi.fn(),
+  waitUntil: vi.fn(),
 }));
+vi.mock("../../netlify/lib/darsms.js", () => ({ sendDarsms: mocks.sendDarsms }));
 vi.mock("@netlify/database", () => ({ getDatabase: () => ({ sql: mocks.sql }) }));
 vi.mock("@netlify/identity", () => ({
   login: mocks.login,
@@ -23,7 +26,7 @@ function request(body: Record<string, unknown>) {
       headers: { "Content-Type": "application/json", Origin: "https://gochati.online" },
       body: JSON.stringify(body),
     }),
-    { ip: "192.0.2.5" } as Context,
+    { ip: "192.0.2.5", waitUntil: mocks.waitUntil } as unknown as Context,
   );
 }
 const signup = {
@@ -44,6 +47,7 @@ beforeEach(() => {
   mocks.sql.mockResolvedValue([]).mockResolvedValueOnce([{ attempts: 1 }]);
   mocks.createUser.mockResolvedValue({ id: "new-account" });
   mocks.login.mockResolvedValue({ id: "new-account" });
+  mocks.sendDarsms.mockResolvedValue({ success: true });
 });
 
 describe("Username authentication and direct signup", () => {
@@ -61,6 +65,7 @@ describe("Username authentication and direct signup", () => {
     expect(response.status).toBe(200);
     expect(mocks.login).toHaveBeenCalledWith("amina@example.test", "example-password");
     expect(await response.json()).toEqual({ data: true });
+    expect(mocks.sendDarsms).not.toHaveBeenCalled();
   });
   it("uses the same error for unknown usernames and incorrect passwords", async () => {
     mocks.login.mockRejectedValue(new Error("Invalid credentials"));
@@ -95,6 +100,26 @@ describe("Username authentication and direct signup", () => {
     expect(mocks.sql.mock.invocationCallOrder[insert]).toBeLessThan(
       mocks.login.mock.invocationCallOrder[0]!,
     );
+    expect(mocks.sql.mock.invocationCallOrder[insert]).toBeLessThan(
+      mocks.sendDarsms.mock.invocationCallOrder[0]!,
+    );
+    expect(mocks.sendDarsms).toHaveBeenCalledExactlyOnceWith(
+      signup.metadata.phone,
+      "Hongera! amina Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh 16000 uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login",
+    );
+    expect(mocks.waitUntil).toHaveBeenCalledWith(expect.any(Promise));
+  });
+  it("keeps signup successful when the SMS provider fails", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      mocks.sendDarsms.mockRejectedValue(new Error("provider unavailable"));
+      expect((await request(signup)).status).toBe(201);
+      await mocks.waitUntil.mock.calls[0][0];
+      expect(mocks.login).toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith("Registration SMS delivery failed.");
+    } finally {
+      log.mockRestore();
+    }
   });
   it("rejects public signup for a reserved administrator email", async () => {
     mocks.sql
@@ -117,6 +142,7 @@ describe("Username authentication and direct signup", () => {
     expect((await request(signup)).status).toBe(409);
     expect(mocks.deleteUser).toHaveBeenCalledWith("new-account");
     expect(mocks.login).not.toHaveBeenCalled();
+    expect(mocks.sendDarsms).not.toHaveBeenCalled();
   });
   it("limits repeated registration requests before creating an account", async () => {
     mocks.sql.mockReset().mockResolvedValueOnce([{ attempts: 11 }]);

@@ -1,5 +1,6 @@
 import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
+import { AdminSms } from "@/components/gochati/AdminSms";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { platform } from "@/integrations/netlify/client";
@@ -10,6 +11,7 @@ import {
   LayoutDashboard,
   CreditCard,
   Bell,
+  MessageSquare,
   Wallet,
   LogOut,
   ArrowUpRight,
@@ -305,6 +307,7 @@ function AdminPage() {
             { id: "users", label: "Watumiaji", icon: Users },
             { id: "payments", label: "Malipo", icon: CreditCard },
             { id: "messages", label: "Notifications", icon: Bell },
+            { id: "sms", label: "SMS", icon: MessageSquare },
             { id: "withdrawals", label: "Withdrawal", icon: Wallet },
           ].map(({ id, label, icon: Icon }) => (
             <Button
@@ -348,7 +351,7 @@ function AdminPage() {
                 ? "Watumiaji"
                 : section === "payments"
                   ? "Malipo ya huduma"
-                  : section === "messages"
+                  : section === "messages" || section === "sms"
                     ? "Mawasiliano"
                     : "Maombi ya withdrawal"}
             </h1>
@@ -368,6 +371,7 @@ function AdminPage() {
         )}
         {ready && (
           <>
+            {section === "sms" && <AdminSms />}
             {section === "payments" && (
               <section className="card-soft mt-4 p-4">
                 <h2 className="text-xl font-bold">Malipo ya SplashPay</h2>
