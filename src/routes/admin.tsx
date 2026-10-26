@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { platform } from "@/integrations/netlify/client";
 import { Button } from "@/components/ui/button";
 import {
+  Menu,
   Users,
   Search,
   LayoutDashboard,
@@ -19,6 +20,13 @@ import {
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 type Audience = "all" | "premium" | "normal" | "active" | "inactive";
 function AdminPage() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [smsRecipient, setSmsRecipient] = useState<{
+    id: string;
+    name: string;
+    phone: string;
+  } | null>(null);
+  const [withdrawalBusy, setWithdrawalBusy] = useState("");
   const [section, setSection] = useState("users");
   const [search, setSearch] = useState("");
   const [searchRows, setSearchRows] = useState<any[] | null>(null);
@@ -177,11 +185,21 @@ function AdminPage() {
     setUserMessage("");
   }
   async function markPaid(id: string) {
-    const { error } = await platform
+    if (withdrawalBusy) return;
+    setWithdrawalBusy(id);
+    const { data, error } = await platform
       .from("gochati_withdrawals")
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("id", id);
-    setNotice(error?.message || "Withdrawal imewekwa Paid; hakuna pesa iliyotumwa.");
+    setWithdrawalBusy("");
+    setNotice(
+      error?.message ||
+        (!data?.length
+          ? "Withdrawal hii tayari imeshughulikiwa."
+          : data[0].sms_status === "queued"
+            ? "Withdrawal imewekwa Paid. SMS imekubaliwa kutumwa."
+            : "Withdrawal imewekwa Paid lakini SMS imeshindikana. Tumia Tuma SMS kwa mtumiaji huyu baada ya kukagua huduma."),
+    );
     await load();
   }
   const activeRows = useMemo(
@@ -293,53 +311,78 @@ function AdminPage() {
     );
   return (
     <main className="admin-workspace">
-      <aside className="admin-sidebar">
-        <a href="/" className="admin-brand">
-          <img src={logoUrl} alt="Gochati.online" width={42} height={42} />
-          <span>
-            gochati<span className="text-primary">.online</span>
-            <small>ADMIN CONSOLE</small>
-          </span>
-        </a>
-        <p className="admin-nav-label">USIMAMIZI</p>
-        <nav aria-label="Sehemu za admin">
-          {[
-            { id: "users", label: "Watumiaji", icon: Users },
-            { id: "payments", label: "Malipo", icon: CreditCard },
-            { id: "messages", label: "Notifications", icon: Bell },
-            { id: "sms", label: "SMS", icon: MessageSquare },
-            { id: "withdrawals", label: "Withdrawal", icon: Wallet },
-          ].map(({ id, label, icon: Icon }) => (
-            <Button
-              key={id}
-              variant={section === id ? "secondary" : "ghost"}
-              className="admin-nav-button"
-              aria-pressed={section === id}
-              onClick={() => setSection(id)}
-            >
-              <Icon size={18} />
-              {label}
-            </Button>
-          ))}
-        </nav>
-        <div className="admin-sidebar-footer">
-          <a href="/" className="flex items-center gap-2 text-sm">
-            <ArrowUpRight size={16} /> Fungua tovuti
+      <div
+        className="admin-menu-wrap"
+        onMouseEnter={() => setMenuOpen(true)}
+        onMouseLeave={() => setMenuOpen(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setMenuOpen(false);
+        }}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) setMenuOpen(false);
+        }}
+      >
+        <Button
+          variant="outline"
+          className="admin-menu-trigger"
+          aria-expanded={menuOpen}
+          aria-controls="admin-navigation"
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          <Menu size={20} /> Menyu ya admin
+        </Button>
+        <aside id="admin-navigation" className="admin-sidebar" hidden={!menuOpen}>
+          <a href="/" className="admin-brand">
+            <img src={logoUrl} alt="Gochati.online" width={42} height={42} />
+            <span>
+              gochati<span className="text-primary">.online</span>
+              <small>ADMIN CONSOLE</small>
+            </span>
           </a>
-          <Button
-            variant="ghost"
-            className="mt-3 w-full justify-start"
-            onClick={async () => {
-              await platform.auth.signOut();
-              setUser(null);
-              setAuthorized(false);
-              setRows([]);
-            }}
-          >
-            <LogOut size={16} /> Toka kwenye akaunti
-          </Button>
-        </div>
-      </aside>
+          <p className="admin-nav-label">USIMAMIZI</p>
+          <nav aria-label="Sehemu za admin">
+            {[
+              { id: "users", label: "Watumiaji", icon: Users },
+              { id: "payments", label: "Malipo", icon: CreditCard },
+              { id: "messages", label: "Notifications", icon: Bell },
+              { id: "sms", label: "SMS", icon: MessageSquare },
+              { id: "withdrawals", label: "Withdrawal", icon: Wallet },
+            ].map(({ id, label, icon: Icon }) => (
+              <Button
+                key={id}
+                variant={section === id ? "secondary" : "ghost"}
+                className="admin-nav-button"
+                aria-pressed={section === id}
+                onClick={() => {
+                  setSection(id);
+                  setSmsRecipient(null);
+                  setMenuOpen(false);
+                }}
+              >
+                <Icon size={18} />
+                {label}
+              </Button>
+            ))}
+          </nav>
+          <div className="admin-sidebar-footer">
+            <a href="/" className="flex items-center gap-2 text-sm">
+              <ArrowUpRight size={16} /> Fungua tovuti
+            </a>
+            <Button
+              variant="ghost"
+              className="mt-3 w-full justify-start"
+              onClick={async () => {
+                await platform.auth.signOut();
+                setUser(null);
+                setAuthorized(false);
+                setRows([]);
+              }}
+            >
+              <LogOut size={16} /> Toka kwenye akaunti
+            </Button>
+          </div>
+        </aside>
+      </div>
       <section className="admin-main">
         <header className="admin-heading">
           <div>
@@ -371,7 +414,16 @@ function AdminPage() {
         )}
         {ready && (
           <>
-            {section === "sms" && <AdminSms />}
+            {section === "sms" && (
+              <>
+                {smsRecipient && (
+                  <Button variant="outline" onClick={() => setSmsRecipient(null)}>
+                    Rudi kwenye SMS za makundi
+                  </Button>
+                )}
+                <AdminSms key={smsRecipient?.id || "groups"} recipient={smsRecipient} />
+              </>
+            )}
             {section === "payments" && (
               <section className="card-soft mt-4 p-4">
                 <h2 className="text-xl font-bold">Malipo ya SplashPay</h2>
@@ -679,6 +731,20 @@ function AdminPage() {
                             <Button
                               variant="outline"
                               onClick={() => {
+                                setSmsRecipient({
+                                  id: u.id,
+                                  name: u.username || u.full_name || "mtumiaji",
+                                  phone: u.phone,
+                                });
+                                setSection("sms");
+                                setNotice("");
+                              }}
+                            >
+                              <MessageSquare size={16} /> Tuma SMS
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
                                 setNotifyUser({
                                   id: u.id,
                                   name: u.full_name || u.username || "mtumiaji",
@@ -699,6 +765,10 @@ function AdminPage() {
             {section === "withdrawals" && (
               <>
                 <h2 className="mt-8 text-xl font-bold">Withdrawal</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Weka Paid baada ya kuthibitisha malipo mwenyewe. Hatua hii hutuma SMS ya
+                  uthibitisho; haitumi pesa.
+                </p>
                 <div className="mt-3 grid gap-3">
                   {withdrawals.length === 0 && (
                     <p className="admin-empty">Hakuna ombi la withdrawal bado.</p>
@@ -724,8 +794,12 @@ function AdminPage() {
                         · {new Date(w.created_at).toLocaleString()}
                       </p>
                       {w.status === "pending" && (
-                        <Button className="mt-2" onClick={() => void markPaid(w.id)}>
-                          Weka Paid
+                        <Button
+                          className="mt-2"
+                          disabled={Boolean(withdrawalBusy)}
+                          onClick={() => void markPaid(w.id)}
+                        >
+                          {withdrawalBusy === w.id ? "Inahifadhi na kutuma SMS..." : "Weka Paid"}
                         </Button>
                       )}
                     </article>

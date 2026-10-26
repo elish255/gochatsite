@@ -1,4 +1,5 @@
 import { authenticated, assert, checkRequest, fail, json } from "../lib/platform.js";
+import { sendDarsms } from "../lib/darsms.js";
 import type { Config } from "@netlify/functions";
 
 export default async (req: Request) => {
@@ -121,7 +122,7 @@ export default async (req: Request) => {
       if (b.rpc === "gochati_request_withdrawal") {
         const amount = Number(a.p_amount),
           phone = String(a.p_phone || "").trim();
-        const minAmount = profile.is_premium ? 500000 : 100000;
+        const minAmount = profile["is_premium"] ? 500000 : 100000;
         assert(
           Number.isSafeInteger(amount) && amount >= minAmount,
           400,
@@ -301,6 +302,25 @@ export default async (req: Request) => {
           ],
         );
       if (mutation) await client.query("COMMIT");
+      if (mutation && table === "gochati_withdrawals") {
+        for (const withdrawal of rows) {
+          withdrawal.sms_status = "failed";
+          try {
+            const { rows: recipients } = await client.query(
+              "SELECT username FROM gochati_users WHERE id=$1",
+              [withdrawal.user_id],
+            );
+            assert(recipients[0], 404, "Mtumiaji hajapatikana.");
+            await sendDarsms(
+              String(withdrawal.phone),
+              `Hongera! ${recipients[0].username} Withdrawal yako ya TZS ${Number(withdrawal.amount).toLocaleString("en-US")} imekamilika na malipo yako yametumwa kikamilifu. Asante kwa kutumia GOCHATI .!!!`,
+            );
+            withdrawal.sms_status = "queued";
+          } catch {
+            // A provider failure must never undo a committed admin status change.
+          }
+        }
+      }
       return json({ data: b.one ? rows[0] || null : rows });
     } catch (e) {
       if (b.operation === "update") await client.query("ROLLBACK");

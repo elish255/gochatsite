@@ -8,8 +8,8 @@ export function normalizeTanzaniaPhone(value: unknown): string | null {
 }
 
 export async function sendDarsms(phone: string, message: string) {
-  const apiKey = process.env.DARSMS_API_KEY;
-  const senderId = process.env.DARSMS_SENDER_ID || "AJIRA PLUS";
+  const apiKey = process.env["DARSMS_API_KEY"];
+  const senderId = process.env["DARSMS_SENDER_ID"] || "AJIRA PLUS";
   if (!apiKey) throw new Error("DARSMS_API_KEY haijawekwa kwenye environment variables.");
   const to = normalizeTanzaniaPhone(phone);
   if (!to) throw new Error("Namba ya simu si sahihi.");
@@ -22,7 +22,9 @@ export async function sendDarsms(phone: string, message: string) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload?.success === false) {
-    throw new Error(`DARSMS API error (${response.status}): ${String(payload?.message || payload?.error || "Utumaji umeshindwa.").slice(0, 250)}`);
+    throw new Error(
+      `DARSMS API error (${response.status}): ${String(payload?.message || payload?.error || "Utumaji umeshindwa.").slice(0, 250)}`,
+    );
   }
   return payload;
 }

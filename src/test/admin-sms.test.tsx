@@ -71,3 +71,24 @@ describe("Admin SMS", () => {
     expect(screen.getByRole("button", { name: "Tuma SMS" })).toBeEnabled();
   });
 });
+
+it("sends SMS only to the selected individual without requiring group counts", async () => {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValue(Response.json({ total: 1, queued: 1, failed: 0, results: [] }));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<AdminSms recipient={{ id: "amina-id", name: "amina", phone: "0712345678" }} />);
+  expect(screen.queryByLabelText("Wapokeaji wa SMS")).not.toBeInTheDocument();
+  expect(fetchMock).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("Ujumbe wa SMS"), {
+    target: { value: "Habari [Username]" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Tuma SMS" }));
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Wapokeaji: 1"));
+  expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body)).toEqual({
+    action: "send",
+    audience: "individual",
+    user_id: "amina-id",
+    message: "Habari [Username]",
+  });
+});

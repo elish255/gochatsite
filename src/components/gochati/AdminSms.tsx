@@ -17,7 +17,11 @@ const audienceOptions = [
   ["vip", "VIP users tu"],
 ] as const;
 
-export function AdminSms() {
+export function AdminSms({
+  recipient,
+}: {
+  recipient?: { id: string; name: string; phone: string } | null;
+}) {
   const [audience, setAudience] = useState("all");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -29,6 +33,7 @@ export function AdminSms() {
   const [countAttempt, setCountAttempt] = useState(0);
 
   useEffect(() => {
+    if (recipient) return;
     const controller = new AbortController();
     setCountError("");
     fetch("/api/gochati-sms", {
@@ -47,7 +52,7 @@ export function AdminSms() {
         if (!controller.signal.aborted) setCountError("Idadi ya wapokeaji haijapatikana.");
       });
     return () => controller.abort();
-  }, [countAttempt]);
+  }, [countAttempt, recipient]);
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -60,7 +65,12 @@ export function AdminSms() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", audience, message: message.trim() }),
+        body: JSON.stringify({
+          action: "send",
+          audience: recipient ? "individual" : audience,
+          user_id: recipient?.id,
+          message: message.trim(),
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "SMS hazijatumwa. Jaribu tena.");
@@ -79,41 +89,59 @@ export function AdminSms() {
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
         SMS zinatumwa kwenye namba walizosajili. Tumia [Username] kuweka username ya kila mpokeaji.
-        Kundi lisizidi watumiaji 500 kwa utumaji mmoja.
+        {!recipient && "Kundi lisizidi watumiaji 500 kwa utumaji mmoja."}
       </p>
       <form onSubmit={send} className="mt-4 space-y-3" aria-busy={sending}>
-        <label className="block text-sm font-semibold" htmlFor="sms-audience">
-          Wapokeaji wa SMS
-        </label>
-        <select
-          id="sms-audience"
-          className="w-full rounded-xl border border-border bg-background p-3 text-foreground"
-          value={audience}
-          onChange={(event) => setAudience(event.target.value)}
-          disabled={sending}
-        >
-          {audienceOptions.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}{counts ? ` (${counts[value]})` : ""}
-            </option>
-          ))}
-        </select>
-        <div aria-live="polite" className="text-sm text-muted-foreground">
-          {countError ? (
-            <>
-              {countError}{" "}
-              <Button type="button" variant="outline" size="sm" onClick={() => setCountAttempt((value) => value + 1)}>
-                Jaribu tena
-              </Button>
-            </>
-          ) : counts ? (
-            <>
-              Wapokeaji wa kundi hili: <strong className="text-foreground">{counts[audience]}</strong>.
-              {counts[audience] === 0 && " Hakuna watumiaji kwenye kundi hili."}
-              {counts[audience] > 500 && " Kundi lina zaidi ya watumiaji 500. Chagua kundi dogo kabla ya kutuma."}
-            </>
-          ) : "Inapakia idadi ya wapokeaji..."}
-        </div>
+        {recipient ? (
+          <p className="rounded-xl border border-border p-3">
+            Kwa: <strong>{recipient.name}</strong> · {recipient.phone}
+          </p>
+        ) : (
+          <>
+            <label className="block text-sm font-semibold" htmlFor="sms-audience">
+              Wapokeaji wa SMS
+            </label>
+            <select
+              id="sms-audience"
+              className="w-full rounded-xl border border-border bg-background p-3 text-foreground"
+              value={audience}
+              onChange={(event) => setAudience(event.target.value)}
+              disabled={sending}
+            >
+              {audienceOptions.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                  {counts ? ` (${counts[value]})` : ""}
+                </option>
+              ))}
+            </select>
+            <div aria-live="polite" className="text-sm text-muted-foreground">
+              {countError ? (
+                <>
+                  {countError}{" "}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCountAttempt((value) => value + 1)}
+                  >
+                    Jaribu tena
+                  </Button>
+                </>
+              ) : counts ? (
+                <>
+                  Wapokeaji wa kundi hili:{" "}
+                  <strong className="text-foreground">{counts[audience]}</strong>.
+                  {counts[audience] === 0 && " Hakuna watumiaji kwenye kundi hili."}
+                  {(counts[audience] ?? 0) > 500 &&
+                    " Kundi lina zaidi ya watumiaji 500. Chagua kundi dogo kabla ya kutuma."}
+                </>
+              ) : (
+                "Inapakia idadi ya wapokeaji..."
+              )}
+            </div>
+          </>
+        )}
         <label className="block text-sm font-semibold" htmlFor="sms-message">
           Ujumbe wa SMS
         </label>
@@ -128,7 +156,16 @@ export function AdminSms() {
           placeholder="Hongera! [Username]..."
         />
         <p className="text-sm text-muted-foreground">Herufi {message.length}/1200</p>
-        <Button type="submit" disabled={sending || !message.trim() || (counts != null && (counts[audience] === 0 || counts[audience] > 500))}>
+        <Button
+          type="submit"
+          disabled={
+            sending ||
+            !message.trim() ||
+            (!recipient &&
+              counts != null &&
+              (counts[audience] === 0 || (counts[audience] ?? 0) > 500))
+          }
+        >
           {sending ? "Inatuma SMS..." : "Tuma SMS"}
         </Button>
       </form>
