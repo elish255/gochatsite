@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 
 type SmsResult = {
@@ -8,12 +8,46 @@ type SmsResult = {
   results: { username: string; status: string }[];
 };
 
+const audienceOptions = [
+  ["all", "Watumiaji wote"],
+  ["premium", "Premium users tu"],
+  ["normal", "Normal users tu"],
+  ["active", "Active users tu"],
+  ["inactive", "Inactive users tu"],
+  ["vip", "VIP users tu"],
+] as const;
+
 export function AdminSms() {
   const [audience, setAudience] = useState("all");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<SmsResult | null>(null);
+
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+  const [countError, setCountError] = useState("");
+  const [countAttempt, setCountAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setCountError("");
+    fetch("/api/gochati-sms", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "counts" }),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error("Idadi ya wapokeaji haijapatikana.");
+        if (!controller.signal.aborted) setCounts(data.counts);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCountError("Idadi ya wapokeaji haijapatikana.");
+      });
+    return () => controller.abort();
+  }, [countAttempt]);
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -58,13 +92,28 @@ export function AdminSms() {
           onChange={(event) => setAudience(event.target.value)}
           disabled={sending}
         >
-          <option value="all">Watumiaji wote</option>
-          <option value="premium">Premium users tu</option>
-          <option value="normal">Normal users tu</option>
-          <option value="active">Active users tu</option>
-          <option value="inactive">Inactive users tu</option>
-          <option value="vip">VIP users tu</option>
+          {audienceOptions.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}{counts ? ` (${counts[value]})` : ""}
+            </option>
+          ))}
         </select>
+        <div aria-live="polite" className="text-sm text-muted-foreground">
+          {countError ? (
+            <>
+              {countError}{" "}
+              <Button type="button" variant="outline" size="sm" onClick={() => setCountAttempt((value) => value + 1)}>
+                Jaribu tena
+              </Button>
+            </>
+          ) : counts ? (
+            <>
+              Wapokeaji wa kundi hili: <strong className="text-foreground">{counts[audience]}</strong>.
+              {counts[audience] === 0 && " Hakuna watumiaji kwenye kundi hili."}
+              {counts[audience] > 500 && " Kundi lina zaidi ya watumiaji 500. Chagua kundi dogo kabla ya kutuma."}
+            </>
+          ) : "Inapakia idadi ya wapokeaji..."}
+        </div>
         <label className="block text-sm font-semibold" htmlFor="sms-message">
           Ujumbe wa SMS
         </label>
@@ -79,7 +128,7 @@ export function AdminSms() {
           placeholder="Hongera! [Username]..."
         />
         <p className="text-sm text-muted-foreground">Herufi {message.length}/1200</p>
-        <Button type="submit" disabled={sending || !message.trim()}>
+        <Button type="submit" disabled={sending || !message.trim() || (counts != null && (counts[audience] === 0 || counts[audience] > 500))}>
           {sending ? "Inatuma SMS..." : "Tuma SMS"}
         </Button>
       </form>
