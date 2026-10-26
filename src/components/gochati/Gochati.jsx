@@ -1,4 +1,5 @@
 import * as l from "react";
+import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
 import { platform } from "@/integrations/netlify/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
@@ -102,6 +103,7 @@ const M = [
       portraitKey = `person-${t + 1}`;
     return {
       id: t + 1,
+      topic: chatPersona(t + 1).topic,
       name: i,
       age: 22 + ((t * 7) % 26),
       country: a,
@@ -237,7 +239,7 @@ function q({ person: e, onChat: t, onCall: n }) {
               }),
               (0, K.jsxs)(`div`, {
                 className: `mt-2 inline-block rounded-lg border border-border bg-secondary/70 px-2.5 py-1 text-[11px] font-semibold`,
-                children: [e.rate.label, ` — `, I(e.rate.amount)],
+                children: [e.topic, ` · `, e.rate.label, ` — `, I(e.rate.amount)],
               }),
             ],
           }),
@@ -266,160 +268,25 @@ function q({ person: e, onChat: t, onCall: n }) {
     ],
   });
 }
-var J = (e) => e.charAt(0).toUpperCase() + e.slice(1);
-function Y(e) {
-  let t = e.match(
-    /(?:naitwa|jina langu ni|mimi ni|my name is|i am|i'm)\s+([a-zA-Z]{2,15})/i,
-  );
-  return t && t[1] ? J(t[1].toLowerCase()) : null;
-}
-function X(e) {
-  let t = e.match(/(?:natokea|natoka|niko|nipo|from)\s+([a-zA-Z]{3,20})/i);
-  return t && t[1] ? J(t[1].toLowerCase()) : null;
-}
-var ie = [
-    {
-      test: /(habari|mambo|vipi|hujambo|hello|hi|salama|shikamoo|niaje)/i,
-      replies: (e) => [
-        `Nzuri sana! Leo nimeamka na hamu ya kujifunza Kiswahili zaidi, wewe siku yako inakwendaje?`,
-        `Salama kabisa. Mimi ni ${e}, nimefurahi kuanza mazungumzo na wewe leo.`,
-      ],
-    },
-    {
-      test: /(nafanya|kazi|job|work|shule|chuo|masomo)/i,
-      replies: () => [
-        `Hiyo ni kazi ya heshima kweli. Huwa inakuchukua muda mrefu kwa siku au unapata nafasi ya kupumzika?`,
-        `Napenda watu wenye bidii. Ulianza lini kufanya hivyo?`,
-      ],
-    },
-    {
-      test: /(pesa|malipo|lipwa|payment|hela|fedha)/i,
-      replies: () => [
-        `Usiwe na wasiwasi kuhusu hilo, mfumo wenyewe hushughulikia malipo mara mazungumzo yetu yanapokamilika.`,
-        `Mimi nalipia muda wangu hapa, hivyo endelea tu kuniambia habari zako.`,
-      ],
-    },
-    {
-      test: /(safari|utalii|tour|mlima|kilimanjaro|serengeti|beach|bahari|zanzibar)/i,
-      replies: () => [
-        `Ndoto yangu kubwa ni kupanda Kilimanjaro mwakani. Wewe umeshawahi kufika huko?`,
-        `Nimeona picha za Serengeti na zilinivutia mno, naamini uhalisia ni mzuri zaidi.`,
-      ],
-    },
-    {
-      test: /(familia|mke|mume|mtoto|watoto|family|ndoa)/i,
-      replies: () => [
-        `Familia ni utajiri wa kweli. Mnaishi wote pamoja au mmesambaa sehemu tofauti?`,
-        `Inapendeza sana kusikia hivyo. Mimi natamani siku moja kuwa na familia yenye utulivu kama hiyo.`,
-      ],
-    },
-    {
-      test: /(chakula|ugali|pilau|nyama|kula|food|samaki)/i,
-      replies: () => [
-        `Nilijaribu pilau mara moja kwenye mgahawa wa Kiafrika hapa, ladha yake sitaisahau kamwe.`,
-        `Sasa umenifanya niwe na njaa! Wewe upishi wako unaanzia wapi?`,
-      ],
-    },
-    {
-      test: /(mpira|soka|football|muziki|music|filamu|movie|dansi)/i,
-      replies: () => [
-        `Mimi hufuatilia sana hiyo. Timu au msanii unayempenda zaidi ni yupi?`,
-        `Tunafanana hapo, huwa inanipa raha baada ya siku ndefu ya kazi.`,
-      ],
-    },
-    {
-      test: /(hali ya hewa|jua|mvua|baridi|weather|joto)/i,
-      replies: () => [
-        `Huku kwetu kuna baridi kali sasa hivi, natamani jua la kwenu.`,
-        `Joto la Afrika Mashariki linanivutia sana, hapa mwanga wa jua ni adimu.`,
-      ],
-    },
-    {
-      test: /(umri|miaka|age|old)/i,
-      replies: () => [
-        `Umri ni namba tu kwangu, muhimu ni mtu kuwa na moyo mzuri kama wako.`,
-        `Naona tuko karibu kimtazamo, hiyo inatosha kufanya mazungumzo yawe matamu.`,
-      ],
-    },
-    {
-      test: /(asante|ahsante|thanks|shukrani)/i,
-      replies: () => [
-        `Karibu sana, furaha ni yangu kuongea nawe.`,
-        `Hakuna shida hata kidogo, endelea kuniambia mengine.`,
-      ],
-    },
-    {
-      test: /\?$/,
-      replies: () => [
-        `Swali zuri. Kwa upande wangu naliona hivi: uzoefu wa moja kwa moja ndio hufundisha zaidi kuliko maelezo.`,
-        `Nifikirie kidogo... naamini jibu lake linategemea hali ya mtu, lakini mimi ningechagua njia rahisi.`,
-      ],
-    },
-  ],
-  Z = [
-    `Hiyo inanivutia kweli, niambie zaidi kidogo kuhusu hilo.`,
-    `Aisee, sikuwahi kufikiria hivyo. Ilikuwaje mara ya kwanza?`,
-    `Unaongea kwa ufasaha wa kupendeza. Je, siku zako nyingi huwa hivi?`,
-    `Nakubaliana nawe kwa asilimia kubwa, ingawa mimi huwa naona upande mwingine pia.`,
-    `Hii ndiyo sababu napenda kuongea na watu wa Tanzania, mnakuwa wakweli.`,
-    `Naisikia hiyo. Ungependa tuzungumzie nini kingine kabla muda haujaisha?`,
-  ];
-function ae(e) {
-  let t = new Set();
-  return (n) => {
-    let r = Y(n),
-      i = X(n),
-      a = [];
-    if (r && i)
-      a = [
-        `Karibu sana ${r}! ${i} ni mahali pazuri, huwa napenda kusoma habari za utalii wa kule.`,
-        `${r}, jina zuri. Nimeambiwa watu wa ${i} ni wakarimu mno, ni kweli?`,
-      ];
-    else if (r)
-      a = [
-        `Nafurahi kukutana nawe ${r}. Mimi ni ${e}, nimekuwa nikijifunza Kiswahili kwa miezi sita sasa.`,
-        `${r}, jina lako linasikika vizuri. Unaishi mkoa gani?`,
-      ];
-    else if (i)
-      a = [
-        `${i}! Nimeona picha zake mtandaoni, hali ya hewa yake ni ya kuvutia. Umeishi huko muda gani?`,
-        `Sijawahi kufika ${i}, lakini iko juu kwenye orodha yangu ya safari.`,
-      ];
-    else {
-      let t = ie.find((e) => e.test.test(n.trim()));
-      a = t ? t.replies(e, n) : Z;
-    }
-    let o = a.filter((e) => !t.has(e)),
-      s = o.length ? o : Z.filter((e) => !t.has(e)),
-      c = (s.length ? s : Z)[
-        Math.floor(Math.random() * (s.length || Z.length))
-      ];
-    return (t.add(c), c);
-  };
-}
-var Q = [
-  `Habari yako! Nimekuwa nikisubiri mtu wa kuongea naye Kiswahili leo.`,
-  `Hujambo? Naitwa hivyo unavyoona hapo juu, nafurahi umeingia.`,
-  `Salamu kutoka huku! Naomba unieleze kidogo kuhusu wewe.`,
-];
 function oe({ person: e, onClose: t, onPaid: n, active = false }) {
   let [r, i] = (0, l.useState)(null),
     [a, o] = (0, l.useState)([]),
     [s, c] = (0, l.useState)(``),
     [u, d] = (0, l.useState)(!1),
     [f, p] = (0, l.useState)(0),
-    m = (0, l.useRef)(ae(e.name)),
+    requestRef = (0, l.useRef)(null),
+    mountedRef = (0, l.useRef)(true),
+    [replyError, setReplyError] = (0, l.useState)(``),
     g = (0, l.useRef)(null),
     _ = (0, l.useRef)(!1);
   ((0, l.useEffect)(() => {
     if (!r) return;
-    let e = Q[Math.floor(Math.random() * Q.length)];
-    d(!0);
-    let t = setTimeout(() => {
-      (d(!1), o([{ id: Date.now(), from: `them`, text: e }]));
-    }, 2600);
-    return () => clearTimeout(t);
-  }, [r, e.name]),
+    o([{ id: `opening-${e.id}`, from: `them`, text: chatOpening(e.id) }]);
+  }, [r, e.id]),
+    (0, l.useEffect)(() => {
+      mountedRef.current = true;
+      return () => { mountedRef.current = false; requestRef.current?.abort(); };
+    }, []),
     (0, l.useEffect)(() => {
       if (!r) return;
       let interval = null;
@@ -458,18 +325,33 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     (0, l.useEffect)(() => {
       g.current?.scrollIntoView({ behavior: `smooth` });
     }, [a, u]));
-  let v = () => {
-      let e = s.trim();
-      if (!e || f === 0) return;
-      (o((t) => [...t, { id: Date.now(), from: `me`, text: e }]), c(``));
-      let t = m.current(e);
-      d(!0);
-      let n = 1800 + Math.random() * 1600,
-        r = Math.min(11e3, t.length * 95);
-      setTimeout(() => {
-        (d(!1),
-          o((e) => [...e, { id: Date.now() + 1, from: `them`, text: t }]));
-      }, n + r);
+  let v = async () => {
+      const body = s.trim();
+      if (!body || f === 0 || requestRef.current) return;
+      if (body.length > 2000) { setReplyError(`Ujumbe usizidi herufi 2,000.`); return; }
+      const history = [...a, { id: crypto.randomUUID(), from: `me`, text: body }];
+      const controller = new AbortController();
+      requestRef.current = controller;
+      o(history); c(``); d(true); setReplyError(``);
+      try {
+        const response = await fetch(`/api/gochati-chat`, {
+          method: `POST`, credentials: `same-origin`,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ personId: e.id, messages: history.slice(-24).map((item) => ({ role: item.from === `me` ? `user` : `assistant`, content: item.text })) }),
+          signal: controller.signal,
+        });
+        const result = await response.json();
+        if (!response.ok || !result.reply) throw new Error(result.message || `Jibu halijapatikana. Jaribu tena.`);
+        if (mountedRef.current) o((items) => [...items, { id: crypto.randomUUID(), from: `them`, text: result.reply }]);
+      } catch (error) {
+        if (mountedRef.current && !controller.signal.aborted) {
+          setReplyError(error.message || `Chat haipatikani kwa sasa. Jaribu tena.`);
+          o(a); c(body);
+        }
+      } finally {
+        requestRef.current = null;
+        if (mountedRef.current) d(false);
+      }
     },
     y = String(Math.floor(f / 60)).padStart(2, `0`),
     b = String(f % 60).padStart(2, `0`);
@@ -496,7 +378,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 }),
                 (0, K.jsx)(`p`, {
                   className: `text-xs opacity-90`,
-                  children: `Online`,
+                  children: `Mhusika wa AI · ${e.topic || chatPersona(e.id).topic}`,
                 }),
               ],
             }),
@@ -519,6 +401,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 (0, K.jsxs)(`div`, {
                   className: `flex-1 space-y-3 overflow-y-auto bg-background/60 p-4`,
                   children: [
+                    replyError && (0, K.jsx)(`p`, { role: `alert`, className: `text-sm text-destructive`, children: replyError }),
                     a.map((e) =>
                       (0, K.jsx)(
                         `div`,
@@ -567,15 +450,16 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                   children: [
                     (0, K.jsx)(`input`, {
                       value: s,
+                      maxLength: 2000,
                       onChange: (e) => c(e.target.value),
                       onKeyDown: (e) => e.key === `Enter` && v(),
                       placeholder: `Andika ujumbe wako...`,
-                      disabled: f === 0,
+                      disabled: f === 0 || u,
                       className: `flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary`,
                     }),
                     (0, K.jsx)(`button`, {
                       onClick: v,
-                      disabled: f === 0,
+                      disabled: f === 0 || u,
                       "aria-label": `Tuma`,
                       className: `grad-brand rounded-xl p-3 text-on-color disabled:opacity-50`,
                       children: (0, K.jsx)(w, { className: `size-5` }),

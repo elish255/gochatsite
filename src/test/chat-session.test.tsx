@@ -11,9 +11,39 @@ const person = { id: 1, name: "Mia", photo: "/avatar.jpg", flag: "GB" };
 beforeEach(() => {
   vi.useFakeTimers();
   mocks.rpc.mockResolvedValue({ data: "session-one" });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ reply: "Habari! Una swali gani kuhusu muziki?" })));
   Element.prototype.scrollIntoView = vi.fn();
 });
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+
+it("answers questions through the chat endpoint with conversation context", async () => {
+  const fetchMock = vi.mocked(fetch);
+  fetchMock.mockResolvedValueOnce(Response.json({ reply: "Ninapenda jazz, hasa saxophone." }));
+  render(<ChatSession person={person} active onClose={vi.fn()} onPaid={vi.fn()} />);
+  await act(async () => { fireEvent.click(screen.getByText("Dakika 5")); });
+  fireEvent.change(screen.getByPlaceholderText("Andika ujumbe wako..."), { target: { value: "Unapenda muziki gani?" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Tuma" })); });
+  expect(screen.getByText("Ninapenda jazz, hasa saxophone.")).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText("Andika ujumbe wako..."), { target: { value: "Kwa nini?" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Tuma" })); });
+  const payload = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
+  expect(payload.personId).toBe(1);
+  expect(payload.messages).toEqual(expect.arrayContaining([
+    { role: "assistant", content: "Ninapenda jazz, hasa saxophone." },
+    { role: "user", content: "Kwa nini?" },
+  ]));
+});
+
+it("restores a failed message for retry without adding a fabricated reply", async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(Response.json({ message: "Chat haipatikani." }, { status: 503 }));
+  render(<ChatSession person={person} active onClose={vi.fn()} onPaid={vi.fn()} />);
+  await act(async () => { fireEvent.click(screen.getByText("Dakika 5")); });
+  fireEvent.change(screen.getByPlaceholderText("Andika ujumbe wako..."), { target: { value: "Unaishi wapi?" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Tuma" })); });
+  expect(screen.getByRole("alert")).toHaveTextContent("Chat haipatikani.");
+  expect(screen.getByPlaceholderText("Andika ujumbe wako...")).toHaveValue("Unaishi wapi?");
+  expect(screen.getByRole("button", { name: "Tuma" })).toBeEnabled();
+});
 
 it("starts an active chat, accepts messages, and completes once after the countdown", async () => {
   const onPaid = vi.fn();

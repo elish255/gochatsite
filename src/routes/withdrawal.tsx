@@ -108,7 +108,6 @@ function WithdrawalPage() {
     });
     if (error) setNotice(error.message);
     else {
-      setNotice("Requested. Ombi limehifadhiwa kama Pending hadi admin aliweke Paid.");
       setReceipt({
         id: withdrawalId,
         phone: phone.trim(),

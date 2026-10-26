@@ -83,7 +83,7 @@ function AdminPage() {
         .limit(1000),
       platform
         .from("gochati_withdrawals")
-        .select("id,user_id,amount,status,created_at,phone")
+        .select("id,user_id,username,amount,status,created_at,phone")
         .order("created_at", { ascending: false })
         .limit(1000),
     ]);
@@ -776,7 +776,7 @@ function AdminPage() {
                   {withdrawals.map((w) => (
                     <article className="card-soft p-4" key={w.id}>
                       <p>
-                        User: {w.user_id} · TZS {Number(w.amount).toLocaleString()} · {w.phone}
+                        Username: {w.username ? `@${w.username}` : "Haipatikani"} · TZS {Number(w.amount).toLocaleString()} · {w.phone}
                       </p>
                       <p>
                         Makato: TZS {Number(w.fee || 0).toLocaleString()} · Baada ya makato: TZS{" "}
