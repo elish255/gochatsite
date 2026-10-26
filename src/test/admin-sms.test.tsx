@@ -7,7 +7,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const counts = { all: 20, premium: 4, normal: 14, active: 8, inactive: 12, vip: 2 };
+
 describe("Admin SMS", () => {
+  it("shows each audience count and updates the selected recipient total", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ counts })));
+    render(<AdminSms />);
+    expect(await screen.findByRole("option", { name: "Active users tu (8)" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Wapokeaji wa SMS"), { target: { value: "active" } });
+    expect(screen.getByText(/Wapokeaji wa kundi hili:/)).toHaveTextContent("8");
+    fireEvent.change(screen.getByLabelText("Wapokeaji wa SMS"), { target: { value: "normal" } });
+    expect(screen.getByText(/Wapokeaji wa kundi hili:/)).toHaveTextContent("14");
+  });
+
   it("sends the selected audience and template to the protected endpoint and shows partial failures", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       Response.json({
@@ -20,6 +32,7 @@ describe("Admin SMS", () => {
         ],
       }),
     );
+    fetchMock.mockResolvedValueOnce(Response.json({ counts }));
     vi.stubGlobal("fetch", fetchMock);
     render(<AdminSms />);
     expect(screen.getByRole("button", { name: "Tuma SMS" })).toBeDisabled();
@@ -31,7 +44,7 @@ describe("Admin SMS", () => {
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent("Zilizokubaliwa kutumwa: 1"),
     );
-    expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/gochati-sms",
       expect.objectContaining({
         method: "POST",
@@ -47,6 +60,7 @@ describe("Admin SMS", () => {
       "fetch",
       vi
         .fn()
+        .mockResolvedValueOnce(Response.json({ counts }))
         .mockResolvedValue(Response.json({ message: "Huruhusiwi kutuma SMS." }, { status: 403 })),
     );
     render(<AdminSms />);
