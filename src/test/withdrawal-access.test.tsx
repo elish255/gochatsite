@@ -101,6 +101,7 @@ describe("Withdrawal account access", () => {
       const Page = Route.options.component as () => React.JSX.Element;
       render(<Page />);
       await screen.findByText("TZS 800,000");
+      fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), { target: { value: "500000" } });
       fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
       expect(await screen.findByRole("dialog")).toHaveTextContent("Vigezo vya withdrawal");
       expect(screen.getByRole("link", { name: "Upgrade" })).toHaveAttribute(
@@ -134,4 +135,26 @@ describe("Withdrawal account access", () => {
       expect(mocks.rpc).toHaveBeenCalledWith("gochati_request_withdrawal", expect.any(Object)),
     );
   });
+});
+
+
+it("keeps a VIP request pending and refreshes history and the open receipt when admin marks paid", async () => {
+  Object.assign(mocks.profile, { account_status: "active", activation_paid: true });
+  mocks.eligibility = { is_premium: true, is_vip: true, referrals: 0, active_referrals: 0 };
+  mocks.rpc.mockImplementation(async () => {
+    mocks.history = [{ id: "vip-withdrawal", amount: 500000, fee: 100000, net_amount: 400000, phone: "0712345678", status: "pending", created_at: "2026-10-26T12:00:00Z" }];
+    return { data: "vip-withdrawal", error: null };
+  });
+  const Page = Route.options.component as () => React.JSX.Element;
+  render(<Page />);
+  await screen.findByText("TZS 800,000");
+  fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), { target: { value: "500000" } });
+  fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+  expect(await screen.findByRole("status", { hidden: true })).toHaveTextContent("Requested");
+  expect(await screen.findByText("Pending", { selector: "article p" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog")).toHaveTextContent("Pending");
+  mocks.history = mocks.history.map((item) => ({ ...item, status: "paid" }));
+  fireEvent(window, new Event("focus"));
+  expect(await screen.findByText("Paid", { selector: "article p" })).toHaveClass("text-success");
+  await waitFor(() => expect(screen.getByRole("dialog")).toHaveTextContent("Paid"));
 });

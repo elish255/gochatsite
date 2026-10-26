@@ -189,7 +189,7 @@ describe("Earning and withdrawal rules", () => {
           await handler(
             request({
               rpc: "gochati_request_withdrawal",
-              args: { p_amount: 25000, p_phone: "0712345678" },
+              args: { p_amount: 500000, p_phone: "0712345678" },
             }),
           )
         ).status,
@@ -208,7 +208,7 @@ describe("Earning and withdrawal rules", () => {
     expect(mocks.query).not.toHaveBeenCalled();
   });
 
-  it("accepts a funded withdrawal above 20,000", async () => {
+  it("accepts a funded withdrawal at the minimum", async () => {
     mocks.sql
       .mockResolvedValueOnce([{ total: 10, active: 5 }])
       .mockResolvedValueOnce([{ id: "withdrawal" }]);
@@ -217,7 +217,7 @@ describe("Earning and withdrawal rules", () => {
         await handler(
           request({
             rpc: "gochati_request_withdrawal",
-            args: { p_amount: 25000, p_phone: "0712345678" },
+            args: { p_amount: 500000, p_phone: "0712345678" },
           }),
         )
       ).status,
@@ -230,7 +230,7 @@ describe("Earning and withdrawal rules", () => {
         await handler(
           request({
             rpc: "gochati_request_withdrawal",
-            args: { p_amount: 25000, p_phone: "0712345678" },
+            args: { p_amount: 500000, p_phone: "0712345678" },
           }),
         )
       ).status,
@@ -253,4 +253,36 @@ describe("SplashPay verification", () => {
   });
   it("preserves pending instead of marking it successful", () =>
     expect(verifiedPaymentStatus(payment, { ...valid, status: "pending" })).toBe("pending"));
+});
+
+
+describe("VIP withdrawal lifecycle", () => {
+  it.each([false, true])("accepts VIP with no referrals (premium=%s)", async (is_premium) => {
+    const current = await mocks.authenticated();
+    mocks.authenticated.mockResolvedValue({ ...current, profile: { ...current.profile, is_vip: true, is_premium } });
+    mocks.sql.mockResolvedValueOnce([{ total: 0, active: 0 }]).mockResolvedValueOnce([{ id: "withdrawal" }]);
+    const response = await handler(request({ rpc: "gochati_request_withdrawal", args: { p_amount: 500000, p_phone: "+255712345678" } }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ data: "withdrawal" });
+    expect(mocks.sql.mock.calls[1][0].join(" ")).toContain("'pending'");
+  });
+  it("rejects malformed phone numbers before debiting", async () => {
+    const response = await handler(request({ rpc: "gochati_request_withdrawal", args: { p_amount: 500000, p_phone: "ddddddddd" } }));
+    expect(response.status).toBe(400);
+    expect(mocks.sql).not.toHaveBeenCalled();
+  });
+  it("forbids users from marking their withdrawals paid", async () => {
+    const response = await handler(request({ table: "gochati_withdrawals", operation: "update", filters: { id: "withdrawal" }, payload: { status: "paid" } }));
+    expect(response.status).toBe(403);
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+  it("allows admin to mark only pending withdrawals paid", async () => {
+    const current = await mocks.authenticated();
+    mocks.authenticated.mockResolvedValue({ ...current, isAdmin: true });
+    const response = await handler(request({ table: "gochati_withdrawals", operation: "update", filters: { id: "withdrawal" }, payload: { status: "paid" } }));
+    expect(response.status).toBe(200);
+    const update = mocks.query.mock.calls.find(([query]) => query.startsWith("UPDATE"));
+    expect(update?.[0]).toContain("status='pending'");
+    expect(update?.[1]).toContain("paid");
+  });
 });
