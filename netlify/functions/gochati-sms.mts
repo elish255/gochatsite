@@ -23,26 +23,47 @@ export default async (req: Request) => {
       vip: "is_vip IS TRUE",
     };
     if (body.action === "counts") {
-      const columns = audiences.map((key) => `COUNT(*) FILTER (WHERE ${filters[key]})::int AS "${key}"`);
+      const columns = audiences.map(
+        (key) => `COUNT(*) FILTER (WHERE ${filters[key]})::int AS "${key}"`,
+      );
       const { rows } = await db.pool.query(`SELECT ${columns.join(", ")} FROM gochati_users`);
       return json({ counts: rows[0] });
     }
-    const audience = String(body.audience || "") as Audience;
-    assert(audiences.includes(audience), 400, "Chagua kundi sahihi la watumiaji.");
-    const template = String(body.message || "").trim();
-    assert(template.length > 0 && template.length <= 1200, 400, "Ujumbe lazima uwe na herufi 1 hadi 1200.");
-    assert(Boolean(process.env.DARSMS_API_KEY), 503, "Weka DARSMS_API_KEY kwenye environment variables.");
-
-    const { rows: recipients } = await db.pool.query(
-      `SELECT username, phone FROM gochati_users WHERE ${filters[audience]} ORDER BY created_at DESC LIMIT 501`,
+    const audience = String(body.audience || "") as Audience | "individual";
+    assert(
+      audience === "individual" || audiences.includes(audience as Audience),
+      400,
+      "Chagua kundi sahihi la watumiaji.",
     );
+    const template = String(body.message || "").trim();
+    assert(
+      template.length > 0 && template.length <= 1200,
+      400,
+      "Ujumbe lazima uwe na herufi 1 hadi 1200.",
+    );
+    assert(
+      Boolean(process.env["DARSMS_API_KEY"]),
+      503,
+      "Weka DARSMS_API_KEY kwenye environment variables.",
+    );
+
+    const individual = audience === "individual";
+    if (individual)
+      assert(typeof body.user_id === "string" && body.user_id.length > 0, 400, "Chagua mtumiaji.");
+    const { rows: recipients } = individual
+      ? await db.pool.query("SELECT username, phone FROM gochati_users WHERE id::text=$1", [
+          body.user_id,
+        ])
+      : await db.pool.query(
+          `SELECT username, phone FROM gochati_users WHERE ${filters[audience]} ORDER BY created_at DESC LIMIT 501`,
+        );
     assert(recipients.length > 0, 400, "Hakuna watumiaji kwenye kundi ulilochagua.");
     assert(recipients.length <= 500, 413, "Kundi lina zaidi ya watumiaji 500. Chagua kundi dogo.");
 
     const outcomes: { username: string; status: string; reason?: string }[] = [];
     for (const row of recipients as Record<string, unknown>[]) {
-      const username = String(row.username || "mtumiaji");
-      const phone = normalizeTanzaniaPhone(row.phone);
+      const username = String(row["username"] || "mtumiaji");
+      const phone = normalizeTanzaniaPhone(row["phone"]);
       if (!phone) {
         outcomes.push({ username, status: "failed", reason: "Namba ya simu si sahihi" });
         continue;
@@ -52,10 +73,14 @@ export default async (req: Request) => {
         await sendDarsms(phone, message);
         outcomes.push({ username, status: "queued" });
       } catch (error) {
-        outcomes.push({ username, status: "failed", reason: error instanceof Error ? error.message : "DARSMS error" });
+        outcomes.push({
+          username,
+          status: "failed",
+          reason: error instanceof Error ? error.message : "DARSMS error",
+        });
       }
     }
-    await db.sql`INSERT INTO gochati_admin_audit(admin_id, action, target_id, changes) VALUES (${user.id}, ${"send_sms"}, ${audience}, ${JSON.stringify({ total: outcomes.length, queued: outcomes.filter((x) => x.status === "queued").length, failed: outcomes.filter((x) => x.status === "failed").length })}::jsonb)`;
+    await db.sql`INSERT INTO gochati_admin_audit(admin_id, action, target_id, changes) VALUES (${user.id}, ${"send_sms"}, ${individual ? body.user_id : audience}, ${JSON.stringify({ total: outcomes.length, queued: outcomes.filter((x) => x.status === "queued").length, failed: outcomes.filter((x) => x.status === "failed").length })}::jsonb)`;
     return json({
       total: outcomes.length,
       queued: outcomes.filter((x) => x.status === "queued").length,
