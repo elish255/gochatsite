@@ -18,6 +18,7 @@ function WithdrawalPage() {
   const [eligibility, setEligibility] = useState<any>(null);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const [receipt, setReceipt] = useState<any>(null);
+  const minAmount = eligibility?.is_premium ? 500000 : 100000;
   const fee = Math.round(Math.max(0, Number(amount) || 0) * 20) / 100;
   const net = Math.max(0, Number(amount) || 0) - fee;
   const eligible =
@@ -61,6 +62,9 @@ function WithdrawalPage() {
     setActive(accountActive);
     setActivationOpen(!accountActive);
     setHistory(withdrawals.data || []);
+    setReceipt((current: any) =>
+      current ? withdrawals.data?.find((item: any) => item.id === current.id) || current : null,
+    );
     setReady(true);
   }
   useEffect(() => {
@@ -80,7 +84,6 @@ function WithdrawalPage() {
       return;
     }
     const value = Number(amount);
-    const minAmount = eligibility?.is_premium ? 500000 : 100000;
     if (!Number.isSafeInteger(value) || value < minAmount) {
       setNotice(`Minimum withdrawal ni TZS ${minAmount.toLocaleString()}.`);
       return;
@@ -105,7 +108,7 @@ function WithdrawalPage() {
     });
     if (error) setNotice(error.message);
     else {
-      setNotice("Ombi limehifadhiwa kama Pending.");
+      setNotice("Requested. Ombi limehifadhiwa kama Pending hadi admin aliweke Paid.");
       setReceipt({
         id: withdrawalId,
         phone: phone.trim(),
@@ -126,14 +129,14 @@ function WithdrawalPage() {
           Salio: <strong>TZS {balance.toLocaleString()}</strong>
         </p>
         <p className="mt-3 text-sm text-muted-foreground">
-          Kiasi lazima kiwe zaidi ya TZS 20,000 na kisizidi salio lako.
+          Minimum withdrawal ni TZS {minAmount.toLocaleString()} na kiasi kisizidi salio lako.
         </p>
         <label className="auth-field">
           <span>Kiasi (TZS)</span>
           <div className="auth-input">
             <input
               type="number"
-              min="20001"
+              min={minAmount}
               max={balance}
               step="1"
               aria-label="Kiasi (TZS)"
@@ -171,7 +174,7 @@ function WithdrawalPage() {
             {notice}
           </p>
         )}
-        <h2 className="mt-6 text-lg font-bold">Historia</h2>
+        <h2 className="mt-6 text-lg font-bold">Withdrawal History</h2>
         {history.length === 0 ? (
           <p>Hakuna ombi bado.</p>
         ) : (

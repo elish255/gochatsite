@@ -120,12 +120,14 @@ export default async (req: Request) => {
       }
       if (b.rpc === "gochati_request_withdrawal") {
         const amount = Number(a.p_amount),
-          phone = String(a.p_phone || "");
+          phone = String(a.p_phone || "").trim();
+        const minAmount = profile.is_premium ? 500000 : 100000;
         assert(
-          Number.isSafeInteger(amount) && amount >= (profile.is_premium ? 500000 : 100000) && /^[+\\d ]{9,16}$/.test(phone),
+          Number.isSafeInteger(amount) && amount >= minAmount,
           400,
-          "Kiasi lazima kiwe zaidi ya TZS 20,000 na namba ya simu iwe sahihi.",
+          `Minimum withdrawal ni TZS ${minAmount.toLocaleString()}.`,
         );
+        assert(/^[+\d ]{9,16}$/.test(phone), 400, "Weka namba sahihi ya simu.");
         const [counts] =
           await db.sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE activation_paid AND account_status='active')::int AS active FROM gochati_users WHERE referred_by=${user.id}`;
         assert(
@@ -140,7 +142,7 @@ export default async (req: Request) => {
         );
         const fee = Math.round(amount * 20) / 100;
         const rows =
-          await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} AND account_status='active' AND activation_paid RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone,fee,net_amount) SELECT id,${amount},${phone},${fee},${amount - fee} FROM debited RETURNING id`;
+          await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} AND account_status='active' AND activation_paid RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone,fee,net_amount,status) SELECT id,${amount},${phone},${fee},${amount - fee},'pending' FROM debited RETURNING id`;
         assert(rows.length, 409, "SALIO HALITOSHI");
         return json({ data: rows[0]?.["id"] });
       }
