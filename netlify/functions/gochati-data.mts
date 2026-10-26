@@ -194,7 +194,10 @@ export default async (req: Request) => {
         order = `"${b.sort.column}" ${b.sort.ascending ? "ASC" : "DESC"}`;
       }
       const limit = Math.min(1000, Math.max(1, Number(b.limit) || 100));
-      query = `SELECT * FROM "${table}" ${clauses.length ? "WHERE " + clauses.join(" AND ") : ""} ORDER BY ${order} LIMIT ${param(limit)}`;
+      const columns = table === "gochati_withdrawals" && isAdmin
+        ? '*, (SELECT username FROM gochati_users WHERE gochati_users.id = gochati_withdrawals.user_id) AS username'
+        : "*";
+      query = `SELECT ${columns} FROM "${table}" ${clauses.length ? "WHERE " + clauses.join(" AND ") : ""} ORDER BY ${order} LIMIT ${param(limit)}`;
     } else if (b.operation === "update") {
       assert(clauses.length && (filters.id || filters.user_id), 400, "Chagua rekodi.");
       const p = b.payload || {};

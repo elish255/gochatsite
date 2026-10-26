@@ -150,7 +150,7 @@ it("keeps a VIP request pending and refreshes history and the open receipt when 
   await screen.findByText("TZS 800,000");
   fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), { target: { value: "500000" } });
   fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
-  expect(await screen.findByRole("status", { hidden: true })).toHaveTextContent("Requested");
+  expect(screen.queryByText(/Ombi limehifadhiwa|Requested\./)).not.toBeInTheDocument();
   expect(await screen.findByText("Pending", { selector: "article p" })).toBeInTheDocument();
   expect(screen.getByRole("dialog")).toHaveTextContent("Pending");
   mocks.history = mocks.history.map((item) => ({ ...item, status: "paid" }));

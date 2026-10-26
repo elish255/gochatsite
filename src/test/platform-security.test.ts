@@ -33,6 +33,27 @@ beforeEach(() => {
   });
 });
 describe("Account API access", () => {
+  it("includes the account username in admin withdrawal reads", async () => {
+    const current = await mocks.authenticated();
+    mocks.authenticated.mockResolvedValue({ ...current, isAdmin: true });
+    const response = await handler(
+      request({ table: "gochati_withdrawals", operation: "select" }),
+    );
+    expect(response.status).toBe(200);
+    expect(mocks.query.mock.calls[0]?.[0]).toContain(
+      "(SELECT username FROM gochati_users WHERE gochati_users.id = gochati_withdrawals.user_id) AS username",
+    );
+  });
+
+  it("keeps ordinary withdrawal reads scoped without the admin username lookup", async () => {
+    const response = await handler(
+      request({ table: "gochati_withdrawals", operation: "select" }),
+    );
+    expect(response.status).toBe(200);
+    expect(mocks.query.mock.calls[0]?.[0]).not.toContain("AS username");
+    expect(mocks.query.mock.calls[0]?.[0]).toContain("user_id=$1");
+  });
+
   it("forbids ordinary users from searching the user directory", async () => {
     expect(
       (await handler(request({ table: "gochati_users", operation: "select", search: "Amina" })))
