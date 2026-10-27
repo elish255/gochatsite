@@ -663,7 +663,7 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         }),
         (0, K.jsx)(`h3`, {
           className: `text-center text-lg font-bold`,
-          children: active ? `Salio la ${I(e || 0)} limehifadhiwa; hakuna pesa halisi iliyotumwa.` : `Akaunti yako haijawa hai`,
+          children: active ? `Salio la ${I(e || 0)} limehifadhiwa; Angalia Kwenye Balance` : `Akaunti yako haijawa hai`,
         }),
         active ? (0, K.jsx)(`button`, {
           onClick: t,
