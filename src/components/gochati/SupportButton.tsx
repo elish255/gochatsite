@@ -5,11 +5,15 @@ import support from "@/assets/support.jpg";
 
 export function SupportButton({ floating = false }: { floating?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [registration, setRegistration] = useState<"yes" | "no" | null>(null);
   return (
     <>
       <Button
         variant={floating ? "reference" : "outline"}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setRegistration(null);
+          setOpen(true);
+        }}
         aria-label="Customer services"
         className={
           floating
@@ -31,11 +35,36 @@ export function SupportButton({ floating = false }: { floating?: boolean }) {
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-sm rounded-3xl">
-          <DialogTitle>Wasiliana nasi kwa Msaada Zaidi</DialogTitle>
-          <DialogDescription>Nielekeze kuhusu Gochat</DialogDescription>
-          <Button asChild>
-            <a href="sms:0743871339?body=Nielekeze%20kuhusu%20Gochat">Tuma SMS</a>
-          </Button>
+          <DialogTitle>
+            {registration === null
+              ? "UMEJISAJILI?"
+              : registration === "yes"
+                ? "Wasiliana nasi kwa Msaada Zaidi"
+                : "Jisajili Kwanza"}
+          </DialogTitle>
+          <DialogDescription>
+            {registration === null
+              ? "Chagua jibu ili kuendelea na huduma kwa wateja."
+              : registration === "yes"
+                ? "Tuma meseji kwa huduma kwa wateja kwa SMS."
+                : "Jisajili kwanza ili kuendelea na huduma kwa wateja."}
+          </DialogDescription>
+          {registration === null ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Button onClick={() => setRegistration("yes")}>NDIO</Button>
+              <Button variant="outline" onClick={() => setRegistration("no")}>
+                HAPANA
+              </Button>
+            </div>
+          ) : registration === "yes" ? (
+            <Button asChild>
+              <a href="sms:0743871339?body=Nielekeze%20kuhusu%20Gochat">Tuma SMS</a>
+            </Button>
+          ) : (
+            <Button asChild>
+              <a href="/register">Gusa hapa Kujisajili Kwanza</a>
+            </Button>
+          )}
         </DialogContent>
       </Dialog>
     </>
