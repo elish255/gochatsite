@@ -52,15 +52,17 @@ export async function authenticated(req: Request) {
   const user = await response.json();
   assert(user.id && user.email && user.confirmed_at, 403, "Thibitisha email yako kwanza.");
   const db = getDatabase();
+  const deleted = await db.sql`SELECT id FROM gochati_deleted_users WHERE id=${user.id}`;
+  assert(!deleted.length, 403, "Akaunti hii imefutwa.");
   const metadata = user.user_metadata || {};
   const username = /^[a-z0-9_]{3,30}$/.test(String(metadata.username || ""))
     ? metadata.username
     : `user_${String(user.id).replace(/-/g, "")}`;
   try {
-    await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country) VALUES (${user.id},${String(user.email).toLowerCase()},${username},${String(metadata.full_name || "").slice(0, 150)},${String(metadata.phone || "").slice(0, 30)},${String(metadata.country || "").slice(0, 80)}) ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email`;
+    await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country) SELECT ${user.id}::uuid,${String(user.email).toLowerCase()},${username},${String(metadata.full_name || "").slice(0, 150)},${String(metadata.phone || "").slice(0, 30)},${String(metadata.country || "").slice(0, 80)} WHERE NOT EXISTS (SELECT 1 FROM gochati_deleted_users WHERE id=${user.id}) ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email`;
   } catch (error) {
     if ((error as { code?: string })?.code !== "23505") throw error;
-    await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country) VALUES (${user.id},${String(user.email).toLowerCase()},${`user_${String(user.id).replace(/-/g, "")}`},${String(metadata.full_name || "").slice(0, 150)},${String(metadata.phone || "").slice(0, 30)},${String(metadata.country || "").slice(0, 80)}) ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email`;
+    await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country) SELECT ${user.id}::uuid,${String(user.email).toLowerCase()},${`user_${String(user.id).replace(/-/g, "")}`},${String(metadata.full_name || "").slice(0, 150)},${String(metadata.phone || "").slice(0, 30)},${String(metadata.country || "").slice(0, 80)} WHERE NOT EXISTS (SELECT 1 FROM gochati_deleted_users WHERE id=${user.id}) ON CONFLICT(id) DO UPDATE SET email=EXCLUDED.email`;
   }
   const referral = String(metadata.referral_username || "").toLowerCase();
   if (/^[a-z0-9_]{3,30}$/.test(referral)) {

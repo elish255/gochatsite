@@ -1,4 +1,5 @@
 import { authenticated, assert, checkRequest, fail, json } from "../lib/platform.js";
+import { admin as identityAdmin } from "@netlify/identity";
 import { sendDarsms } from "../lib/darsms.js";
 import type { Config } from "@netlify/functions";
 
@@ -7,6 +8,83 @@ export default async (req: Request) => {
     checkRequest(req);
     const { db, user, profile, isAdmin } = await authenticated(req);
     const b = await req.json();
+    if (b.rpc === "gochati_admin_delete_users") {
+      assert(isAdmin, 403, "Admin pekee.");
+      const ids = b.args?.user_ids;
+      assert(
+        Array.isArray(ids) &&
+          ids.length > 0 &&
+          ids.length <= 100 &&
+          ids.every(
+            (id: unknown) =>
+              typeof id === "string" &&
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+          ),
+        400,
+        "Chagua akaunti 1 hadi 100.",
+      );
+      const targets = [...new Set<string>(ids)];
+      assert(!targets.includes(user.id), 403, "Huwezi kufuta akaunti yako ya admin.");
+      const client = await db.pool.connect();
+      const deleted: string[] = [];
+      const failed: string[] = [];
+      try {
+        const protectedUsers = await client.query(
+          "SELECT id FROM gochati_users WHERE id=ANY($1::uuid[]) AND (id IN (SELECT user_id FROM gochati_admins) OR lower(email) IN (SELECT lower(email) FROM gochati_admin_emails))",
+          [targets],
+        );
+        assert(!protectedUsers.rows.length, 403, "Akaunti za admin haziwezi kufutwa.");
+        for (const target of targets) {
+          try {
+            await client.query("BEGIN");
+            const existing = await client.query(
+              "SELECT id FROM gochati_users WHERE id=$1 FOR UPDATE",
+              [target],
+            );
+            assert(existing.rows.length, 404, "Akaunti haijapatikana.");
+            // Identity removal prevents future logins; a tombstone also blocks in-flight sessions.
+            try {
+              await identityAdmin.deleteUser(target);
+            } catch (error) {
+              if ((error as { status?: number }).status !== 404) throw error;
+            }
+            await client.query(
+              "INSERT INTO gochati_deleted_users(id) VALUES($1) ON CONFLICT DO NOTHING",
+              [target],
+            );
+            await client.query(
+              "UPDATE gochati_users SET referral_count=GREATEST(0,referral_count-1) WHERE id=(SELECT referred_by FROM gochati_users WHERE id=$1)",
+              [target],
+            );
+            await client.query("UPDATE gochati_users SET referred_by=NULL WHERE referred_by=$1", [
+              target,
+            ]);
+            for (const table of [
+              "gochati_payments",
+              "gochati_withdrawals",
+              "gochati_notifications",
+              "chat_messages",
+              "gochati_earning_sessions",
+            ]) {
+              await client.query(`DELETE FROM ${table} WHERE user_id=$1`, [target]);
+            }
+            await client.query("DELETE FROM gochati_users WHERE id=$1", [target]);
+            await client.query(
+              "INSERT INTO gochati_admin_audit(admin_id,action,target_id,changes) VALUES($1,'delete_account',$2,$3)",
+              [user.id, target, JSON.stringify({ deleted: true })],
+            );
+            await client.query("COMMIT");
+            deleted.push(target);
+          } catch {
+            await client.query("ROLLBACK");
+            failed.push(target);
+          }
+        }
+        return json({ data: { deleted, failed } });
+      } finally {
+        client.release();
+      }
+    }
     if (b.rpc === "gochati_withdrawal_eligibility") {
       const [counts] =
         await db.sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE activation_paid AND account_status='active')::int AS active FROM gochati_users WHERE referred_by=${user.id}`;
@@ -194,9 +272,10 @@ export default async (req: Request) => {
         order = `"${b.sort.column}" ${b.sort.ascending ? "ASC" : "DESC"}`;
       }
       const limit = Math.min(1000, Math.max(1, Number(b.limit) || 100));
-      const columns = table === "gochati_withdrawals" && isAdmin
-        ? '*, (SELECT username FROM gochati_users WHERE gochati_users.id = gochati_withdrawals.user_id) AS username'
-        : "*";
+      const columns =
+        table === "gochati_withdrawals" && isAdmin
+          ? "*, (SELECT username FROM gochati_users WHERE gochati_users.id = gochati_withdrawals.user_id) AS username"
+          : "*";
       query = `SELECT ${columns} FROM "${table}" ${clauses.length ? "WHERE " + clauses.join(" AND ") : ""} ORDER BY ${order} LIMIT ${param(limit)}`;
     } else if (b.operation === "update") {
       assert(clauses.length && (filters.id || filters.user_id), 400, "Chagua rekodi.");
