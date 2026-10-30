@@ -1,11 +1,36 @@
 import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
+import { AdminOverview } from "@/components/gochati/AdminOverview";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { AdminSms } from "@/components/gochati/AdminSms";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { platform } from "@/integrations/netlify/client";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
+  RefreshCw,
+  UserCheck,
+  UserX,
+  BadgeCheck,
+  Crown,
+  CirclePlus,
+  Ban,
+  Trash2,
   Menu,
   Users,
   Search,
@@ -20,6 +45,10 @@ import {
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 type Audience = "all" | "premium" | "normal" | "active" | "inactive";
 function AdminPage() {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [smsRecipient, setSmsRecipient] = useState<{
     id: string;
@@ -27,7 +56,9 @@ function AdminPage() {
     phone: string;
   } | null>(null);
   const [withdrawalBusy, setWithdrawalBusy] = useState("");
-  const [section, setSection] = useState("users");
+  const [section, setSection] = useState("dashboard");
+  const [userView, setUserView] = useState("all");
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [searchRows, setSearchRows] = useState<any[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -107,6 +138,40 @@ function AdminPage() {
   useEffect(() => {
     void load();
   }, []);
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [search, filter, authorized]);
+  async function deleteSelected() {
+    if (deleting || !selectedIds.length) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const { data, error } = await platform.rpc("gochati_admin_delete_users", {
+        user_ids: selectedIds,
+      });
+      if (error) {
+        setDeleteError(error.message);
+        return;
+      }
+      const result = data as { deleted: string[]; failed: string[] };
+      const deleted = new Set<string>(result.deleted);
+      setRows((previous) => previous.filter((row) => !deleted.has(row.id)));
+      setSearchRows((previous) => previous?.filter((row) => !deleted.has(row.id)) ?? null);
+      setSelectedIds(result.failed);
+      setDeleteOpen(false);
+      setNotice(
+        `Akaunti zilizofutwa: ${result.deleted.length}.` +
+          (result.failed.length
+            ? ` Zilizoshindikana: ${result.failed.length}. Zimebaki na tiki; jaribu tena.`
+            : ""),
+      );
+      if (notifyUser && deleted.has(notifyUser.id)) setNotifyUser(null);
+      if (smsRecipient && deleted.has(smsRecipient.id)) setSmsRecipient(null);
+      await load();
+    } finally {
+      setDeleting(false);
+    }
+  }
   async function login(e: FormEvent) {
     e.preventDefault();
     setLoggingIn(true);
@@ -239,10 +304,16 @@ function AdminPage() {
   }, [search, authorized, rows]);
   const visibleRows = (searchRows ?? rows).filter(
     (u) =>
-      filter === "all" ||
-      (filter === "active"
-        ? u.account_status === "active" && u.activation_paid
-        : u.account_status !== "active" || !u.activation_paid),
+      (userView === "all" ||
+        userView === "balance" ||
+        userView === "delete" ||
+        (userView === "premium" && !u.is_premium) ||
+        (userView === "vip" && !u.is_vip) ||
+        userView === "banned") &&
+      (filter === "all" ||
+        (filter === "active"
+          ? u.account_status === "active" && u.activation_paid
+          : u.account_status !== "active" || !u.activation_paid)),
   );
   if (!ready)
     return (
@@ -309,507 +380,783 @@ function AdminPage() {
         </section>
       </main>
     );
+  function navigate(id: string, nextFilter: "all" | "active" | "inactive" = "all", view = "all") {
+    setSection(id);
+    setFilter(nextFilter);
+    setUserView(view);
+    setSelectedIds([]);
+    setSmsRecipient(null);
+    setMenuOpen(false);
+  }
+  const navigation = (
+    <>
+      <a href="/" className="admin-brand">
+        <img src={logoUrl} alt="Gochati.online" width={46} height={46} />
+        <span>
+          Gochati<small>Admin Control</small>
+        </span>
+      </a>
+      <p className="admin-nav-label">MWANZO</p>
+      <nav aria-label="Sehemu za admin">
+        <Button
+          variant="ghost"
+          className="admin-nav-button"
+          aria-current={section === "dashboard" ? "page" : undefined}
+          onClick={() => navigate("dashboard")}
+        >
+          <LayoutDashboard size={21} />
+          Dashboard
+        </Button>
+        <p className="admin-nav-label">WATUMIAJI</p>
+        {[
+          {
+            label: "Total Referral",
+            icon: Users,
+            count: rows.length,
+            filter: "all" as const,
+            view: "all",
+          },
+          {
+            label: "Active Referral",
+            icon: UserCheck,
+            count: activeRows.length,
+            filter: "active" as const,
+            view: "all",
+          },
+          {
+            label: "Inactive Referral",
+            icon: UserX,
+            count: inactiveRows.length,
+            filter: "inactive" as const,
+            view: "all",
+          },
+          {
+            label: "Approve Premium",
+            icon: BadgeCheck,
+            count: rows.filter((u) => !u.is_premium).length,
+            filter: "all" as const,
+            view: "premium",
+          },
+          {
+            label: "Approve V.I.P",
+            icon: Crown,
+            count: rows.filter((u) => !u.is_vip).length,
+            filter: "all" as const,
+            view: "vip",
+          },
+          {
+            label: "Add / Reduce Amount",
+            icon: CirclePlus,
+            count: undefined,
+            filter: "all" as const,
+            view: "balance",
+          },
+          {
+            label: "Ban Account",
+            icon: Ban,
+            count: rows.filter((u) => u.account_status === "banned").length,
+            filter: "all" as const,
+            view: "banned",
+          },
+          {
+            label: "Delete Account",
+            icon: Trash2,
+            count: undefined,
+            filter: "all" as const,
+            view: "delete",
+          },
+        ].map(({ label, icon: Icon, count, filter: nextFilter, view }) => (
+          <Button
+            key={label}
+            variant="ghost"
+            className="admin-nav-button"
+            aria-current={
+              section === "users" && filter === nextFilter && userView === view ? "page" : undefined
+            }
+            onClick={() => navigate("users", nextFilter, view)}
+          >
+            <Icon size={21} />
+            <span>{label}</span>
+            {count !== undefined && <span className="admin-nav-count">{count}</span>}
+          </Button>
+        ))}
+        <p className="admin-nav-label">HUDUMA</p>
+        {[
+          { id: "payments", label: "Malipo", icon: CreditCard },
+          { id: "messages", label: "Notifications", icon: Bell },
+          { id: "sms", label: "SMS", icon: MessageSquare },
+          { id: "withdrawals", label: "Withdrawal", icon: Wallet },
+        ].map(({ id, label, icon: Icon }) => (
+          <Button
+            key={id}
+            variant="ghost"
+            className="admin-nav-button"
+            aria-current={section === id ? "page" : undefined}
+            onClick={() => navigate(id)}
+          >
+            <Icon size={21} />
+            {label}
+          </Button>
+        ))}
+      </nav>
+      <div className="admin-sidebar-footer">
+        <a href="/" className="flex items-center gap-2 text-sm">
+          <ArrowUpRight size={16} /> Fungua tovuti
+        </a>
+        <Button
+          variant="ghost"
+          className="admin-nav-button mt-3"
+          onClick={async () => {
+            await platform.auth.signOut();
+            setUser(null);
+            setAuthorized(false);
+            setRows([]);
+          }}
+        >
+          <LogOut size={21} /> Logout
+        </Button>
+      </div>
+    </>
+  );
   return (
     <main className="admin-workspace">
-      <div
-        className="admin-menu-wrap"
-        onMouseEnter={() => setMenuOpen(true)}
-        onMouseLeave={() => setMenuOpen(false)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") setMenuOpen(false);
-        }}
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node)) setMenuOpen(false);
-        }}
-      >
-        <Button
-          variant="outline"
-          className="admin-menu-trigger"
-          aria-expanded={menuOpen}
-          aria-controls="admin-navigation"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          <Menu size={20} /> Menyu ya admin
-        </Button>
-        <aside id="admin-navigation" className="admin-sidebar" hidden={!menuOpen}>
-          <a href="/" className="admin-brand">
-            <img src={logoUrl} alt="Gochati.online" width={42} height={42} />
-            <span>
-              gochati<span className="text-primary">.online</span>
-              <small>ADMIN CONSOLE</small>
-            </span>
-          </a>
-          <p className="admin-nav-label">USIMAMIZI</p>
-          <nav aria-label="Sehemu za admin">
-            {[
-              { id: "users", label: "Watumiaji", icon: Users },
-              { id: "payments", label: "Malipo", icon: CreditCard },
-              { id: "messages", label: "Notifications", icon: Bell },
-              { id: "sms", label: "SMS", icon: MessageSquare },
-              { id: "withdrawals", label: "Withdrawal", icon: Wallet },
-            ].map(({ id, label, icon: Icon }) => (
+      <aside className="admin-sidebar admin-desktop-sidebar">{navigation}</aside>
+      <div className="admin-content">
+        <div className="admin-topbar">
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
               <Button
-                key={id}
-                variant={section === id ? "secondary" : "ghost"}
-                className="admin-nav-button"
-                aria-pressed={section === id}
-                onClick={() => {
-                  setSection(id);
-                  setSmsRecipient(null);
-                  setMenuOpen(false);
-                }}
+                variant="ghost"
+                size="icon"
+                className="admin-menu-trigger"
+                aria-label="Menyu ya admin"
               >
-                <Icon size={18} />
-                {label}
+                <Menu size={25} />
               </Button>
-            ))}
-          </nav>
-          <div className="admin-sidebar-footer">
-            <a href="/" className="flex items-center gap-2 text-sm">
-              <ArrowUpRight size={16} /> Fungua tovuti
-            </a>
-            <Button
-              variant="ghost"
-              className="mt-3 w-full justify-start"
-              onClick={async () => {
-                await platform.auth.signOut();
-                setUser(null);
-                setAuthorized(false);
-                setRows([]);
+            </SheetTrigger>
+            <SheetContent side="left" className="admin-drawer">
+              <SheetTitle className="sr-only">Menyu ya admin</SheetTitle>
+              <SheetDescription className="sr-only">
+                Chagua sehemu ya kusimamia Gochati.
+              </SheetDescription>
+              <div className="admin-sidebar">{navigation}</div>
+            </SheetContent>
+          </Sheet>
+          <div className="admin-search">
+            <Search size={20} />
+            <input
+              type="search"
+              aria-label="Tafuta watumiaji"
+              placeholder="Tafuta mtumiaji..."
+              maxLength={100}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setSection("users");
+                setUserView("all");
+                setFilter("all");
               }}
-            >
-              <LogOut size={16} /> Toka kwenye akaunti
-            </Button>
+            />
+            {search && (
+              <Button variant="ghost" size="sm" onClick={() => setSearch("")}>
+                Futa
+              </Button>
+            )}
           </div>
-        </aside>
-      </div>
-      <section className="admin-main">
-        <header className="admin-heading">
-          <div>
-            <p className="admin-eyebrow">
-              <LayoutDashboard size={14} /> DASHBOARD
+          <Button
+            variant="outline"
+            size="icon"
+            className="admin-refresh"
+            aria-label="Pakia upya takwimu"
+            disabled={refreshing}
+            onClick={async () => {
+              setRefreshing(true);
+              try {
+                await load();
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+          >
+            <RefreshCw size={20} className={refreshing ? "animate-spin" : ""} />
+          </Button>
+        </div>
+        <section className="admin-main">
+          <header className="admin-heading">
+            <div>
+              <p className="admin-eyebrow">
+                <LayoutDashboard size={14} /> DASHBOARD
+              </p>
+              <h1>
+                {section === "dashboard"
+                  ? "Dashboard"
+                  : section === "users"
+                    ? "Watumiaji"
+                    : section === "payments"
+                      ? "Malipo ya huduma"
+                      : section === "messages" || section === "sms"
+                        ? "Mawasiliano"
+                        : "Maombi ya withdrawal"}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                {section === "dashboard"
+                  ? "Muhtasari wa mapato, watumiaji na maombi yanayosubiri."
+                  : "Dhibiti akaunti, huduma na mawasiliano ya Gochati.online."}
+              </p>
+            </div>
+            <span className="admin-session">
+              <span /> Admin
+            </span>
+          </header>
+          <p className="admin-disclosure">Balance na withdrawal hazitumi pesa halisi.</p>
+          {notice && (
+            <p role="status" className="auth-message">
+              {notice}
             </p>
-            <h1>
-              {section === "users"
-                ? "Watumiaji"
-                : section === "payments"
-                  ? "Malipo ya huduma"
-                  : section === "messages" || section === "sms"
-                    ? "Mawasiliano"
-                    : "Maombi ya withdrawal"}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-2">
-              Dhibiti akaunti, huduma na mawasiliano ya Gochati.online.
-            </p>
-          </div>
-          <span className="admin-session">
-            <span /> Admin
-          </span>
-        </header>
-        <p className="admin-disclosure">Balance na withdrawal hazitumi pesa halisi.</p>
-        {notice && (
-          <p role="status" className="auth-message">
-            {notice}
-          </p>
-        )}
-        {ready && (
-          <>
-            {section === "sms" && (
-              <>
-                {smsRecipient && (
-                  <Button variant="outline" onClick={() => setSmsRecipient(null)}>
-                    Rudi kwenye SMS za makundi
-                  </Button>
-                )}
-                <AdminSms key={smsRecipient?.id || "groups"} recipient={smsRecipient} />
-              </>
-            )}
-            {section === "payments" && (
-              <section className="card-soft mt-4 p-4">
-                <h2 className="text-xl font-bold">Malipo ya SplashPay</h2>
-                <p className="text-sm">
-                  Ada za activation, Premium na VIP. Uthibitisho unatoka SplashPay.
-                </p>
-                {payments.length === 0 ? (
-                  <p>Hakuna malipo bado.</p>
-                ) : (
-                  payments.map((payment) => (
-                    <article key={payment.id} className="mt-3 border-t border-border pt-3">
-                      <strong>
-                        {payment.purpose} · TZS {Number(payment.amount).toLocaleString()}
-                      </strong>
-                      <p>
-                        {rows.find((row) => row.id === payment.user_id)?.email || payment.user_id}
-                      </p>
-                      <p className="break-all">{payment.order_id}</p>
-                      <p>
-                        {payment.phone} · {payment.status} ·{" "}
-                        {new Date(payment.created_at).toLocaleString()}
-                      </p>
-                      <Button
-                        variant="outline"
-                        disabled={paymentBusy === payment.id || payment.status === "success"}
-                        onClick={async () => {
-                          setPaymentBusy(payment.id);
-                          try {
-                            const response = await fetch("/api/gochati-payment", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                action: "status",
-                                reference: payment.order_id,
-                              }),
-                            });
-                            const data = await response.json();
-                            if (!response.ok) throw new Error(data.message);
-                            setNotice("Hali ya malipo: " + data.payment_status);
-                            await load();
-                          } catch (e) {
-                            setNotice(
-                              e instanceof Error ? e.message : "Imeshindikana kuthibitisha malipo.",
-                            );
-                          } finally {
-                            setPaymentBusy("");
-                          }
-                        }}
-                      >
-                        Thibitisha kupitia SplashPay
-                      </Button>
-                    </article>
-                  ))
-                )}
-              </section>
-            )}
-            {section === "users" && (
-              <div className="admin-metrics grid gap-3 sm:grid-cols-3">
-                <button className="card-soft p-4 text-left" onClick={() => setFilter("all")}>
-                  <p className="text-sm">Watumiaji wote</p>
-                  <strong className="text-2xl">{rows.length}</strong>
-                </button>
-                <button className="card-soft p-4 text-left" onClick={() => setFilter("active")}>
-                  <p className="text-sm">Active users</p>
-                  <strong className="text-2xl text-emerald-600">{activeRows.length}</strong>
-                </button>
-                <button className="card-soft p-4 text-left" onClick={() => setFilter("inactive")}>
-                  <p className="text-sm">Inactive users</p>
-                  <strong className="text-2xl text-amber-600">{inactiveRows.length}</strong>
-                </button>
-              </div>
-            )}
-            {section === "messages" && (
-              <div className="card-soft mt-4 p-4">
-                <h2 className="font-bold">Tuma notification</h2>
-                <textarea
-                  className="mt-2 w-full rounded-xl border p-3 bg-background text-foreground"
-                  value={broadcast}
-                  onChange={(e) => setBroadcast(e.target.value)}
-                  placeholder="Andika ujumbe..."
+          )}
+          {ready && (
+            <>
+              {section === "dashboard" && (
+                <AdminOverview
+                  users={rows}
+                  payments={payments}
+                  onUsers={(nextFilter) => navigate("users", nextFilter)}
                 />
-                <label className="mt-3 block text-sm font-semibold">Wapokeaji</label>
-                <select
-                  className="mt-1 w-full rounded-xl border p-3 bg-background text-foreground"
-                  value={audience}
-                  onChange={(e) => setAudience(e.target.value as Audience)}
-                >
-                  <option value="all">Watumiaji wote</option>
-                  <option value="premium">Premium users tu</option>
-                  <option value="normal">Normal users tu</option>
-                  <option value="active">Active users tu</option>
-                  <option value="inactive">Hawajalipia Activation fee</option>
-                </select>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button disabled={sending} onClick={() => void notify()}>
-                    {sending ? "Inatuma..." : "Tuma notification"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      await platform.auth.signOut();
-                      setUser(null);
-                      setAuthorized(false);
-                      setRows([]);
-                    }}
-                  >
-                    Toka
-                  </Button>
-                </div>
-              </div>
-            )}
-            {notifyUser && (
-              <div
-                className="card-soft mt-4 p-4"
-                role="dialog"
-                aria-label="Tuma notification kwa mtumiaji"
-              >
-                <h2 className="font-bold">Tuma notification kwa {notifyUser.name}</h2>
-                <textarea
-                  className="mt-2 w-full rounded-xl border p-3 bg-background text-foreground"
-                  value={userMessage}
-                  onChange={(e) => setUserMessage(e.target.value)}
-                  placeholder="Andika ujumbe wa kumtumia mtumiaji..."
-                />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button
-                    disabled={sending || !userMessage.trim()}
-                    onClick={() => void notifySelected()}
-                  >
-                    {sending ? "Inatuma..." : "Tuma ujumbe"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setNotifyUser(null);
-                      setUserMessage("");
-                    }}
-                  >
-                    Ghairi
-                  </Button>
-                </div>
-              </div>
-            )}
-            {section === "users" && (
-              <>
-                <div className="admin-search">
-                  <Search size={20} />
-                  <input
-                    type="search"
-                    aria-label="Tafuta watumiaji"
-                    placeholder="Tafuta kwa jina, username au namba ya simu..."
-                    maxLength={100}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  {search && (
-                    <Button variant="ghost" size="sm" onClick={() => setSearch("")}>
-                      Futa
+              )}
+              {section === "sms" && (
+                <>
+                  {smsRecipient && (
+                    <Button variant="outline" onClick={() => setSmsRecipient(null)}>
+                      Rudi kwenye SMS za makundi
                     </Button>
                   )}
+                  <AdminSms key={smsRecipient?.id || "groups"} recipient={smsRecipient} />
+                </>
+              )}
+              {section === "payments" && (
+                <section className="card-soft mt-4 p-4">
+                  <h2 className="text-xl font-bold">Malipo ya SplashPay</h2>
+                  <p className="text-sm">
+                    Ada za activation, Premium na VIP. Uthibitisho unatoka SplashPay.
+                  </p>
+                  {payments.length === 0 ? (
+                    <p>Hakuna malipo bado.</p>
+                  ) : (
+                    payments.map((payment) => (
+                      <article key={payment.id} className="mt-3 border-t border-border pt-3">
+                        <strong>
+                          {payment.purpose} · TZS {Number(payment.amount).toLocaleString()}
+                        </strong>
+                        <p>
+                          {rows.find((row) => row.id === payment.user_id)?.email || payment.user_id}
+                        </p>
+                        <p className="break-all">{payment.order_id}</p>
+                        <p>
+                          {payment.phone} · {payment.status} ·{" "}
+                          {new Date(payment.created_at).toLocaleString()}
+                        </p>
+                        <Button
+                          variant="outline"
+                          disabled={paymentBusy === payment.id || payment.status === "success"}
+                          onClick={async () => {
+                            setPaymentBusy(payment.id);
+                            try {
+                              const response = await fetch("/api/gochati-payment", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "status",
+                                  reference: payment.order_id,
+                                }),
+                              });
+                              const data = await response.json();
+                              if (!response.ok) throw new Error(data.message);
+                              setNotice("Hali ya malipo: " + data.payment_status);
+                              await load();
+                            } catch (e) {
+                              setNotice(
+                                e instanceof Error
+                                  ? e.message
+                                  : "Imeshindikana kuthibitisha malipo.",
+                              );
+                            } finally {
+                              setPaymentBusy("");
+                            }
+                          }}
+                        >
+                          Thibitisha kupitia SplashPay
+                        </Button>
+                      </article>
+                    ))
+                  )}
+                </section>
+              )}
+              {section === "users" && (
+                <div className="admin-metrics grid gap-3 sm:grid-cols-3">
+                  <button className="card-soft p-4 text-left" onClick={() => setFilter("all")}>
+                    <p className="text-sm">Watumiaji wote</p>
+                    <strong className="text-2xl">{rows.length}</strong>
+                  </button>
+                  <button className="card-soft p-4 text-left" onClick={() => setFilter("active")}>
+                    <p className="text-sm">Active users</p>
+                    <strong className="text-2xl text-emerald-600">{activeRows.length}</strong>
+                  </button>
+                  <button className="card-soft p-4 text-left" onClick={() => setFilter("inactive")}>
+                    <p className="text-sm">Inactive users</p>
+                    <strong className="text-2xl text-amber-600">{inactiveRows.length}</strong>
+                  </button>
                 </div>
-                {searching && (
-                  <p role="status" className="text-sm text-muted-foreground">
-                    Inatafuta watumiaji...
-                  </p>
-                )}
-                {searchError && (
-                  <p role="alert" className="auth-error">
-                    {searchError}
-                  </p>
-                )}
-                <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-xl font-bold">Watumiaji ({visibleRows.length})</h2>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={filter === "all" ? "default" : "outline"}
-                      onClick={() => setFilter("all")}
-                    >
-                      Wote
+              )}
+              {section === "messages" && (
+                <div className="card-soft mt-4 p-4">
+                  <h2 className="font-bold">Tuma notification</h2>
+                  <textarea
+                    className="mt-2 w-full rounded-xl border p-3 bg-background text-foreground"
+                    value={broadcast}
+                    onChange={(e) => setBroadcast(e.target.value)}
+                    placeholder="Andika ujumbe..."
+                  />
+                  <label className="mt-3 block text-sm font-semibold">Wapokeaji</label>
+                  <select
+                    className="mt-1 w-full rounded-xl border p-3 bg-background text-foreground"
+                    value={audience}
+                    onChange={(e) => setAudience(e.target.value as Audience)}
+                  >
+                    <option value="all">Watumiaji wote</option>
+                    <option value="premium">Premium users tu</option>
+                    <option value="normal">Normal users tu</option>
+                    <option value="active">Active users tu</option>
+                    <option value="inactive">Hawajalipia Activation fee</option>
+                  </select>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button disabled={sending} onClick={() => void notify()}>
+                      {sending ? "Inatuma..." : "Tuma notification"}
                     </Button>
                     <Button
-                      variant={filter === "active" ? "default" : "outline"}
-                      onClick={() => setFilter("active")}
+                      variant="outline"
+                      onClick={async () => {
+                        await platform.auth.signOut();
+                        setUser(null);
+                        setAuthorized(false);
+                        setRows([]);
+                      }}
                     >
-                      Active
-                    </Button>
-                    <Button
-                      variant={filter === "inactive" ? "default" : "outline"}
-                      onClick={() => setFilter("inactive")}
-                    >
-                      Inactive
+                      Toka
                     </Button>
                   </div>
                 </div>
-                <div className="mt-3 grid gap-3">
-                  {!searching && !searchError && visibleRows.length === 0 && (
-                    <div className="admin-empty">
-                      <Users size={32} />
-                      <h3>Hakuna mtumiaji aliyepatikana</h3>
-                      <p>Badilisha jina, username, namba au kichujio.</p>
-                    </div>
+              )}
+              {notifyUser && (
+                <div
+                  className="card-soft mt-4 p-4"
+                  role="dialog"
+                  aria-label="Tuma notification kwa mtumiaji"
+                >
+                  <h2 className="font-bold">Tuma notification kwa {notifyUser.name}</h2>
+                  <textarea
+                    className="mt-2 w-full rounded-xl border p-3 bg-background text-foreground"
+                    value={userMessage}
+                    onChange={(e) => setUserMessage(e.target.value)}
+                    placeholder="Andika ujumbe wa kumtumia mtumiaji..."
+                  />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      disabled={sending || !userMessage.trim()}
+                      onClick={() => void notifySelected()}
+                    >
+                      {sending ? "Inatuma..." : "Tuma ujumbe"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setNotifyUser(null);
+                        setUserMessage("");
+                      }}
+                    >
+                      Ghairi
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {section === "users" && (
+                <>
+                  {searching && (
+                    <p role="status" className="text-sm text-muted-foreground">
+                      Inatafuta watumiaji...
+                    </p>
                   )}
-                  {!searching &&
-                    !searchError &&
-                    visibleRows.map((u) => (
-                      <article className="card-soft admin-user-card p-5" key={u.id}>
-                        <div className="flex flex-wrap justify-between gap-2">
-                          <div>
-                            <strong>{u.full_name}</strong> (@{u.username})
-                            <p>
-                              {u.phone} · {u.country}
-                            </p>
-                            <p>Usajili: {new Date(u.created_at).toLocaleString()}</p>
-                            <p>
-                              Hali: {u.account_status} · Paid:{" "}
-                              {u.activation_paid ? "Ndiyo" : "Hapana"} ·{" "}
-                              {u.is_premium ? "PREMIUM" : "Normal"} · {u.is_vip ? "VIP" : "Non-VIP"}{" "}
-                              · Walioalikwa: {u.referral_count || 0} · Balance: TZS{" "}
-                              {Number(u.balance || 0).toLocaleString()}
-                            </p>
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <input
-                                aria-label={`Kiasi cha kubadilisha balance ya ${u.username}`}
-                                type="number"
-                                min="1"
-                                step="1"
-                                value={balanceAdjustments[u.id] || ""}
-                                onChange={(e) =>
-                                  setBalanceAdjustments((prev) => ({
-                                    ...prev,
-                                    [u.id]: e.target.value,
-                                  }))
-                                }
-                                placeholder="Kiasi (TZS)"
-                                className="w-36 rounded-lg border p-2 bg-background text-foreground"
-                              />
-                              <Button
-                                disabled={balanceBusy === u.id}
-                                onClick={() =>
-                                  void adjustBalance(u.id, Number(u.balance || 0), "add")
-                                }
-                              >
-                                + Ongeza balance
-                              </Button>
-                              <Button
-                                variant="outline"
-                                disabled={balanceBusy === u.id}
-                                onClick={() =>
-                                  void adjustBalance(u.id, Number(u.balance || 0), "subtract")
-                                }
-                              >
-                                − Punguza balance
-                              </Button>
+                  {searchError && (
+                    <p role="alert" className="auth-error">
+                      {searchError}
+                    </p>
+                  )}
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-xl font-bold">Watumiaji ({visibleRows.length})</h2>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={filter === "all" ? "default" : "outline"}
+                        onClick={() => setFilter("all")}
+                      >
+                        Wote
+                      </Button>
+                      <Button
+                        variant={filter === "active" ? "default" : "outline"}
+                        onClick={() => setFilter("active")}
+                      >
+                        Active
+                      </Button>
+                      <Button
+                        variant={filter === "inactive" ? "default" : "outline"}
+                        onClick={() => setFilter("inactive")}
+                      >
+                        Inactive
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-border p-3">
+                    <p className="text-sm">
+                      Weka tiki kwenye akaunti unazotaka kufuta (hadi 100). Zilizochaguliwa:{" "}
+                      {selectedIds.length}
+                    </p>
+                    <Button
+                      variant="destructive"
+                      disabled={!selectedIds.length || searching || deleting}
+                      onClick={() => {
+                        setDeleteError("");
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      Delete account ({selectedIds.length})
+                    </Button>
+                    {selectedIds.length > 0 && (
+                      <Button
+                        variant="outline"
+                        disabled={deleting}
+                        onClick={() => setSelectedIds([])}
+                      >
+                        Ondoa tiki zote
+                      </Button>
+                    )}
+                  </div>
+                  <AlertDialog
+                    open={deleteOpen}
+                    onOpenChange={(open) => {
+                      if (!deleting) setDeleteOpen(open);
+                    }}
+                  >
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Futa akaunti {selectedIds.length}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Akaunti zilizochaguliwa pamoja na historia ya chat, arifa, malipo na
+                          withdrawal zitafutwa. Hatua hii haiwezi kutenguliwa.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <ul className="max-h-48 overflow-auto text-sm">
+                        {selectedIds.map((id) => (
+                          <li key={id}>
+                            @{(searchRows ?? rows).find((row) => row.id === id)?.username || id}
+                          </li>
+                        ))}
+                      </ul>
+                      {deleteError && (
+                        <p role="alert" className="text-destructive">
+                          {deleteError}
+                        </p>
+                      )}
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Ghairi</AlertDialogCancel>
+                        <Button
+                          variant="destructive"
+                          disabled={deleting}
+                          onClick={() => void deleteSelected()}
+                        >
+                          {deleting ? "Inafuta..." : "Ndiyo, futa akaunti"}
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <div className="mt-3 grid gap-3">
+                    {!searching && !searchError && visibleRows.length === 0 && (
+                      <div className="admin-empty">
+                        <Users size={32} />
+                        <h3>Hakuna mtumiaji aliyepatikana</h3>
+                        <p>Badilisha jina, username, namba au kichujio.</p>
+                      </div>
+                    )}
+                    {!searching &&
+                      !searchError &&
+                      visibleRows.map((u) => (
+                        <article className="card-soft admin-user-card p-5" key={u.id}>
+                          <div className="flex flex-wrap justify-between gap-2">
+                            <div>
+                              <label className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 accent-destructive"
+                                  aria-label={`Chagua akaunti ya ${u.username}`}
+                                  checked={selectedIds.includes(u.id)}
+                                  disabled={
+                                    deleting ||
+                                    u.id === user.id ||
+                                    (!selectedIds.includes(u.id) && selectedIds.length >= 100)
+                                  }
+                                  onChange={(event) =>
+                                    setSelectedIds((previous) =>
+                                      event.target.checked
+                                        ? [...previous, u.id]
+                                        : previous.filter((id) => id !== u.id),
+                                    )
+                                  }
+                                />
+                                Chagua akaunti
+                              </label>
+                              <strong>{u.full_name}</strong> (@{u.username})
+                              <p>
+                                {u.phone} · {u.country}
+                              </p>
+                              <p>Usajili: {new Date(u.created_at).toLocaleString()}</p>
+                              <p>
+                                Hali: {u.account_status} · Paid:{" "}
+                                {u.activation_paid ? "Ndiyo" : "Hapana"} ·{" "}
+                                {u.is_premium ? "PREMIUM" : "Normal"} ·{" "}
+                                {u.is_vip ? "VIP" : "Non-VIP"} · Walioalikwa:{" "}
+                                {u.referral_count || 0} · Balance: TZS{" "}
+                                {Number(u.balance || 0).toLocaleString()}
+                              </p>
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <input
+                                  aria-label={`Kiasi cha kubadilisha balance ya ${u.username}`}
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  value={balanceAdjustments[u.id] || ""}
+                                  onChange={(e) =>
+                                    setBalanceAdjustments((prev) => ({
+                                      ...prev,
+                                      [u.id]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="Kiasi (TZS)"
+                                  className="w-36 rounded-lg border p-2 bg-background text-foreground"
+                                />
+                                <Button
+                                  disabled={balanceBusy === u.id}
+                                  onClick={() =>
+                                    void adjustBalance(u.id, Number(u.balance || 0), "add")
+                                  }
+                                >
+                                  + Ongeza balance
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  disabled={balanceBusy === u.id}
+                                  onClick={() =>
+                                    void adjustBalance(u.id, Number(u.balance || 0), "subtract")
+                                  }
+                                >
+                                  − Punguza balance
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              onClick={() =>
-                                void updateUser(u.id, {
-                                  activation_paid: true,
-                                  account_status: "active",
-                                })
-                              }
-                            >
-                              Washa akaunti (manual)
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() =>
-                                void updateUser(u.id, { account_status: "deactivated" })
-                              }
-                            >
-                              Deactivate
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => void updateUser(u.id, { account_status: "banned" })}
-                            >
-                              Ban
-                            </Button>
-                            {u.account_status === "banned" && (
+                            <div className="flex flex-wrap gap-2">
                               <Button
-                                variant="outline"
                                 onClick={() =>
                                   void updateUser(u.id, {
-                                    account_status: u.activation_paid ? "active" : "pending",
+                                    activation_paid: true,
+                                    account_status: "active",
                                   })
                                 }
                               >
-                                Unban
+                                Washa akaunti (manual)
                               </Button>
-                            )}
-                            <Button
-                              variant={u.is_premium ? "default" : "outline"}
-                              onClick={() => void updateUser(u.id, { is_premium: !u.is_premium })}
-                            >
-                              {u.is_premium ? "Remove Premium" : "Make Premium"}
-                            </Button>
-                            <Button
-                              variant={u.is_vip ? "default" : "outline"}
-                              onClick={() => void updateUser(u.id, { is_vip: !u.is_vip })}
-                            >
-                              {u.is_vip ? "Remove VIP" : "Make VIP"}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setSmsRecipient({
-                                  id: u.id,
-                                  name: u.username || u.full_name || "mtumiaji",
-                                  phone: u.phone,
-                                });
-                                setSection("sms");
-                                setNotice("");
-                              }}
-                            >
-                              <MessageSquare size={16} /> Tuma SMS
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setNotifyUser({
-                                  id: u.id,
-                                  name: u.full_name || u.username || "mtumiaji",
-                                });
-                                setUserMessage("");
-                                setNotice("");
-                              }}
-                            >
-                              Notify user
-                            </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() =>
+                                  void updateUser(u.id, { account_status: "deactivated" })
+                                }
+                              >
+                                Deactivate
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => void updateUser(u.id, { account_status: "banned" })}
+                              >
+                                Ban
+                              </Button>
+                              {u.account_status === "banned" && (
+                                <Button
+                                  variant="outline"
+                                  onClick={() =>
+                                    void updateUser(u.id, {
+                                      account_status: u.activation_paid ? "active" : "pending",
+                                    })
+                                  }
+                                >
+                                  Unban
+                                </Button>
+                              )}
+                              <Button
+                                variant={u.is_premium ? "default" : "outline"}
+                                onClick={() => void updateUser(u.id, { is_premium: !u.is_premium })}
+                              >
+                                {u.is_premium ? "Remove Premium" : "Make Premium"}
+                              </Button>
+                              <Button
+                                variant={u.is_vip ? "default" : "outline"}
+                                onClick={() => void updateUser(u.id, { is_vip: !u.is_vip })}
+                              >
+                                {u.is_vip ? "Remove VIP" : "Make VIP"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setSmsRecipient({
+                                    id: u.id,
+                                    name: u.username || u.full_name || "mtumiaji",
+                                    phone: u.phone,
+                                  });
+                                  setSection("sms");
+                                  setNotice("");
+                                }}
+                              >
+                                <MessageSquare size={16} /> Tuma SMS
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setNotifyUser({
+                                    id: u.id,
+                                    name: u.full_name || u.username || "mtumiaji",
+                                  });
+                                  setUserMessage("");
+                                  setNotice("");
+                                }}
+                              >
+                                Notify user
+                              </Button>
+                            </div>
                           </div>
-                        </div>
+                        </article>
+                      ))}
+                  </div>
+                </>
+              )}
+              {section === "withdrawals" && (
+                <>
+                  <h2 className="mt-8 text-xl font-bold">Withdrawal</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Weka Paid baada ya kuthibitisha malipo mwenyewe. Hatua hii hutuma SMS ya
+                    uthibitisho; haitumi pesa.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-border p-3">
+                    <p className="text-sm">
+                      Weka tiki kwenye akaunti unazotaka kufuta (hadi 100). Zilizochaguliwa:{" "}
+                      {selectedIds.length}
+                    </p>
+                    <Button
+                      variant="destructive"
+                      disabled={!selectedIds.length || searching || deleting}
+                      onClick={() => {
+                        setDeleteError("");
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      Delete account ({selectedIds.length})
+                    </Button>
+                    {selectedIds.length > 0 && (
+                      <Button
+                        variant="outline"
+                        disabled={deleting}
+                        onClick={() => setSelectedIds([])}
+                      >
+                        Ondoa tiki zote
+                      </Button>
+                    )}
+                  </div>
+                  <AlertDialog
+                    open={deleteOpen}
+                    onOpenChange={(open) => {
+                      if (!deleting) setDeleteOpen(open);
+                    }}
+                  >
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Futa akaunti {selectedIds.length}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Akaunti zilizochaguliwa pamoja na historia ya chat, arifa, malipo na
+                          withdrawal zitafutwa. Hatua hii haiwezi kutenguliwa.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <ul className="max-h-48 overflow-auto text-sm">
+                        {selectedIds.map((id) => (
+                          <li key={id}>
+                            @{(searchRows ?? rows).find((row) => row.id === id)?.username || id}
+                          </li>
+                        ))}
+                      </ul>
+                      {deleteError && (
+                        <p role="alert" className="text-destructive">
+                          {deleteError}
+                        </p>
+                      )}
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Ghairi</AlertDialogCancel>
+                        <Button
+                          variant="destructive"
+                          disabled={deleting}
+                          onClick={() => void deleteSelected()}
+                        >
+                          {deleting ? "Inafuta..." : "Ndiyo, futa akaunti"}
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <div className="mt-3 grid gap-3">
+                    {withdrawals.length === 0 && (
+                      <p className="admin-empty">Hakuna ombi la withdrawal bado.</p>
+                    )}
+                    {withdrawals.map((w) => (
+                      <article className="card-soft p-4" key={w.id}>
+                        <p>
+                          Username: {w.username ? `@${w.username}` : "Haipatikani"} · TZS{" "}
+                          {Number(w.amount).toLocaleString()} · {w.phone}
+                        </p>
+                        <p>
+                          Makato: TZS {Number(w.fee || 0).toLocaleString()} · Baada ya makato: TZS{" "}
+                          {Number(w.net_amount ?? w.amount).toLocaleString()}
+                        </p>
+                        <p>
+                          Status:{" "}
+                          <strong
+                            className={w.status === "paid" ? "text-success" : "text-amber-600"}
+                          >
+                            {w.status === "paid"
+                              ? "Paid"
+                              : w.status === "pending"
+                                ? "Pending"
+                                : "Rejected"}
+                          </strong>{" "}
+                          · {new Date(w.created_at).toLocaleString()}
+                        </p>
+                        {w.status === "pending" && (
+                          <Button
+                            className="mt-2"
+                            disabled={Boolean(withdrawalBusy)}
+                            onClick={() => void markPaid(w.id)}
+                          >
+                            {withdrawalBusy === w.id ? "Inahifadhi na kutuma SMS..." : "Weka Paid"}
+                          </Button>
+                        )}
                       </article>
                     ))}
-                </div>
-              </>
-            )}
-            {section === "withdrawals" && (
-              <>
-                <h2 className="mt-8 text-xl font-bold">Withdrawal</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Weka Paid baada ya kuthibitisha malipo mwenyewe. Hatua hii hutuma SMS ya
-                  uthibitisho; haitumi pesa.
-                </p>
-                <div className="mt-3 grid gap-3">
-                  {withdrawals.length === 0 && (
-                    <p className="admin-empty">Hakuna ombi la withdrawal bado.</p>
-                  )}
-                  {withdrawals.map((w) => (
-                    <article className="card-soft p-4" key={w.id}>
-                      <p>
-                        Username: {w.username ? `@${w.username}` : "Haipatikani"} · TZS {Number(w.amount).toLocaleString()} · {w.phone}
-                      </p>
-                      <p>
-                        Makato: TZS {Number(w.fee || 0).toLocaleString()} · Baada ya makato: TZS{" "}
-                        {Number(w.net_amount ?? w.amount).toLocaleString()}
-                      </p>
-                      <p>
-                        Status:{" "}
-                        <strong className={w.status === "paid" ? "text-success" : "text-amber-600"}>
-                          {w.status === "paid"
-                            ? "Paid"
-                            : w.status === "pending"
-                              ? "Pending"
-                              : "Rejected"}
-                        </strong>{" "}
-                        · {new Date(w.created_at).toLocaleString()}
-                      </p>
-                      {w.status === "pending" && (
-                        <Button
-                          className="mt-2"
-                          disabled={Boolean(withdrawalBusy)}
-                          onClick={() => void markPaid(w.id)}
-                        >
-                          {withdrawalBusy === w.id ? "Inahifadhi na kutuma SMS..." : "Weka Paid"}
-                        </Button>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </section>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </section>
+      </div>
     </main>
   );
 }
