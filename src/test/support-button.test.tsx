@@ -1,31 +1,49 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ getUser: vi.fn(), api: vi.fn() }));
+vi.mock("@/integrations/netlify/client", () => ({
+  platform: { auth: { getUser: mocks.getUser } },
+}));
+vi.mock("@/components/gochati/customer-care-api", () => ({ careApi: mocks.api }));
+vi.mock("@/components/gochati/CustomerCareChat", () => ({
+  CustomerCareChat: () => <div>Customer care conversation</div>,
+}));
 import { SupportButton } from "@/components/gochati/SupportButton";
-
 afterEach(cleanup);
-
-it("offers SMS after confirming registration", () => {
+beforeEach(() => {
+  vi.resetAllMocks();
+  mocks.getUser.mockResolvedValue({ data: { user: null } });
+});
+it("directs visitors to the existing customer service number", async () => {
   render(<SupportButton floating />);
   fireEvent.click(screen.getByRole("button", { name: "Customer services" }));
-  expect(screen.getByRole("heading", { name: "UMEJISAJILI?" })).toBeInTheDocument();
-  expect(screen.queryByRole("link")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "NDIO", exact: true }));
-  expect(screen.getByRole("link", { name: "Tuma SMS" })).toHaveAttribute(
+  expect(await screen.findByRole("link", { name: "Tuma SMS" })).toHaveAttribute(
     "href",
     "sms:0743871339?body=Nielekeze%20kuhusu%20Gochat",
   );
+  expect(mocks.api).not.toHaveBeenCalled();
 });
-
-it("directs unregistered visitors to the registration form and resets on reopening", () => {
+it("directs inactive accounts to SMS", async () => {
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "user" } } });
+  mocks.api.mockResolvedValue({ active: false });
   render(<SupportButton />);
   fireEvent.click(screen.getByRole("button", { name: "Customer services" }));
-  fireEvent.click(screen.getByRole("button", { name: "HAPANA" }));
-  expect(screen.getByRole("link", { name: "Gusa hapa Kujisajili Kwanza" })).toHaveAttribute(
-    "href",
-    "/register",
-  );
-  expect(screen.queryByRole("link", { name: "Tuma SMS" })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  expect(await screen.findByRole("link", { name: "Tuma SMS" })).toBeInTheDocument();
+  expect(screen.queryByText("Customer care conversation")).not.toBeInTheDocument();
+});
+it("opens an in-account conversation for active accounts", async () => {
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "user" } } });
+  mocks.api.mockResolvedValue({ active: true });
+  render(<SupportButton />);
   fireEvent.click(screen.getByRole("button", { name: "Customer services" }));
-  expect(screen.getByRole("heading", { name: "UMEJISAJILI?" })).toBeInTheDocument();
+  expect(await screen.findByText("Customer care conversation")).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Tuma SMS" })).not.toBeInTheDocument();
+});
+it("keeps the SMS fallback available when session checks fail", async () => {
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "user" } } });
+  mocks.api.mockRejectedValue(new Error("Session imeisha."));
+  render(<SupportButton />);
+  fireEvent.click(screen.getByRole("button", { name: "Customer services" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Session imeisha.");
+  expect(screen.getByRole("link", { name: "Tuma SMS" })).toBeInTheDocument();
 });

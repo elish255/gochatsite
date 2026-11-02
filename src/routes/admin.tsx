@@ -1,3 +1,4 @@
+import { AdminCareNotifications, AdminCustomerCare, AdminPhoneBans } from "@/components/gochati/AdminCustomerCare";
 import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
 import { AdminOverview } from "@/components/gochati/AdminOverview";
@@ -137,6 +138,7 @@ function AdminPage() {
   }
   useEffect(() => {
     void load();
+    if (new URLSearchParams(window.location.search).has("customer-care")) setSection("customer-care");
   }, []);
   useEffect(() => {
     setSelectedIds([]);
@@ -482,6 +484,8 @@ function AdminPage() {
         ))}
         <p className="admin-nav-label">HUDUMA</p>
         {[
+          { id: "customer-care", label: "Customer care", icon: MessageSquare },
+          { id: "phone-bans", label: "Namba zilizozuiwa", icon: Ban },
           { id: "payments", label: "Malipo", icon: CreditCard },
           { id: "messages", label: "Notifications", icon: Bell },
           { id: "sms", label: "SMS", icon: MessageSquare },
@@ -594,7 +598,7 @@ function AdminPage() {
                     ? "Watumiaji"
                     : section === "payments"
                       ? "Malipo ya huduma"
-                      : section === "messages" || section === "sms"
+                      : section === "messages" || section === "sms" || section === "customer-care" || section === "phone-bans"
                         ? "Mawasiliano"
                         : "Maombi ya withdrawal"}
               </h1>
@@ -616,6 +620,9 @@ function AdminPage() {
           )}
           {ready && (
             <>
+              <AdminCareNotifications onOpen={() => navigate("customer-care")} />
+              {section === "customer-care" && <AdminCustomerCare />}
+              {section === "phone-bans" && <AdminPhoneBans />}
               {section === "dashboard" && (
                 <AdminOverview
                   users={rows}

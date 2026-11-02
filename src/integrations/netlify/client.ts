@@ -138,7 +138,34 @@ export const platform = {
         };
       }
     },
-    signOut: () => result(logout),
+    signOut: () =>
+      result(async () => {
+        // Stop this browser's admin notifications before discarding its authenticated session.
+        if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.getRegistration("/");
+            const subscription = await registration?.pushManager?.getSubscription();
+            if (subscription) {
+              try {
+                await fetch("/api/gochati-support", {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "unsubscribe",
+                    subscription: subscription.toJSON(),
+                  }),
+                });
+              } finally {
+                await subscription.unsubscribe();
+              }
+            }
+          } catch {
+            /* Logout remains available if the push service is unreachable. */
+          }
+        }
+        return logout();
+      }),
     onAuthStateChange: (
       callback: (event: string, session: { user: AppUser | null } | null) => void,
     ) => ({

@@ -285,7 +285,7 @@ describe("VIP withdrawal lifecycle", () => {
     const response = await handler(request({ rpc: "gochati_request_withdrawal", args: { p_amount: 500000, p_phone: "+255712345678" } }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ data: "withdrawal" });
-    expect(mocks.sql.mock.calls[1][0].join(" ")).toContain("'pending'");
+    expect(mocks.sql.mock.calls[1]?.[0].join(" ")).toContain("'pending'");
   });
   it("rejects malformed phone numbers before debiting", async () => {
     const response = await handler(request({ rpc: "gochati_request_withdrawal", args: { p_amount: 500000, p_phone: "ddddddddd" } }));
