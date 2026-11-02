@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   sendDarsms: vi.fn(),
   waitUntil: vi.fn(),
 }));
+vi.mock("../../netlify/lib/admin-push.js", () => ({ deliverAdminPush: async () => {} }));
 vi.mock("../../netlify/lib/darsms.js", () => ({ sendDarsms: mocks.sendDarsms }));
 vi.mock("@netlify/database", () => ({ getDatabase: () => ({ sql: mocks.sql }) }));
 vi.mock("@netlify/identity", () => ({
@@ -114,7 +115,7 @@ describe("Username authentication and direct signup", () => {
     try {
       mocks.sendDarsms.mockRejectedValue(new Error("provider unavailable"));
       expect((await request(signup)).status).toBe(201);
-      await mocks.waitUntil.mock.calls[0][0];
+      await Promise.all(mocks.waitUntil.mock.calls.map(([promise]) => promise));
       expect(mocks.login).toHaveBeenCalled();
       expect(log).toHaveBeenCalledWith("Registration SMS delivery failed.");
     } finally {
@@ -125,6 +126,7 @@ describe("Username authentication and direct signup", () => {
     mocks.sql
       .mockReset()
       .mockResolvedValueOnce([{ attempts: 1 }])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ email: signup.email }])
       .mockResolvedValueOnce([]);
@@ -138,6 +140,7 @@ describe("Username authentication and direct signup", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
       .mockRejectedValueOnce({ code: "23505" });
     expect((await request(signup)).status).toBe(409);
     expect(mocks.deleteUser).toHaveBeenCalledWith("new-account");
@@ -148,6 +151,20 @@ describe("Username authentication and direct signup", () => {
     mocks.sql.mockReset().mockResolvedValueOnce([{ attempts: 11 }]);
     expect((await request(signup)).status).toBe(429);
     expect(mocks.createUser).not.toHaveBeenCalled();
+  });
+  it("blocks banned phone numbers before creating an Identity account", async () => {
+    mocks.sql.mockImplementation(async (parts: TemplateStringsArray, ...values: unknown[]) => {
+      const query = parts.join("");
+      if (query.includes("INSERT INTO gochati_auth_limits")) return [{ attempts: 1 }];
+      if (query.includes("FROM gochati_phone_bans")) {
+        expect(values).toContain("255712345678");
+        return [{ phone: "255712345678" }];
+      }
+      return [];
+    });
+    expect((await request(signup)).status).toBe(403);
+    expect(mocks.createUser).not.toHaveBeenCalled();
+    expect(mocks.login).not.toHaveBeenCalled();
   });
   it("requires acceptance of terms on the server", async () => {
     expect((await request({ ...signup, agree_terms: false })).status).toBe(400);

@@ -3,6 +3,8 @@ import { getDatabase } from "@netlify/database";
 import { admin, login, verifyRequestOrigin } from "@netlify/identity";
 import type { Config, Context } from "@netlify/functions";
 import { assert, checkRequest, fail, HttpError, json } from "../lib/platform.js";
+import { validPhone } from "../lib/customer-care.js";
+import { deliverAdminPush } from "../lib/admin-push.js";
 import { sendDarsms } from "../lib/darsms.js";
 
 export default async (req: Request, context: Context) => {
@@ -62,6 +64,9 @@ export default async (req: Request, context: Context) => {
       "Weka majina yako.",
     );
     assert(/^[+\d ]{9,17}$/.test(String(metadata.phone || "")), 400, "Weka namba ya simu halali.");
+    const phone = validPhone(String(metadata.phone || ""));
+    const banned = await db.sql`SELECT phone FROM gochati_phone_bans WHERE phone=${phone}`;
+    assert(!banned.length, 403, "Namba hii imezuiwa kujisajili. Wasiliana na customer service.");
     // Auto-confirmed public signup must never claim an allowlisted administrator email.
     const reserved = await db.sql`SELECT email FROM gochati_admin_emails WHERE email=${email}`;
     const existing =
@@ -96,6 +101,7 @@ export default async (req: Request, context: Context) => {
       await admin.deleteUser(user.id);
       throw error;
     }
+    context.waitUntil(deliverAdminPush().catch(() => {}));
     // Start only after both account records exist; SMS failure must not undo signup.
     context.waitUntil(
       sendDarsms(

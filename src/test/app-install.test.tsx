@@ -30,7 +30,7 @@ it.each(["Download Gochati App", "Download App"])(
     Object.assign(event, { prompt, userChoice: Promise.resolve({ outcome: "accepted" }) });
     act(() => { window.dispatchEvent(event); });
     expect(event.defaultPrevented).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: label, exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: label }));
     await waitFor(() => expect(prompt).toHaveBeenCalledOnce());
     expect(await screen.findByText(/Ombi la kusakinisha GoChati limekubaliwa/)).toBeInTheDocument();
     act(() => { window.dispatchEvent(new Event("appinstalled")); });

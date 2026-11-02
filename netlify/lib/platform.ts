@@ -75,6 +75,8 @@ export async function authenticated(req: Request) {
   const admins =
     await db.sql`SELECT user_id FROM gochati_admins WHERE user_id=${user.id} AND EXISTS(SELECT 1 FROM gochati_admin_emails WHERE email=${String(user.email).toLowerCase()})`;
   const isAdmin = admins.length > 0;
+  const phoneBans = await db.sql`SELECT phone FROM gochati_phone_bans WHERE phone=gochati_normalize_phone(${String(profile["phone"] || "")})`;
+  assert(isAdmin || !phoneBans.length, 403, "Namba hii imezuiwa. Wasiliana na customer service.");
   assert(
     isAdmin || !["banned", "deactivated"].includes(String(profile["account_status"])),
     403,
