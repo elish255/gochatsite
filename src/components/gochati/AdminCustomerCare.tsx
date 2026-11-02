@@ -21,7 +21,7 @@ type Thread = {
   unread: number;
 };
 
-export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
+export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) => void }) {
   const [events, setEvents] = useState<Event[]>([]);
   const [error, setError] = useState("");
   const [enabled, setEnabled] = useState(false);
@@ -167,14 +167,15 @@ export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
                   className={`rounded-xl border p-3 text-sm ${e.read_at ? "border-border" : "border-primary bg-primary/5"}`}
                 >
                   <p>
-                    {e.kind === "registration" ? "Usajili mpya" : "Ujumbe kutoka kwa User"} ·{" "}
-                    {e.username || "Akaunti iliyofutwa"}
+                    {e.kind === "registration"
+                      ? `Usajili mpya · ${e.username || "Akaunti iliyofutwa"}`
+                      : `User (${e.username || "Akaunti iliyofutwa"}) ametuma ujumbe`}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(e.created_at).toLocaleString()}
                   </p>
                   {e.kind === "support" && (
-                    <Button variant="ghost" size="sm" onClick={onOpen}>
+                    <Button variant="ghost" size="sm" onClick={() => onOpen(e.user_id || undefined)}>
                       Fungua customer care
                     </Button>
                   )}
@@ -194,15 +195,15 @@ export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
           <p className="font-bold">
             {popup.kind === "registration"
               ? "Mtumiaji mpya amejisajili"
-              : "Ujumbe mpya kutoka kwa User"}
+              : `User (${popup.username || "Akaunti iliyofutwa"}) ametuma ujumbe`}
           </p>
-          <p className="text-sm">{popup.username}</p>
+          {popup.kind === "registration" && <p className="text-sm">{popup.username}</p>}
           <div className="mt-2 flex gap-2">
             {popup.kind === "support" && (
               <Button
                 size="sm"
                 onClick={() => {
-                  onOpen();
+                  onOpen(popup.user_id || undefined);
                   setPopup(null);
                 }}
               >
@@ -218,12 +219,15 @@ export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
     </section>
   );
 }
-export function AdminCustomerCare() {
+export function AdminCustomerCare({ userId }: { userId?: string }) {
   const [search, setSearch] = useState("");
   const [threads, setThreads] = useState<Thread[]>([]);
-  const [selected, setSelected] = useState<Thread | null>(null);
+  const [selected, setSelected] = useState<Pick<Thread, "id" | "username"> | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (userId) setSelected({ id: userId, username: "" });
+  }, [userId]);
   const load = useCallback(async () => {
     try {
       const result = await careApi({ action: "inbox", search });
@@ -304,7 +308,7 @@ export function AdminCustomerCare() {
                 <Button size="sm" variant="outline" onClick={() => setSelected(null)}>
                   Rudi inbox
                 </Button>
-                <strong className="truncate">{selected.username}</strong>
+                <strong className="truncate">{threads.find((t) => t.id === selected.id)?.username || selected.username}</strong>
               </div>
               <CustomerCareChat key={selected.id} userId={selected.id} admin />
             </>

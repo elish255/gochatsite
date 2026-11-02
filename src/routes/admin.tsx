@@ -136,6 +136,7 @@ function AdminPage() {
     setWithdrawals(w.data || []);
     setReady(true);
   }
+  const [careUserId, setCareUserId] = useState<string | undefined>();
   useEffect(() => {
     void load();
     if (new URLSearchParams(window.location.search).has("customer-care")) setSection("customer-care");
@@ -620,8 +621,8 @@ function AdminPage() {
           )}
           {ready && (
             <>
-              <AdminCareNotifications onOpen={() => navigate("customer-care")} />
-              {section === "customer-care" && <AdminCustomerCare />}
+              <AdminCareNotifications onOpen={(userId) => { setCareUserId(userId); navigate("customer-care"); }} />
+              {section === "customer-care" && <AdminCustomerCare userId={careUserId} />}
               {section === "phone-bans" && <AdminPhoneBans />}
               {section === "dashboard" && (
                 <AdminOverview

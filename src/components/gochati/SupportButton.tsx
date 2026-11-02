@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { platform } from "@/integrations/netlify/client";
@@ -11,15 +11,17 @@ export function SupportButton({ floating = false }: { floating?: boolean }) {
   const [mode, setMode] = useState<"loading" | "chat" | "sms" | "error">("loading");
   const [error, setError] = useState("");
   const [unread, setUnread] = useState(0);
+  const statusRequest = useRef(0);
   useEffect(() => {
     let alive = true;
     async function refresh() {
+      const request = ++statusRequest.current;
       try {
         const {
           data: { user },
         } = await platform.auth.getUser();
         const status = user ? await careApi({ action: "status" }) : { unread: 0 };
-        if (alive) setUnread(Number(status.unread || 0));
+        if (alive && request === statusRequest.current) setUnread(Number(status.unread || 0));
       } catch {
         /* Keep the last known badge during a temporary network failure. */
       }
@@ -27,12 +29,16 @@ export function SupportButton({ floating = false }: { floating?: boolean }) {
     void refresh();
     const timer = setInterval(() => void refresh(), 5000);
     window.addEventListener("focus", refresh);
-    window.addEventListener("care-messages-read", refresh);
+    const onRead = () => {
+      setUnread(0);
+      void refresh();
+    };
+    window.addEventListener("care-messages-read", onRead);
     return () => {
       alive = false;
       clearInterval(timer);
       window.removeEventListener("focus", refresh);
-      window.removeEventListener("care-messages-read", refresh);
+      window.removeEventListener("care-messages-read", onRead);
     };
   }, []);
   async function check() {
@@ -86,17 +92,6 @@ export function SupportButton({ floating = false }: { floating?: boolean }) {
           </span>
         )}
       </Button>
-      {unread > 0 && !open && (
-        <div
-          role="status"
-          className="fixed inset-x-4 top-4 z-[120] mx-auto flex max-w-lg items-center justify-between gap-3 rounded-2xl border border-primary bg-background p-4 shadow-xl"
-        >
-          <p className="text-sm font-bold">Customer services: ujumbe mpya ({unread})</p>
-          <Button size="sm" onClick={() => void check()}>
-            Soma ujumbe
-          </Button>
-        </div>
-      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[95dvh] max-w-lg overflow-y-auto rounded-3xl">
           <DialogTitle>Customer care</DialogTitle>
