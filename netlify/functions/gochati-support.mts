@@ -221,8 +221,10 @@ export default async (req: Request, context: Context) => {
       const messages = before
         ? await db.sql`SELECT id,sender,body,kind,mime,created_at,read_at FROM gochati_support_messages WHERE user_id=${target} AND created_at<${before}::timestamptz ORDER BY created_at DESC,id DESC LIMIT 50`
         : await db.sql`SELECT id,sender,body,kind,mime,created_at,read_at FROM gochati_support_messages WHERE user_id=${target} ORDER BY created_at DESC,id DESC LIMIT 50`;
-      if (!before && body.mark_read !== false)
-        await db.sql`UPDATE gochati_support_messages SET read_at=now() WHERE id=ANY(${messages.map((m) => m["id"])}::uuid[]) AND sender=${isAdmin ? "user" : "admin"} AND read_at IS NULL`;
+      // Opening the conversation acknowledges its history, including replies beyond page one.
+      // The newest fetched timestamp keeps later arrivals unread until the next refresh.
+      if (!before && body.mark_read !== false && messages.length)
+        await db.sql`UPDATE gochati_support_messages SET read_at=now() WHERE user_id=${target} AND created_at<=${messages[0]["created_at"]}::timestamptz AND sender=${isAdmin ? "user" : "admin"} AND read_at IS NULL`;
       return json({ data: messages.reverse() });
     }
     assert(action === "send", 400, "Ombi si sahihi.");

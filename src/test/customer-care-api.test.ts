@@ -217,3 +217,19 @@ it("does not acknowledge messages when only checking for updates", async () => {
   expect(response.status).toBe(200);
   expect(mocks.sql.mock.calls.some(([q]) => q.join("").includes("SET read_at"))).toBe(false);
 });
+
+it("acknowledges the conversation history beyond the latest page when opened", async () => {
+  const latest = "2026-11-02T18:00:00.000Z";
+  mocks.sql.mockResolvedValueOnce([{ account_status: "active", activation_paid: true }])
+    .mockResolvedValueOnce([{ id: other, created_at: latest, sender: "admin" }])
+    .mockResolvedValueOnce([]);
+  expect((await handler(request({ action: "messages" }), context)).status).toBe(200);
+  const update = mocks.sql.mock.calls.find(([q]) => q.join("").includes("SET read_at"));
+  expect(update?.[0].join("")).toContain("WHERE user_id=");
+  expect(update?.[0].join("")).toContain("created_at<=");
+  expect(update?.slice(1)).toEqual([own, latest, "admin"]);
+});
+it("does not acknowledge the conversation when loading older pages", async () => {
+  await handler(request({ action: "messages", before: "2026-11-02T18:00:00Z" }), context);
+  expect(mocks.sql.mock.calls.some(([q]) => q.join("").includes("SET read_at"))).toBe(false);
+});
