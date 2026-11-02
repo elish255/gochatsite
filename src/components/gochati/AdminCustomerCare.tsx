@@ -38,9 +38,15 @@ export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
         setEvents(result.data);
         setError("");
         const newest = result.data[0];
-        if (newest && last !== undefined && BigInt(newest.id) > BigInt(last)) {
+        const unread = result.data.find((event: Event) => !event.read_at);
+        if (last === undefined && unread) setPopup(unread);
+        else if (
+          newest &&
+          last !== undefined &&
+          BigInt(newest.id) > BigInt(last) &&
+          !newest.read_at
+        )
           setPopup(newest);
-        }
         if (newest) last = String(newest.id);
         else if (last === undefined) last = "0";
       } catch (err) {
@@ -48,7 +54,9 @@ export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
       }
     }
     void load();
-    const timer = setInterval(() => void load(), 10000);
+    const refresh = () => void load();
+    window.addEventListener("focus", refresh);
+    const timer = setInterval(refresh, 5000);
     if ("serviceWorker" in navigator)
       navigator.serviceWorker
         .getRegistration("/")
@@ -60,6 +68,7 @@ export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
     return () => {
       active = false;
       clearInterval(timer);
+      window.removeEventListener("focus", refresh);
     };
   }, []);
   useEffect(() => {
@@ -158,7 +167,7 @@ export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
                   className={`rounded-xl border p-3 text-sm ${e.read_at ? "border-border" : "border-primary bg-primary/5"}`}
                 >
                   <p>
-                    {e.kind === "registration" ? "Usajili mpya" : "Ujumbe wa customer care"} ·{" "}
+                    {e.kind === "registration" ? "Usajili mpya" : "Ujumbe kutoka kwa User"} ·{" "}
                     {e.username || "Akaunti iliyofutwa"}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -185,7 +194,7 @@ export function AdminCareNotifications({ onOpen }: { onOpen: () => void }) {
           <p className="font-bold">
             {popup.kind === "registration"
               ? "Mtumiaji mpya amejisajili"
-              : "Ujumbe mpya wa customer care"}
+              : "Ujumbe mpya kutoka kwa User"}
           </p>
           <p className="text-sm">{popup.username}</p>
           <div className="mt-2 flex gap-2">

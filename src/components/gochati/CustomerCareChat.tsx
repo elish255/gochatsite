@@ -27,10 +27,12 @@ export function CustomerCareChat({ userId, admin = false }: { userId?: string; a
   const end = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const load = useCallback(async () => {
+    if (document.visibilityState === "hidden") return;
     try {
       const result = await careApi({ action: "messages", user_id: userId });
       if (alive.current) {
         setMessages(result.data);
+        window.dispatchEvent(new Event("care-messages-read"));
         setHasOlder(result.data.length === 50);
       }
     } catch (err) {
@@ -42,10 +44,15 @@ export function CustomerCareChat({ userId, admin = false }: { userId?: string; a
   useEffect(() => {
     alive.current = true;
     void load();
+    const refresh = () => void load();
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
     const interval = setInterval(() => void load(), 5000);
     return () => {
       alive.current = false;
       clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
       if (timer.current) clearTimeout(timer.current);
       if (recorder.current?.state === "recording") recorder.current.stop();
       stream.current?.getTracks().forEach((t) => t.stop());
@@ -204,7 +211,11 @@ export function CustomerCareChat({ userId, admin = false }: { userId?: string; a
               className={`max-w-[90%] rounded-2xl p-3 ${m.sender === (admin ? "admin" : "user") ? "ml-auto bg-primary text-primary-foreground" : "border border-border bg-background"}`}
             >
               <p className="mb-1 text-xs font-bold">
-                {m.sender === "admin" ? "Customer care" : "Mteja"}
+                {m.sender === "admin"
+                  ? "Customer services · Huduma kwa wateja"
+                  : admin
+                    ? "User · Mteja"
+                    : "User · Wewe"}
               </p>
               {m.kind === "image" ? (
                 <a href={`/api/gochati-support?file=${m.id}`} target="_blank" rel="noreferrer">

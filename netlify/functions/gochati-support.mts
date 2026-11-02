@@ -206,10 +206,14 @@ export default async (req: Request, context: Context) => {
       return json({ ok: true });
     }
     const target = String(isAdmin ? body.user_id || user.id : user.id);
-    if (action === "status")
-      return json({
-        active: isAdmin || (profile["account_status"] === "active" && !!profile["activation_paid"]),
-      });
+    if (action === "status") {
+      const active =
+        isAdmin || (profile["account_status"] === "active" && !!profile["activation_paid"]);
+      const [counts] = active
+        ? await db.sql`SELECT count(*)::int AS unread FROM gochati_support_messages WHERE user_id=${user.id} AND sender='admin' AND read_at IS NULL`
+        : [];
+      return json({ active, unread: Number(counts?.["unread"] || 0) });
+    }
     await canChat(target, action === "messages");
     if (action === "messages") {
       const before = body.before ? String(body.before) : null;
@@ -217,7 +221,7 @@ export default async (req: Request, context: Context) => {
       const messages = before
         ? await db.sql`SELECT id,sender,body,kind,mime,created_at,read_at FROM gochati_support_messages WHERE user_id=${target} AND created_at<${before}::timestamptz ORDER BY created_at DESC,id DESC LIMIT 50`
         : await db.sql`SELECT id,sender,body,kind,mime,created_at,read_at FROM gochati_support_messages WHERE user_id=${target} ORDER BY created_at DESC,id DESC LIMIT 50`;
-      if (!before)
+      if (!before && body.mark_read !== false)
         await db.sql`UPDATE gochati_support_messages SET read_at=now() WHERE id=ANY(${messages.map((m) => m["id"])}::uuid[]) AND sender=${isAdmin ? "user" : "admin"} AND read_at IS NULL`;
       return json({ data: messages.reverse() });
     }
