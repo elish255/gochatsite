@@ -31,24 +31,22 @@ export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) =
   useEffect(() => {
     let active = true,
       last: string | undefined;
+    let request = 0;
     async function load() {
+      const current = ++request;
       try {
         const result = await careApi({ action: "events" });
-        if (!active) return;
+        if (!active || current !== request) return;
         setEvents(result.data);
         setError("");
-        const newest = result.data[0];
-        const unread = result.data.find((event: Event) => !event.read_at);
-        if (last === undefined && unread) setPopup(unread);
-        else if (
-          newest &&
-          last !== undefined &&
-          BigInt(newest.id) > BigInt(last) &&
-          !newest.read_at
-        )
-          setPopup(newest);
-        if (newest) last = String(newest.id);
-        else if (last === undefined) last = "0";
+        const newest = result.data.reduce((max: string, event: Event) =>
+          BigInt(event.id) > BigInt(max) ? String(event.id) : max, "0");
+        const unread = result.data.find((event: Event) =>
+          !event.read_at && (last === undefined || BigInt(event.id) > BigInt(last)));
+        if (unread) setPopup(unread);
+        else setPopup((previous) => previous && result.data.some((event: Event) =>
+          event.id === previous.id && !event.read_at) ? previous : null);
+        last = newest;
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Arifa hazijapatikana.");
       }
@@ -56,6 +54,7 @@ export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) =
     void load();
     const refresh = () => void load();
     window.addEventListener("focus", refresh);
+    window.addEventListener("care-messages-read", refresh);
     const timer = setInterval(refresh, 5000);
     if ("serviceWorker" in navigator)
       navigator.serviceWorker
@@ -69,6 +68,7 @@ export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) =
       active = false;
       clearInterval(timer);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener("care-messages-read", refresh);
     };
   }, []);
   useEffect(() => {
@@ -121,8 +121,9 @@ export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) =
   }
   async function markRead() {
     try {
-      await careApi({ action: "read-events", id: events[0]?.id });
+      await careApi({ action: "read-events", id: events.reduce((max, event) => BigInt(event.id) > BigInt(max) ? String(event.id) : max, "0") });
       setEvents((prev) => prev.map((e) => ({ ...e, read_at: new Date().toISOString() })));
+      setPopup(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Imeshindikana.");
     }
@@ -241,8 +242,13 @@ export function AdminCustomerCare({ userId }: { userId?: string }) {
   }, [search]);
   useEffect(() => {
     void load();
-    const timer = setInterval(() => void load(), 5000);
-    return () => clearInterval(timer);
+    const refresh = () => void load();
+    window.addEventListener("care-messages-read", refresh);
+    const timer = setInterval(refresh, 5000);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("care-messages-read", refresh);
+    };
   }, [load]);
   return (
     <section className="card-soft p-4">

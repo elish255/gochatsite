@@ -130,7 +130,7 @@ export default async (req: Request, context: Context) => {
       }
       if (action === "events")
         return json({
-          data: await db.sql`SELECT e.*,u.username FROM gochati_admin_events e LEFT JOIN gochati_users u ON u.id=e.user_id ORDER BY e.id DESC LIMIT 100`,
+          data: await db.sql`SELECT e.*,u.username FROM gochati_admin_events e LEFT JOIN gochati_users u ON u.id=e.user_id ORDER BY (e.read_at IS NULL) DESC,e.id DESC LIMIT 100`,
         });
       if (action === "read-events") {
         assert(/^\d+$/.test(String(body.id)), 400, "Arifa si sahihi.");
