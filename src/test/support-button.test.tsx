@@ -47,3 +47,13 @@ it("keeps the SMS fallback available when session checks fail", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Session imeisha.");
   expect(screen.getByRole("link", { name: "Tuma SMS" })).toBeInTheDocument();
 });
+it("shows an unread badge and a top notification that opens customer service", async () => {
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "user" } } });
+  mocks.api.mockResolvedValue({ active: true, unread: 2 });
+  render(<SupportButton floating />);
+  expect(await screen.findByLabelText("2 ujumbe mpya")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Customer services: ujumbe mpya (2)");
+  fireEvent.click(screen.getByRole("button", { name: "Soma ujumbe" }));
+  expect(await screen.findByText("Customer care conversation")).toBeInTheDocument();
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+});

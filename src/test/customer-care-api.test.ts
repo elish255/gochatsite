@@ -204,3 +204,16 @@ it("serves byte ranges for voice playback on mobile browsers", async () => {
   expect(response.headers.get("content-range")).toBe("bytes 1-2/4");
   expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([20, 30]);
 });
+it("reports unread customer service replies without marking them read", async () => {
+  mocks.sql.mockResolvedValue([{ unread: 3 }]);
+  const response = await handler(request({ action: "status", user_id: other }), context);
+  expect(await response.json()).toEqual({ active: true, unread: 3 });
+  expect(mocks.sql).toHaveBeenCalledOnce();
+  expect(mocks.sql.mock.calls[0]?.slice(1)).toEqual([own]);
+  expect(mocks.sql.mock.calls[0]?.[0].join("")).toContain("sender='admin' AND read_at IS NULL");
+});
+it("does not acknowledge messages when only checking for updates", async () => {
+  const response = await handler(request({ action: "messages", mark_read: false }), context);
+  expect(response.status).toBe(200);
+  expect(mocks.sql.mock.calls.some(([q]) => q.join("").includes("SET read_at"))).toBe(false);
+});
