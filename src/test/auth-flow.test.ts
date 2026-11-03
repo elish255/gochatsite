@@ -45,7 +45,7 @@ const signup = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.sql.mockResolvedValue([]).mockResolvedValueOnce([{ attempts: 1 }]);
+  mocks.sql.mockImplementation(async (strings: TemplateStringsArray) => strings.join("").includes("SELECT activation_fee") ? [{ activation_fee: 22000 }] : []).mockResolvedValueOnce([{ attempts: 1 }]);
   mocks.createUser.mockResolvedValue({ id: "new-account" });
   mocks.login.mockResolvedValue({ id: "new-account" });
   mocks.sendDarsms.mockResolvedValue({ success: true });
@@ -106,7 +106,7 @@ describe("Username authentication and direct signup", () => {
     );
     expect(mocks.sendDarsms).toHaveBeenCalledExactlyOnceWith(
       signup.metadata.phone,
-      "Hongera! amina Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh 16000 uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login",
+      "Hongera! amina Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh 22000 uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login",
     );
     expect(mocks.waitUntil).toHaveBeenCalledWith(expect.any(Promise));
   });

@@ -1,3 +1,4 @@
+import { getActivationFee } from "../lib/settings.js";
 import { createHash } from "node:crypto";
 import { getDatabase } from "@netlify/database";
 import { admin, login, verifyRequestOrigin } from "@netlify/identity";
@@ -104,10 +105,10 @@ export default async (req: Request, context: Context) => {
     context.waitUntil(deliverAdminPush().catch(() => {}));
     // Start only after both account records exist; SMS failure must not undo signup.
     context.waitUntil(
-      sendDarsms(
+      getActivationFee(db).then((fee) => sendDarsms(
         data.phone,
-        `Hongera! ${username} Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh 16000 uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login`,
-      ).catch(() => {
+        `Hongera! ${username} Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh ${fee} uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login`,
+      )).catch(() => {
         // Provider errors may contain sensitive details; keep logs generic.
         console.error("Registration SMS delivery failed.");
       }),

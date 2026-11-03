@@ -1,3 +1,4 @@
+import { useActivationFee } from "@/hooks/use-activation-fee";
 import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
@@ -645,6 +646,7 @@ function se({ person: e, kind: t, onClose: n, active = false }) {
   );
 }
 function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
+  const { formatted: activationAmount } = useActivationFee();
   if (!active) return <ActivationRequiredDialog open onClose={t} />;
   return (0, K.jsx)(`div`, {
     className: `fixed inset-0 z-[80] flex items-center justify-center bg-overlay/60 p-4 backdrop-blur-sm`,
@@ -672,7 +674,7 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         }) : (0, K.jsxs)(K.Fragment, { children: [
           (0, K.jsxs)(`p`, {
             className: `mt-3 text-center text-sm leading-relaxed text-muted-foreground`,
-            children: [`Huduma hii inahitaji akaunti iliyo hai (active account). Ada ya activation ni `, (0, K.jsx)(`span`, { className: `font-bold text-foreground`, children: `TZS 16,000` }), `. Jisajili sasa ili kutumia huduma ya mazungumzo.`],
+            children: [`Huduma hii inahitaji akaunti iliyo hai (active account). Ada ya activation ni `, (0, K.jsx)(`span`, { className: `font-bold text-foreground`, children: `TZS ${activationAmount}` }), `. Jisajili sasa ili kutumia huduma ya mazungumzo.`],
           }),
           (0, K.jsxs)(`a`, { href: L, className: `grad-withdraw mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-lg transition active:scale-95`, children: [`Fungua na Activate Akaunti Hapa `, (0, K.jsx)(f, { className: `size-4` })] }),
         ]}),

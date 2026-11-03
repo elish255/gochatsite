@@ -2,6 +2,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Route } from "@/routes/withdrawal";
 
+vi.mock("@/hooks/use-activation-fee", () => ({ useActivationFee: () => ({ fee: 22000, formatted: "22,000", error: "" }) }));
+
 const mocks = vi.hoisted(() => ({
   profile: {
     account_status: "inactive",
@@ -55,7 +57,7 @@ describe("Withdrawal account access", () => {
       render(<Page />);
       expect(await screen.findByRole("dialog")).toHaveTextContent("HUWEZI KUTOA PESA");
       expect(screen.getByRole("dialog")).toHaveTextContent("Huwezi kutoa pesa kwa sasa kwa sababu huna kiasi cha kutosha cha kupokea huduma hii.");
-      expect(screen.getByRole("dialog")).toHaveTextContent("Jisajili kwa mtaji wa 16,000, kisha kamilisha chat angalau moja ili uweze kulipwa kwa kuwafundisha wazungu Kiswahili.");
+      expect(screen.getByRole("dialog")).toHaveTextContent("Jisajili kwa mtaji wa 22,000, kisha kamilisha chat angalau moja ili uweze kulipwa kwa kuwafundisha wazungu Kiswahili.");
       expect(screen.getByRole("link", { name: /JISAJILI SASA/ })).toHaveAttribute(
         "href",
         "/register",

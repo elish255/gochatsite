@@ -1,3 +1,4 @@
+import { getActivationFee } from "../lib/settings.js";
 import { randomUUID } from "node:crypto";
 import type { Config } from "@netlify/functions";
 import { authenticated, assert, checkRequest, fail, json } from "../lib/platform.js";
@@ -38,10 +39,10 @@ export default async (req: Request) => {
         403,
         "Akaunti imesimamishwa.",
       );
-      const prices: Record<string, number> = { activation: 16000, premium: 32000, vip: 35500 };
+      const prices: Record<string, number> = { activation: await getActivationFee(db), premium: 32000, vip: 35500 };
       const purpose = String(b.purpose),
         amount = prices[purpose];
-      assert(amount && Number(b.amount) === amount, 400, "Ada si sahihi.");
+      assert(amount && Number(b.amount) === amount, 400, "Ada imebadilika. Subiri kiasi kipya kionekane kisha jaribu tena.");
       const phone = String(b.phone || "").replace(/\D/g, "");
       assert(/^255\d{9}$/.test(phone), 400, "Weka simu sahihi ya Tanzania.");
       assert(
