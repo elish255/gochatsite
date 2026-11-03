@@ -1,3 +1,4 @@
+import { useActivationFee } from "@/hooks/use-activation-fee";
 import { logoUrl } from "@/lib/gochati-media";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -11,6 +12,7 @@ function PaymentPage() {
     typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("type") : null;
   const premiumMode = paymentType === "premium";
   const vipMode = paymentType === "vip";
+  const { fee: activationFee, formatted: activationAmount, error: feeError } = useActivationFee();
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -117,6 +119,7 @@ function PaymentPage() {
     setBusy(true);
     setNotice("");
     try {
+      if (!vipMode && !premiumMode && activationFee === null) throw new Error(feeError || "Subiri ada ipakie.");
       const normalized = phone.replace(/\D/g, "").replace(/^0/, "255");
       if (!/^255[0-9]{9}$/.test(normalized))
         throw new Error("Weka namba sahihi ya simu ya Tanzania.");
@@ -130,7 +133,7 @@ function PaymentPage() {
         body: JSON.stringify({
           action: "create",
           phone: normalized,
-          amount: vipMode ? 35500 : premiumMode ? 32000 : 16000,
+          amount: vipMode ? 35500 : premiumMode ? 32000 : activationFee,
           purpose: vipMode ? "vip" : premiumMode ? "premium" : "activation",
         }),
       });
@@ -200,8 +203,9 @@ function PaymentPage() {
             ? "Lipa TZS 35,500 kwa kiwango cha VIP."
             : premiumMode
               ? "Lipa TZS 32,000 kubadilisha akaunti yako kuwa Premium."
-              : "Lipa TZS 16,000 ili kuwasha akaunti yako na kuendelea kutumia huduma."}
+              : `Lipa TZS ${activationAmount} ili kuwasha akaunti yako na kuendelea kutumia huduma.`}
         </p>
+        {!vipMode && !premiumMode && feeError && <p role="alert" className="auth-error">{feeError}</p>}
         {blocked ? (
           <p className="auth-error">{notice}</p>
         ) : paid ? (
@@ -225,14 +229,14 @@ function PaymentPage() {
                 />
               </div>
             </label>
-            <Button className="auth-submit" disabled={busy} onClick={startPayment}>
+            <Button className="auth-submit" disabled={busy || (!vipMode && !premiumMode && activationFee === null)} onClick={startPayment}>
               {busy
                 ? "Inatuma ombi..."
                 : vipMode
                   ? "LIPA SASA — TZS 35,500"
                   : premiumMode
                     ? "LIPA SASA — TZS 32,000"
-                    : "LIPA SASA — TZS 16,000"}
+                    : `LIPA SASA — TZS ${activationAmount}`}
             </Button>
             {reference && (
               <Button

@@ -1,8 +1,10 @@
+import { useActivationFee } from "@/hooks/use-activation-fee";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, TriangleAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export function ActivationRequiredDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { formatted } = useActivationFee();
   return (
     <Dialog open={open} onOpenChange={(value) => { if (!value) onClose(); }}>
       <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] gap-5 overflow-y-auto rounded-[2rem] border-border bg-card p-6 sm:max-w-md sm:rounded-[2rem] sm:p-7">
@@ -13,7 +15,7 @@ export function ActivationRequiredDialog({ open, onClose }: { open: boolean; onC
         <DialogDescription asChild>
           <div className="space-y-4 text-base leading-7">
             <p className="text-foreground">Huwezi kutoa pesa kwa sasa kwa sababu huna kiasi cha kutosha cha kupokea huduma hii.</p>
-            <p>Jisajili kwa mtaji wa <strong className="text-gold">16,000</strong>, kisha kamilisha chat angalau moja ili uweze kulipwa kwa kuwafundisha wazungu Kiswahili.</p>
+            <p>Jisajili kwa mtaji wa <strong className="text-gold">{formatted}</strong>, kisha kamilisha chat angalau moja ili uweze kulipwa kwa kuwafundisha wazungu Kiswahili.</p>
           </div>
         </DialogDescription>
         <Button variant="reference" size="reference" asChild>

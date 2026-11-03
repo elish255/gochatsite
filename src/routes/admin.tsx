@@ -1,3 +1,4 @@
+import { AdminActivationFee } from "@/components/gochati/AdminActivationFee";
 import { AdminCareNotifications, AdminCustomerCare, AdminPhoneBans } from "@/components/gochati/AdminCustomerCare";
 import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
@@ -487,6 +488,7 @@ function AdminPage() {
         {[
           { id: "customer-care", label: "Customer care", icon: MessageSquare },
           { id: "phone-bans", label: "Namba zilizozuiwa", icon: Ban },
+          { id: "activation-fee", label: "Activation fee", icon: CreditCard },
           { id: "payments", label: "Malipo", icon: CreditCard },
           { id: "messages", label: "Notifications", icon: Bell },
           { id: "sms", label: "SMS", icon: MessageSquare },
@@ -597,6 +599,8 @@ function AdminPage() {
                   ? "Dashboard"
                   : section === "users"
                     ? "Watumiaji"
+                    : section === "activation-fee"
+                      ? "Activation fee"
                     : section === "payments"
                       ? "Malipo ya huduma"
                       : section === "messages" || section === "sms" || section === "customer-care" || section === "phone-bans"
@@ -622,6 +626,7 @@ function AdminPage() {
           {ready && (
             <>
               <AdminCareNotifications onOpen={(userId) => { setCareUserId(userId); navigate("customer-care"); }} />
+              {section === "activation-fee" && <AdminActivationFee />}
               {section === "customer-care" && <AdminCustomerCare userId={careUserId} />}
               {section === "phone-bans" && <AdminPhoneBans />}
               {section === "dashboard" && (
