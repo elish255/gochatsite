@@ -1,4 +1,3 @@
-import { useActivationFee } from "@/hooks/use-activation-fee";
 import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
@@ -646,7 +645,6 @@ function se({ person: e, kind: t, onClose: n, active = false }) {
   );
 }
 function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
-  const { formatted: activationAmount } = useActivationFee();
   if (!active) return <ActivationRequiredDialog open onClose={t} />;
   return (0, K.jsx)(`div`, {
     className: `fixed inset-0 z-[80] flex items-center justify-center bg-overlay/60 p-4 backdrop-blur-sm`,
@@ -674,9 +672,9 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         }) : (0, K.jsxs)(K.Fragment, { children: [
           (0, K.jsxs)(`p`, {
             className: `mt-3 text-center text-sm leading-relaxed text-muted-foreground`,
-            children: [`Huduma hii inahitaji akaunti iliyo hai (active account). Ada ya activation ni `, (0, K.jsx)(`span`, { className: `font-bold text-foreground`, children: `TZS ${activationAmount}` }), `. Jisajili sasa ili kutumia huduma ya mazungumzo.`],
+            children: `Jisajili sasa kuweza kuendelea kuchat na kulipwa. Akaunti yako inakuwa active moja kwa moja.`,
           }),
-          (0, K.jsxs)(`a`, { href: L, className: `grad-withdraw mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-lg transition active:scale-95`, children: [`Fungua na Activate Akaunti Hapa `, (0, K.jsx)(f, { className: `size-4` })] }),
+          (0, K.jsxs)(`a`, { href: L, className: `grad-withdraw mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-lg transition active:scale-95`, children: [`Jisajili Sasa `, (0, K.jsx)(f, { className: `size-4` })] }),
         ]}),
       ],
     }),
@@ -837,7 +835,7 @@ function de() {
         const { data: { user } } = await platform.auth.getUser();
         if (!user) { if (mounted) setAccountReady(true); return; }
         const { data } = await platform.from("gochati_users").select("account_status,activation_paid,is_premium,is_vip,referral_count,balance,net_income,username").eq("id", user.id).maybeSingle();
-        if (mounted && data) { setAccountActive(data.account_status === "active" && !!data.activation_paid); setIsPremium(!!data.is_premium); setIsVip(!!data.is_vip); setReferralCount(Number(data.referral_count || 0)); setUsername(String(data.username || "")); const savedBalance = Number(data.balance || 0); r(Number(data.net_income || 0)); a(savedBalance); w(savedBalance); setAccountReady(true); }
+        if (mounted && data) { setAccountActive(data.account_status === "active"); setIsPremium(!!data.is_premium); setIsVip(!!data.is_vip); setReferralCount(Number(data.referral_count || 0)); setUsername(String(data.username || "")); const savedBalance = Number(data.balance || 0); r(Number(data.net_income || 0)); a(savedBalance); w(savedBalance); setAccountReady(true); }
       };
       void loadAccount();
       window.addEventListener("focus", loadAccount);

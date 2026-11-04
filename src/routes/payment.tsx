@@ -1,4 +1,3 @@
-import { useActivationFee } from "@/hooks/use-activation-fee";
 import { logoUrl } from "@/lib/gochati-media";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -10,9 +9,25 @@ export const Route = createFileRoute("/payment")({ component: PaymentPage });
 function PaymentPage() {
   const paymentType =
     typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("type") : null;
+  if (paymentType !== "premium" && paymentType !== "vip") return <AccountAccessRedirect />;
+  return <UpgradePaymentPage paymentType={paymentType} />;
+}
+
+function AccountAccessRedirect() {
+  const nav = useNavigate();
+  useEffect(() => {
+    let active = true;
+    void platform.auth.getUser().then(({ data: { user } }) => {
+      if (active) void nav({ to: user ? "/" : "/register", replace: true });
+    });
+    return () => { active = false; };
+  }, [nav]);
+  return <main className="auth-page"><p role="status">Inaelekeza kwenye akaunti...</p></main>;
+}
+
+function UpgradePaymentPage({ paymentType }: { paymentType: "premium" | "vip" }) {
   const premiumMode = paymentType === "premium";
   const vipMode = paymentType === "vip";
-  const { fee: activationFee, formatted: activationAmount, error: feeError } = useActivationFee();
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -48,14 +63,6 @@ function PaymentPage() {
       } else if (premiumMode && data?.is_premium) {
         setPaid(true);
         setNotice("Akaunti yako tayari ni Premium.");
-      } else if (
-        !premiumMode &&
-        !vipMode &&
-        data?.activation_paid &&
-        data?.account_status === "active"
-      ) {
-        setPaid(true);
-        setNotice("Akaunti yako tayari iko active.");
       } else if (data?.account_status === "deactivated" || data?.account_status === "banned") {
         setBlocked(true);
         setNotice("Akaunti yako imesimamishwa. Wasiliana na huduma kwa wateja.");
@@ -119,7 +126,6 @@ function PaymentPage() {
     setBusy(true);
     setNotice("");
     try {
-      if (!vipMode && !premiumMode && activationFee === null) throw new Error(feeError || "Subiri ada ipakie.");
       const normalized = phone.replace(/\D/g, "").replace(/^0/, "255");
       if (!/^255[0-9]{9}$/.test(normalized))
         throw new Error("Weka namba sahihi ya simu ya Tanzania.");
@@ -133,8 +139,8 @@ function PaymentPage() {
         body: JSON.stringify({
           action: "create",
           phone: normalized,
-          amount: vipMode ? 35500 : premiumMode ? 32000 : activationFee,
-          purpose: vipMode ? "vip" : premiumMode ? "premium" : "activation",
+          amount: vipMode ? 35500 : 32000,
+          purpose: vipMode ? "vip" : "premium",
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -194,18 +200,13 @@ function PaymentPage() {
         <h1>
           {vipMode
             ? "Upgrade VIP Account"
-            : premiumMode
-              ? "Upgrade Premium Account"
-              : "Activation Fee"}
+            : "Upgrade Premium Account"}
         </h1>
         <p className="auth-subtitle">
           {vipMode
             ? "Lipa TZS 35,500 kwa kiwango cha VIP."
-            : premiumMode
-              ? "Lipa TZS 32,000 kubadilisha akaunti yako kuwa Premium."
-              : `Lipa TZS ${activationAmount} ili kuwasha akaunti yako na kuendelea kutumia huduma.`}
+            : "Lipa TZS 32,000 kubadilisha akaunti yako kuwa Premium."}
         </p>
-        {!vipMode && !premiumMode && feeError && <p role="alert" className="auth-error">{feeError}</p>}
         {blocked ? (
           <p className="auth-error">{notice}</p>
         ) : paid ? (
@@ -229,14 +230,12 @@ function PaymentPage() {
                 />
               </div>
             </label>
-            <Button className="auth-submit" disabled={busy || (!vipMode && !premiumMode && activationFee === null)} onClick={startPayment}>
+            <Button className="auth-submit" disabled={busy} onClick={startPayment}>
               {busy
                 ? "Inatuma ombi..."
                 : vipMode
                   ? "LIPA SASA — TZS 35,500"
-                  : premiumMode
-                    ? "LIPA SASA — TZS 32,000"
-                    : `LIPA SASA — TZS ${activationAmount}`}
+                  : "LIPA SASA — TZS 32,000"}
             </Button>
             {reference && (
               <Button

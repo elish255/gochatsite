@@ -17,8 +17,7 @@ export default async (req: Request, context: Context) => {
         m &&
           (isAdmin ||
             (m["user_id"] === user.id &&
-              profile["account_status"] === "active" &&
-              profile["activation_paid"])),
+              profile["account_status"] === "active")),
         403,
         "Huna ruhusa.",
       );
@@ -208,7 +207,7 @@ export default async (req: Request, context: Context) => {
     const target = String(isAdmin ? body.user_id || user.id : user.id);
     if (action === "status") {
       const active =
-        isAdmin || (profile["account_status"] === "active" && !!profile["activation_paid"]);
+        isAdmin || (profile["account_status"] === "active");
       const [counts] = active
         ? await db.sql`SELECT count(*)::int AS unread FROM gochati_support_messages WHERE user_id=${user.id} AND sender='admin' AND read_at IS NULL`
         : [];
@@ -224,7 +223,7 @@ export default async (req: Request, context: Context) => {
       // Opening the conversation acknowledges its history, including replies beyond page one.
       // The newest fetched timestamp keeps later arrivals unread until the next refresh.
       if (!before && body.mark_read !== false && messages.length)
-        await db.sql`UPDATE gochati_support_messages SET read_at=now() WHERE user_id=${target} AND created_at<=${messages[0]["created_at"]}::timestamptz AND sender=${isAdmin ? "user" : "admin"} AND read_at IS NULL`;
+        await db.sql`UPDATE gochati_support_messages SET read_at=now() WHERE user_id=${target} AND created_at<=${messages[0]!["created_at"]}::timestamptz AND sender=${isAdmin ? "user" : "admin"} AND read_at IS NULL`;
       return json({ data: messages.reverse() });
     }
     assert(action === "send", 400, "Ombi si sahihi.");
@@ -243,7 +242,7 @@ export default async (req: Request, context: Context) => {
       assert(
         account &&
           ((isAdmin && reading) ||
-            (account["account_status"] === "active" && account["activation_paid"])),
+            (account["account_status"] === "active")),
         403,
         "Chat inahitaji akaunti active. Tumia namba ya customer service.",
       );

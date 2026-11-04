@@ -42,7 +42,7 @@ export function AuthCallbacks() {
     return notice ? (
       <div role="status" className="border-b border-border bg-card p-4 text-center text-sm">
         {notice}{" "}
-        <a href="/payment" className="underline">
+        <a href="/" className="underline">
           Endelea
         </a>
       </div>

@@ -1,4 +1,3 @@
-import { getActivationFee } from "../lib/settings.js";
 import { createHash } from "node:crypto";
 import { getDatabase } from "@netlify/database";
 import { admin, login, verifyRequestOrigin } from "@netlify/identity";
@@ -96,7 +95,7 @@ export default async (req: Request, context: Context) => {
       );
     }
     try {
-      await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country) VALUES (${user.id},${email},${username},${data.full_name},${data.phone},${data.country})`;
+      await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country,account_status,activation_paid) VALUES (${user.id},${email},${username},${data.full_name},${data.phone},${data.country},'active',true)`;
     } catch (error) {
       // Compensate only for the Identity account created by this request.
       await admin.deleteUser(user.id);
@@ -105,10 +104,10 @@ export default async (req: Request, context: Context) => {
     context.waitUntil(deliverAdminPush().catch(() => {}));
     // Start only after both account records exist; SMS failure must not undo signup.
     context.waitUntil(
-      getActivationFee(db).then((fee) => sendDarsms(
+      sendDarsms(
         data.phone,
-        `Hongera! ${username} Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh ${fee} uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login`,
-      )).catch(() => {
+        `Hongera! ${username} Usajili wako wa GOCHATI umekamilika. Akaunti yako iko active. Endelea kuchat na kufundisha Kiswahili hapa: https://gochati.online/login`,
+      ).catch(() => {
         // Provider errors may contain sensitive details; keep logs generic.
         console.error("Registration SMS delivery failed.");
       }),

@@ -34,9 +34,9 @@ describe("Account screens", () => {
     await waitFor(() =>
       expect(mocks.login).toHaveBeenCalledWith({ username: "amina", password: "example-password" }),
     );
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/payment", replace: true });
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/", replace: true });
   });
-  it("takes a newly saved account straight to payment", async () => {
+  it("takes a newly saved account straight to chat", async () => {
     mocks.signup.mockResolvedValue({
       data: { session: { user: { id: "new-user" } } },
       error: null,
@@ -56,7 +56,7 @@ describe("Account screens", () => {
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "JISAJILI" }));
     await waitFor(() =>
-      expect(mocks.navigate).toHaveBeenCalledWith({ to: "/payment", replace: true }),
+      expect(mocks.navigate).toHaveBeenCalledWith({ to: "/", replace: true }),
     );
     expect(mocks.signup).toHaveBeenCalledWith(expect.objectContaining({ agreeTerms: true }));
   });

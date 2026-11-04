@@ -87,7 +87,7 @@ export default async (req: Request) => {
     }
     if (b.rpc === "gochati_withdrawal_eligibility") {
       const [counts] =
-        await db.sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE activation_paid AND account_status='active')::int AS active FROM gochati_users WHERE referred_by=${user.id}`;
+        await db.sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE account_status='active')::int AS active FROM gochati_users WHERE referred_by=${user.id}`;
       return json({
         data: {
           is_premium: profile["is_premium"],
@@ -110,8 +110,8 @@ export default async (req: Request) => {
       );
       const conditions: Record<string, string> = {
         all: "true",
-        active: "activation_paid AND account_status='active'",
-        inactive: "NOT activation_paid",
+        active: "account_status='active'",
+        inactive: "account_status<>'active'",
         premium: "is_premium",
         normal: "NOT is_premium AND NOT is_vip",
       };
@@ -169,7 +169,7 @@ export default async (req: Request) => {
     }
     if (b.rpc) {
       assert(
-        profile["activation_paid"] && profile["account_status"] === "active",
+        profile["account_status"] === "active",
         403,
         "Akaunti haijawezeshwa.",
       );
@@ -208,7 +208,7 @@ export default async (req: Request) => {
         );
         assert(/^[+\d ]{9,16}$/.test(phone), 400, "Weka namba sahihi ya simu.");
         const [counts] =
-          await db.sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE activation_paid AND account_status='active')::int AS active FROM gochati_users WHERE referred_by=${user.id}`;
+          await db.sql`SELECT count(*)::int AS total, count(*) FILTER (WHERE account_status='active')::int AS active FROM gochati_users WHERE referred_by=${user.id}`;
         assert(
           profile["is_vip"] ||
             (profile["is_premium"]
@@ -221,7 +221,7 @@ export default async (req: Request) => {
         );
         const fee = Math.round(amount * 20) / 100;
         const rows =
-          await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} AND account_status='active' AND activation_paid RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone,fee,net_amount,status) SELECT id,${amount},${phone},${fee},${amount - fee},'pending' FROM debited RETURNING id`;
+          await db.sql`WITH debited AS (UPDATE gochati_users SET balance=balance-${amount} WHERE id=${user.id} AND balance>=${amount} AND account_status='active' RETURNING id) INSERT INTO gochati_withdrawals(user_id,amount,phone,fee,net_amount,status) SELECT id,${amount},${phone},${fee},${amount - fee},'pending' FROM debited RETURNING id`;
         assert(rows.length, 409, "SALIO HALITOSHI");
         return json({ data: rows[0]?.["id"] });
       }

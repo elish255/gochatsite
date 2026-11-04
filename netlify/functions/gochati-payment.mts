@@ -1,4 +1,3 @@
-import { getActivationFee } from "../lib/settings.js";
 import { randomUUID } from "node:crypto";
 import type { Config } from "@netlify/functions";
 import { authenticated, assert, checkRequest, fail, json } from "../lib/platform.js";
@@ -9,6 +8,7 @@ export default async (req: Request) => {
     checkRequest(req);
     const { db, user, profile, isAdmin } = await authenticated(req);
     const b = await req.json();
+    assert(b.action !== "create" || ["premium", "vip"].includes(b.purpose), 400, "Chagua huduma halali ya kuboresha akaunti.");
     const apiKey = Netlify.env.get("SPLASHPAY_API_KEY"),
       secret = Netlify.env.get("SPLASHPAY_API_SECRET");
     assert(apiKey && secret, 503, "SplashPay haijasanidiwa. Wasiliana na admin.");
@@ -39,16 +39,14 @@ export default async (req: Request) => {
         403,
         "Akaunti imesimamishwa.",
       );
-      const prices: Record<string, number> = { activation: await getActivationFee(db), premium: 32000, vip: 35500 };
+      const prices: Record<string, number> = { premium: 32000, vip: 35500 };
       const purpose = String(b.purpose),
         amount = prices[purpose];
       assert(amount && Number(b.amount) === amount, 400, "Ada imebadilika. Subiri kiasi kipya kionekane kisha jaribu tena.");
       const phone = String(b.phone || "").replace(/\D/g, "");
       assert(/^255\d{9}$/.test(phone), 400, "Weka simu sahihi ya Tanzania.");
       assert(
-        !(purpose === "activation"
-          ? profile["activation_paid"]
-          : purpose === "premium"
+        !(purpose === "premium"
             ? profile["is_premium"]
             : profile["is_vip"]),
         409,

@@ -98,6 +98,8 @@ describe("Username authentication and direct signup", () => {
       parts.join("").includes("INSERT INTO gochati_users"),
     );
     expect(insert).toBeGreaterThan(-1);
+    expect(mocks.sql.mock.calls[insert]![0].join("")).toContain("account_status,activation_paid");
+    expect(mocks.sql.mock.calls[insert]![0].join("")).toContain("'active',true");
     expect(mocks.sql.mock.invocationCallOrder[insert]).toBeLessThan(
       mocks.login.mock.invocationCallOrder[0]!,
     );
@@ -106,7 +108,7 @@ describe("Username authentication and direct signup", () => {
     );
     expect(mocks.sendDarsms).toHaveBeenCalledExactlyOnceWith(
       signup.metadata.phone,
-      "Hongera! amina Usajili wako wa GOCHATI umekamilika. Wezesha/Lipia akaunti kwa Tsh 22000 uanze Kulipwa Hadi 100,000Tzs kwa kuwafundisha wazungu Kiswahili Gusa Link https://gochati.online/login",
+      "Hongera! amina Usajili wako wa GOCHATI umekamilika. Akaunti yako iko active. Endelea kuchat na kufundisha Kiswahili hapa: https://gochati.online/login",
     );
     expect(mocks.waitUntil).toHaveBeenCalledWith(expect.any(Promise));
   });

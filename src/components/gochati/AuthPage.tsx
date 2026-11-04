@@ -66,17 +66,17 @@ export function AuthPage({ mode }: { mode: Mode }) {
         if (signUpError) throw signUpError;
         if (!data.session) {
           throw new Error(
-            "Akaunti imehifadhiwa. Ingia kwa username na password ili kuendelea kwenye malipo.",
+            "Akaunti imehifadhiwa. Ingia kwa username na password ili kuendelea kuchat.",
           );
         }
-        await navigate({ to: "/payment", replace: true });
+        await navigate({ to: "/", replace: true });
       } else if (mode === "login") {
         const { error: loginError } = await platform.auth.signInWithUsername({
           username: value("username").toLowerCase(),
           password,
         });
         if (loginError) throw new Error("Username au password si sahihi.");
-        await navigate({ to: "/payment", replace: true });
+        await navigate({ to: "/", replace: true });
       } else if (mode === "forgot") {
         throw new Error(
           "Wasiliana na huduma kwa wateja ili kusaidiwa kurejesha password ya akaunti ya username.",
@@ -110,7 +110,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
         </h1>
         <p className="auth-subtitle">
           {register
-            ? "Jaza taarifa zako kisha endelea kwenye ukurasa wa malipo."
+            ? "Jisajili sasa kuweza kuendelea kuchat na kulipwa."
             : "Tumia username na password ulizotumia wakati wa usajili."}
         </p>
         <form onSubmit={submit}>

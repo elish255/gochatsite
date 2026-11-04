@@ -58,7 +58,7 @@ function WithdrawalPage() {
     setBalance(Number(profile.data?.balance || 0));
     setPhone((current) => current || profile.data?.phone || "");
     const accountActive =
-      profile.data?.account_status === "active" && !!profile.data?.activation_paid;
+      profile.data?.account_status === "active";
     setActive(accountActive);
     setActivationOpen(!accountActive);
     setHistory(withdrawals.data || []);

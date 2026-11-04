@@ -2,7 +2,6 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Route } from "@/routes/withdrawal";
 
-vi.mock("@/hooks/use-activation-fee", () => ({ useActivationFee: () => ({ fee: 22000, formatted: "22,000", error: "" }) }));
 
 const mocks = vi.hoisted(() => ({
   profile: {
@@ -48,16 +47,16 @@ beforeEach(() => {
 describe("Withdrawal account access", () => {
   it.each([
     { account_status: "inactive", activation_paid: true },
-    { account_status: "active", activation_paid: false },
+    { account_status: "deactivated", activation_paid: false },
   ])(
-    "opens activation dialog and blocks requests for $account_status / $activation_paid",
+    "opens account access dialog and blocks requests for $account_status / $activation_paid",
     async (profile) => {
       Object.assign(mocks.profile, profile);
       const Page = Route.options.component as () => React.JSX.Element;
       render(<Page />);
-      expect(await screen.findByRole("dialog")).toHaveTextContent("HUWEZI KUTOA PESA");
-      expect(screen.getByRole("dialog")).toHaveTextContent("Huwezi kutoa pesa kwa sasa kwa sababu huna kiasi cha kutosha cha kupokea huduma hii.");
-      expect(screen.getByRole("dialog")).toHaveTextContent("Jisajili kwa mtaji wa 22,000, kisha kamilisha chat angalau moja ili uweze kulipwa kwa kuwafundisha wazungu Kiswahili.");
+      expect(await screen.findByRole("dialog")).toHaveTextContent("JISAJILI ILI KUENDELEA");
+      expect(screen.getByRole("dialog")).toHaveTextContent("Jisajili sasa kuweza kuendelea kuchat na kulipwa.");
+      expect(screen.getByRole("dialog")).toHaveTextContent("Akaunti yako inakuwa active moja kwa moja baada ya kujisajili.");
       expect(screen.getByRole("link", { name: /JISAJILI SASA/ })).toHaveAttribute(
         "href",
         "/register",
@@ -125,8 +124,8 @@ describe("Withdrawal account access", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("allows an active paid account to request withdrawal without the dialog", async () => {
-    Object.assign(mocks.profile, { account_status: "active", activation_paid: true });
+  it("allows an active account without an activation payment to request withdrawal without the dialog", async () => {
+    Object.assign(mocks.profile, { account_status: "active", activation_paid: false });
     mocks.rpc.mockResolvedValue({ error: null });
     const Page = Route.options.component as () => React.JSX.Element;
     render(<Page />);
