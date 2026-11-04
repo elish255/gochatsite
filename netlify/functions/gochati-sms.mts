@@ -18,8 +18,8 @@ export default async (req: Request) => {
       all: "TRUE",
       premium: "is_premium IS TRUE",
       normal: "is_premium IS NOT TRUE AND is_vip IS NOT TRUE",
-      active: "account_status = 'active' AND activation_paid IS TRUE",
-      inactive: "(account_status = 'active' AND activation_paid IS TRUE) IS NOT TRUE",
+      active: "account_status = 'active'",
+      inactive: "(account_status = 'active') IS NOT TRUE",
       vip: "is_vip IS TRUE",
     };
     if (body.action === "counts") {

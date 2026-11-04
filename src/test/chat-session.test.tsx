@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { ActivationRequiredDialog } from "@/components/gochati/ActivationRequiredDialog";
 import { ChatSession, CallDialog } from "@/components/gochati/Gochati.jsx";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn() }));
@@ -70,4 +71,12 @@ it.each(["voice", "video"])("ends an active %s call after three seconds", async 
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
   expect(screen.getByText("Imeshindwa Kuanzisha, Endelea Kuchat")).toBeInTheDocument();
   expect(screen.queryByText("Fungua Account Hapa")).not.toBeInTheDocument();
+});
+
+
+it("invites guests to register without showing an activation fee", () => {
+  render(<ActivationRequiredDialog open onClose={vi.fn()} />);
+  expect(screen.getByText(/Jisajili sasa kuweza kuendelea kuchat na kulipwa/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Jisajili Sasa/i })).toHaveAttribute("href", "/register");
+  expect(screen.queryByText(/activation|16,000|mtaji/i)).not.toBeInTheDocument();
 });

@@ -55,7 +55,7 @@ function TermsPage() {
         <section className="mt-8">
           <h2 className="mb-3 text-lg font-bold">4. Malipo, salio na ada</h2>
           <p>
-            Huduma fulani zinaweza kuhitaji ada ya uanzishaji au malipo ya kuboresha akaunti. Kiasi
+            Akaunti inakuwa active moja kwa moja baada ya usajili. Kuboresha akaunti kunaweza kuhitaji malipo. Kiasi
             na masharti husika yataonyeshwa kwenye ukurasa wa malipo.
           </p>
         </section>

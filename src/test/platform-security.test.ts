@@ -24,7 +24,7 @@ beforeEach(() => {
   mocks.query.mockResolvedValue({ rows: [] });
   mocks.authenticated.mockResolvedValue({
     user: { id: "user-one" },
-    profile: { activation_paid: true, account_status: "active" },
+    profile: { activation_paid: false, account_status: "active" },
     isAdmin: false,
     db: {
       sql: mocks.sql,

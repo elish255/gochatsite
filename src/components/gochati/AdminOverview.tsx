@@ -20,7 +20,7 @@ export function AdminOverview({
   onUsers: (filter: "all" | "active" | "inactive") => void;
 }) {
   const [mode, setMode] = useState<"income" | "registrations">("income");
-  const active = users.filter((u) => u.activation_paid && u.account_status === "active").length;
+  const active = users.filter((u) => u.account_status === "active").length;
   const successful = payments.filter((p) => p.status === "success");
   const income = successful.reduce((total, p) => total + Number(p.amount || 0), 0);
   const days = useMemo(

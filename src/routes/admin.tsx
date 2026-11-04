@@ -1,4 +1,3 @@
-import { AdminActivationFee } from "@/components/gochati/AdminActivationFee";
 import { AdminCareNotifications, AdminCustomerCare, AdminPhoneBans } from "@/components/gochati/AdminCustomerCare";
 import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
@@ -272,11 +271,11 @@ function AdminPage() {
     await load();
   }
   const activeRows = useMemo(
-    () => rows.filter((u) => u.account_status === "active" && u.activation_paid),
+    () => rows.filter((u) => u.account_status === "active"),
     [rows],
   );
   const inactiveRows = useMemo(
-    () => rows.filter((u) => u.account_status !== "active" || !u.activation_paid),
+    () => rows.filter((u) => u.account_status !== "active"),
     [rows],
   );
   useEffect(() => {
@@ -316,8 +315,8 @@ function AdminPage() {
         userView === "banned") &&
       (filter === "all" ||
         (filter === "active"
-          ? u.account_status === "active" && u.activation_paid
-          : u.account_status !== "active" || !u.activation_paid)),
+          ? u.account_status === "active"
+          : u.account_status !== "active")),
   );
   if (!ready)
     return (
@@ -488,7 +487,6 @@ function AdminPage() {
         {[
           { id: "customer-care", label: "Customer care", icon: MessageSquare },
           { id: "phone-bans", label: "Namba zilizozuiwa", icon: Ban },
-          { id: "activation-fee", label: "Activation fee", icon: CreditCard },
           { id: "payments", label: "Malipo", icon: CreditCard },
           { id: "messages", label: "Notifications", icon: Bell },
           { id: "sms", label: "SMS", icon: MessageSquare },
@@ -599,8 +597,6 @@ function AdminPage() {
                   ? "Dashboard"
                   : section === "users"
                     ? "Watumiaji"
-                    : section === "activation-fee"
-                      ? "Activation fee"
                     : section === "payments"
                       ? "Malipo ya huduma"
                       : section === "messages" || section === "sms" || section === "customer-care" || section === "phone-bans"
@@ -626,8 +622,7 @@ function AdminPage() {
           {ready && (
             <>
               <AdminCareNotifications onOpen={(userId) => { setCareUserId(userId); navigate("customer-care"); }} />
-              {section === "activation-fee" && <AdminActivationFee />}
-              {section === "customer-care" && <AdminCustomerCare userId={careUserId} />}
+              {section === "customer-care" && <AdminCustomerCare {...(careUserId ? { userId: careUserId } : {})} />}
               {section === "phone-bans" && <AdminPhoneBans />}
               {section === "dashboard" && (
                 <AdminOverview
@@ -650,7 +645,7 @@ function AdminPage() {
                 <section className="card-soft mt-4 p-4">
                   <h2 className="text-xl font-bold">Malipo ya SplashPay</h2>
                   <p className="text-sm">
-                    Ada za activation, Premium na VIP. Uthibitisho unatoka SplashPay.
+                    Ada za Premium na VIP. Uthibitisho unatoka SplashPay.
                   </p>
                   {payments.length === 0 ? (
                     <p>Hakuna malipo bado.</p>
@@ -739,7 +734,7 @@ function AdminPage() {
                     <option value="premium">Premium users tu</option>
                     <option value="normal">Normal users tu</option>
                     <option value="active">Active users tu</option>
-                    <option value="inactive">Hawajalipia Activation fee</option>
+                    <option value="inactive">Akaunti zisizo active</option>
                   </select>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button disabled={sending} onClick={() => void notify()}>
@@ -930,8 +925,7 @@ function AdminPage() {
                               </p>
                               <p>Usajili: {new Date(u.created_at).toLocaleString()}</p>
                               <p>
-                                Hali: {u.account_status} · Paid:{" "}
-                                {u.activation_paid ? "Ndiyo" : "Hapana"} ·{" "}
+                                Hali: {u.account_status} ·{" "}
                                 {u.is_premium ? "PREMIUM" : "Normal"} ·{" "}
                                 {u.is_vip ? "VIP" : "Non-VIP"} · Walioalikwa:{" "}
                                 {u.referral_count || 0} · Balance: TZS{" "}
@@ -1002,7 +996,7 @@ function AdminPage() {
                                   variant="outline"
                                   onClick={() =>
                                     void updateUser(u.id, {
-                                      account_status: u.activation_paid ? "active" : "pending",
+                                      account_status: "active",
                                     })
                                   }
                                 >
