@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Gochati } from "@/components/gochati/Gochati";
 import { SupportButton } from "@/components/gochati/SupportButton";
+import { ChannelButton } from "@/components/gochati/ChannelButton";
 import { AboutGochati } from "@/components/gochati/AboutGochati";
 
 export const Route = createFileRoute("/")({
@@ -64,6 +65,7 @@ export const Route = createFileRoute("/")({
         </p>
       </footer>
       <SupportButton floating />
+      <ChannelButton />
     </>
   ),
 });

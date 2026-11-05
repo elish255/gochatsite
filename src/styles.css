@@ -136,3 +136,14 @@ main section.mt-8.grid.grid-cols-1.gap-3.sm\:grid-cols-2 > div:nth-child(2){disp
 @media(max-width:1150px){.admin-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-workspace{grid-template-columns:250px minmax(0,1fr)}}
 @media(max-width:800px){.admin-workspace{display:block}.admin-desktop-sidebar{display:none}.admin-menu-trigger{display:inline-flex;flex-shrink:0}.admin-topbar{gap:12px;padding:16px 18px;min-height:78px}.admin-search{padding:10px 12px}.admin-search input{font-size:13px}.admin-main{padding:28px 18px}.admin-session{display:none}.admin-heading{margin-bottom:14px}.admin-summary-grid{gap:12px}.admin-stat{padding:19px 17px;border-radius:26px}.admin-stat-top{font-size:13px}.admin-stat-icon{width:35px;height:35px}.admin-stat strong{font-size:23px;margin-top:22px}.admin-stat p{font-size:11px}.admin-chart-card{padding:22px 18px;border-radius:26px}.admin-chart-heading{gap:12px}.admin-chart-heading h2{font-size:15px}.admin-chart-tabs button{font-size:12px;padding:6px 10px}.admin-chart-bars{gap:5px}.admin-chart-bar{border-radius:6px 6px 0 0}.admin-chart-plot{height:260px;gap:9px}.admin-user-card{padding:16px}.admin-user-card input{max-width:100%}}
 @media(prefers-reduced-motion:reduce){.admin-workspace *,.admin-drawer{animation:none!important;transition:none!important}}
+
+@keyframes gochati-channel-blink {
+  0%, 100% { opacity: 1; transform: translateY(0) scale(1); }
+  50% { opacity: .72; transform: translateY(-1px) scale(1.025); }
+}
+.gochati-channel-float {
+  animation: gochati-channel-blink 1.25s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gochati-channel-float { animation: none; }
+}
