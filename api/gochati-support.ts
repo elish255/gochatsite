@@ -1,3 +1,4 @@
+
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
@@ -409,7 +410,6 @@ async function handleAction(body: any, identity: any) {
 
     if (profileError) throw profileError;
 
-    // Usajili mpya unakuwa Active bila activation fee.
     const active =
       profile?.account_status === "active";
 
@@ -479,19 +479,35 @@ async function handleAction(body: any, identity: any) {
       );
     }
 
-    const { error } = await db
+    const { data: existing, error: findError } = await db
       .from("gochati_push_subscriptions")
-      .upsert(
-        {
+      .select("id, subscription")
+      .eq("admin_id", user.id);
+
+    if (findError) throw findError;
+
+    const current = (existing || []).find(
+      (item: any) =>
+        item.subscription?.endpoint === subscription.endpoint
+    );
+
+    if (current) {
+      const { error } = await db
+        .from("gochati_push_subscriptions")
+        .update({ subscription })
+        .eq("id", current.id);
+
+      if (error) throw error;
+    } else {
+      const { error } = await db
+        .from("gochati_push_subscriptions")
+        .insert({
           admin_id: user.id,
           subscription,
-        },
-        {
-          onConflict: "admin_id,subscription",
-        }
-      );
+        });
 
-    if (error) throw error;
+      if (error) throw error;
+    }
 
     return { success: true };
   }
@@ -505,13 +521,35 @@ async function handleAction(body: any, identity: any) {
       );
     }
 
-    const { error } = await db
-      .from("gochati_push_subscriptions")
-      .delete()
-      .eq("admin_id", user.id)
-      .eq("subscription", body.subscription);
+    const endpoint = body.subscription?.endpoint;
 
-    if (error) throw error;
+    if (!endpoint) {
+      throw new Error(
+        "Push subscription haijatambulika."
+      );
+    }
+
+    const { data: subscriptions, error: findError } = await db
+      .from("gochati_push_subscriptions")
+      .select("id, subscription")
+      .eq("admin_id", user.id);
+
+    if (findError) throw findError;
+
+    const matching = (subscriptions || []).filter(
+      (item: any) =>
+        item.subscription?.endpoint === endpoint
+    );
+
+    for (const item of matching) {
+      const { error } = await db
+        .from("gochati_push_subscriptions")
+        .delete()
+        .eq("id", item.id)
+        .eq("admin_id", user.id);
+
+      if (error) throw error;
+    }
 
     return { success: true };
   }
@@ -858,7 +896,6 @@ export default async function handler(
   }
 
   try {
-    // Thibitisha token kabla ya kuruhusu action yoyote.
     const identity = await getIdentity(req);
 
     const parsed = await parseRequest(req);
