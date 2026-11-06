@@ -345,6 +345,47 @@ async function handleUpload(
 async function handleAction(body: any, identity: any) {
   const { user, db, isAdmin } = identity;
   const action = body.action;
+    if (action === "status") {
+    if (isAdmin) {
+      return {
+        active: true,
+        unread: 0,
+      };
+    }
+
+    const { data: profile, error: profileError } = await db
+      .from("gochati_users")
+      .select("account_status, activation_paid")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    const active =
+      profile?.account_status === "active" &&
+      profile?.activation_paid === true;
+
+    if (!active) {
+      return {
+        active: false,
+        unread: 0,
+      };
+    }
+
+    const { count, error: unreadError } = await db
+      .from("gochati_support_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("sender", "admin")
+      .is("read_at", null);
+
+    if (unreadError) throw unreadError;
+
+    return {
+      active: true,
+      unread: count || 0,
+    };
+  }
 
   if (action === "push-key") {
     if (!isAdmin) throw new Error("Admin pekee ndiye anaruhusiwa.");
