@@ -1,20 +1,9 @@
-# Hali ya migration ya Gochati
+# GoChati Supabase migration status
 
-## Kilichofanyika kwenye package hii
-- Imeongezwa floating button ya WhatsApp Channel juu ya Customer Service, yenye blink animation.
-- `.env` ya ndani imeondolewa ili credentials zisambazwe ndani ya ZIP.
+- Removed Netlify deployment configuration and Netlify Functions directory.
+- Replaced application runtime imports of the old Netlify platform client with the Supabase platform adapter.
+- Replaced `/api/gochati-auth` Netlify proxy with a Supabase Edge Function proxy.
+- Added `supabase/functions/gochati-auth/index.ts` for username login and registration using Supabase Auth and the existing `gochati_users` table.
+- Kept the existing `api/gochati-login.ts` and `api/gochati-payment.ts` source files as requested.
 
-## Muhimu: hii bado SI migration iliyokamilika
-Code ya sasa bado inategemea Netlify Identity, `@netlify/database`, na Netlify Functions. Vercel haiendeshi Netlify Functions moja kwa moja. Kwa hiyo usi-deploy package hii kama toleo la production ukitarajia Supabase Auth, login, registration na malipo tayari vimehamishwa.
-
-Migration kamili inahitaji kubadilisha backend endpoints zote kuwa Vercel/TanStack server routes, kuhamisha database access kwenda Supabase PostgreSQL, na kubadilisha auth client kuwa Supabase Auth. Hili halijatekelezwa wala kuthibitishwa kwenye package hii.
-
-## Environment variables zinazotarajiwa kwa migration ya mwisho
-- `SUPABASE_URL`
-- `SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only; never expose as `VITE_*`)
-- `SPLASHPAY_API_KEY` na `SPLASHPAY_API_SECRET` (server-only)
-- `DARSMS_API_KEY` (server-only, ikiwa SMS inatumika)
-- `OPENAI_API_KEY` (server-only, ikiwa chat AI inatumika)
-
-Usibadilishe au kufuta tables za shared Supabase project bila backup na migration SQL iliyokaguliwa. Mabadiliko ya Gochati yawekwe kwenye namespace/tables zake tu.
+Important: this archive addresses the reported unresolved Netlify import and removes Netlify deployment files. It does not claim that every existing API (data, chat, support, SMS, payment, withdrawals) has already been migrated to Supabase Edge Functions or that a production build has been verified. The current execution environment could not complete `npm ci` before timeout. Deploy the `gochati-auth` Edge Function and configure its Supabase secrets before relying on registration/login.
