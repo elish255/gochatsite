@@ -1,0 +1,60 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GoChati VAPID Generator</title>
+</head>
+<body>
+  <h2>GoChati VAPID Keys</h2>
+  <button onclick="generate()">Tengeneza VAPID Keys</button>
+  <p>Public Key:</p>
+  <textarea id="pub" rows="4" style="width:100%"></textarea>
+  <p>Private Key:</p>
+  <textarea id="priv" rows="4" style="width:100%"></textarea>
+  <p id="status"></p>
+
+<script>
+function b64url(bytes) {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-")
+    .replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function generate() {
+  try {
+    const pair = await crypto.subtle.generateKey(
+      { name: "ECDH", namedCurve: "P-256" },
+      true,
+      ["deriveBits"]
+    );
+
+    const pub = await crypto.subtle.exportKey("jwk", pair.publicKey);
+    const priv = await crypto.subtle.exportKey("jwk", pair.privateKey);
+
+    const x = Uint8Array.from(atob(
+      pub.x.replace(/-/g, "+").replace(/_/g, "/")
+    ), c => c.charCodeAt(0));
+
+    const y = Uint8Array.from(atob(
+      pub.y.replace(/-/g, "+").replace(/_/g, "/")
+    ), c => c.charCodeAt(0));
+
+    const raw = new Uint8Array(65);
+    raw[0] = 4;
+    raw.set(x, 1);
+    raw.set(y, 33);
+
+    document.getElementById("pub").value = b64url(raw);
+    document.getElementById("priv").value = priv.d;
+    document.getElementById("status").textContent =
+      "VAPID keys zimetengenezwa!";
+  } catch (e) {
+    document.getElementById("status").textContent =
+      "Hitilafu: " + e.message;
+  }
+}
+</script>
+</body>
+</html>

@@ -183,8 +183,7 @@ export function AdminOverview({
         </details>
       </section>
       <p className="admin-data-note">
-        Muhtasari unatokana na akaunti na malipo ya karibuni yaliyopakiwa (hadi 1,000 kwa kila
-        kundi). Balance na withdrawal ni simulizi, si pesa halisi.
+        Muhtasari unatoka.
       </p>
     </div>
   );
