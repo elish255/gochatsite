@@ -2,7 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { platform } from "@/integrations/netlify/client";
+import { platform } from "@/integrations/supabase/platform";
 import { useAuthSession } from "./AuthSession";
 
 export function AccountControl() {

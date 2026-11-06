@@ -1,12 +1,16 @@
-import { getUser, login, logout, onAuthChange, hydrateSession } from "@netlify/identity";
+import { supabase } from "../supabase/client";
 
 export type AppUser = {
   id: string;
   email?: string | undefined;
   user_metadata: Record<string, any>;
 };
-const normalize = (user: Awaited<ReturnType<typeof getUser>>): AppUser | null =>
-  user ? { id: user.id, email: user.email, user_metadata: user.userMetadata || {} } : null;
+const normalize = (user: {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+} | null): AppUser | null =>
+  user ? { id: user.id, email: user.email, user_metadata: user.user_metadata || {} } : null;
 async function result(action: () => Promise<unknown>) {
   try {
     return { data: await action(), error: null };
@@ -18,9 +22,15 @@ async function result(action: () => Promise<unknown>) {
   }
 }
 export async function api(body: Record<string, unknown>) {
+  const { data: sessionData } = await supabase.auth.getSession();
   const response = await fetch("/api/gochati-data", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(sessionData.session?.access_token
+        ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+        : {}),
+    },
     body: JSON.stringify(body),
   });
   const value = await response.json();
@@ -28,15 +38,23 @@ export async function api(body: Record<string, unknown>) {
   return value.data;
 }
 async function authRequest(body: Record<string, unknown>) {
-  if (await getUser()) await logout();
+  await supabase.auth.signOut();
   const response = await fetch("/api/gochati-auth", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("Huduma ya usajili haipatikani kwa sasa. Jaribu tena baadaye.");
+  }
   const value = await response.json();
   if (!response.ok) throw new Error(value.message || "Imeshindikana kuingia.");
-  return hydrateSession();
+  if (value.data?.session) {
+    const { error } = await supabase.auth.setSession(value.data.session);
+    if (error) throw error;
+  }
+  return (await supabase.auth.getUser()).data.user;
 }
 // A small query interface keeps the existing browser experience independent of storage.
 class Query implements PromiseLike<any> {
@@ -105,9 +123,16 @@ class Query implements PromiseLike<any> {
 }
 export const platform = {
   auth: {
-    getUser: async () => ({ data: { user: normalize(await getUser()) }, error: null }),
+    getUser: async () => {
+      const { data, error } = await supabase.auth.getUser();
+      return { data: { user: normalize(data.user) }, error };
+    },
     signInWithPassword: ({ email, password }: { email: string; password: string }) =>
-      result(() => login(email, password)),
+      result(async () => {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        return data.user;
+      }),
     signInWithUsername: ({ username, password }: { username: string; password: string }) =>
       result(() => authRequest({ action: "login", username, password })),
     signUp: async ({
@@ -130,7 +155,8 @@ export const platform = {
           metadata: options.data,
           agree_terms: agreeTerms,
         });
-        return { data: { user: normalize(user), session: await getUser() }, error: null };
+        const { data: sessionData } = await supabase.auth.getSession();
+        return { data: { user: normalize(user), session: sessionData.session }, error: null };
       } catch (cause) {
         return {
           data: { user: null, session: null },
@@ -164,15 +190,15 @@ export const platform = {
             /* Logout remains available if the push service is unreachable. */
           }
         }
-        return logout();
+        return supabase.auth.signOut();
       }),
     onAuthStateChange: (
       callback: (event: string, session: { user: AppUser | null } | null) => void,
     ) => ({
       data: {
         subscription: {
-          unsubscribe: onAuthChange((event, user) =>
-            callback(event, user ? { user: normalize(user) } : null),
+            unsubscribe: supabase.auth.onAuthStateChange((event, session) =>
+            callback(event, session ? { user: normalize(session.user) } : null),
           ),
         },
       },

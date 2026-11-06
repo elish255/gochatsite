@@ -1,7 +1,7 @@
 import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
-import { platform } from "@/integrations/netlify/client";
+import { platform } from "@/integrations/supabase/platform";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
 import { ActivationRequiredDialog } from "./ActivationRequiredDialog";

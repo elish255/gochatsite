@@ -1,5 +1,5 @@
 import { authenticated, assert, checkRequest, fail, json } from "../lib/platform.js";
-import { admin as identityAdmin } from "@netlify/identity";
+import { supabaseAdmin } from "../lib/supabase.js";
 import { sendDarsms } from "../lib/darsms.js";
 import type { Config } from "@netlify/functions";
 
@@ -44,7 +44,8 @@ export default async (req: Request) => {
             assert(existing.rows.length, 404, "Akaunti haijapatikana.");
             // Identity removal prevents future logins; a tombstone also blocks in-flight sessions.
             try {
-              await identityAdmin.deleteUser(target);
+              const { error } = await supabaseAdmin.auth.admin.deleteUser(target);
+    if (error && error.status !== 404) throw error;
             } catch (error) {
               if ((error as { status?: number }).status !== 404) throw error;
             }

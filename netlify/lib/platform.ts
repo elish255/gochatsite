@@ -1,5 +1,5 @@
-import { getDatabase } from "@netlify/database";
-import { getIdentityConfig } from "@netlify/identity";
+import { getDatabase } from "./database.js";
+import { accessToken, supabaseAdmin } from "./supabase.js";
 
 export class HttpError extends Error {
   constructor(
@@ -34,23 +34,12 @@ export function checkRequest(req: Request) {
   assert(Number(req.headers.get("content-length") || 0) < 100000, 413, "Ombi ni kubwa sana.");
 }
 export async function authenticated(req: Request) {
-  const config = getIdentityConfig();
-  assert(config, 503, "Huduma ya akaunti haijawashwa.");
-  const cookie = req.headers
-    .get("cookie")
-    ?.split(";")
-    .map((x) => x.trim())
-    .find((x) => x.startsWith("nf_jwt="));
-  const token = cookie ? decodeURIComponent(cookie.slice(7)) : "";
+  const token = accessToken(req);
   assert(token, 401, "Tafadhali ingia kwenye akaunti yako.");
-  // Ask Identity to validate the token; never authorize from decoded claims alone.
-  const response = await fetch(`${config.url.replace(/\/$/, "")}/user`, {
-    headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(10000),
-  });
-  assert(response.ok, 401, "Session imeisha. Ingia tena.");
-  const user = await response.json();
-  assert(user.id && user.email && user.confirmed_at, 403, "Thibitisha email yako kwanza.");
+  const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(token);
+  assert(!authError && userData.user, 401, "Session imeisha. Ingia tena.");
+  const user = userData.user;
+  assert(user.id && user.email && user.email_confirmed_at, 403, "Thibitisha email yako kwanza.");
   const db = getDatabase();
   const deleted = await db.sql`SELECT id FROM gochati_deleted_users WHERE id=${user.id}`;
   assert(!deleted.length, 403, "Akaunti hii imefutwa.");

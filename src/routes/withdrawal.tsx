@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { platform } from "@/integrations/netlify/client";
+import { platform } from "@/integrations/supabase/platform";
 import { Button } from "@/components/ui/button";
 import { ActivationRequiredDialog } from "@/components/gochati/ActivationRequiredDialog";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";

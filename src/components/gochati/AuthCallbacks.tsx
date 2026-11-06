@@ -1,36 +1,33 @@
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  acceptInvite,
-  handleAuthCallback,
-  requestPasswordRecovery,
-  updateUser,
-} from "@netlify/identity";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function AuthCallbacks() {
-  const [action, setAction] = useState<"invite" | "recovery" | null>(null);
-  const [token, setToken] = useState("");
+  const [action, setAction] = useState<"recovery" | null>(null);
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    void handleAuthCallback()
-      .then((result) => {
-        if (result?.type === "invite") {
-          setToken(result.token || "");
-          setAction("invite");
-        } else if (result?.type === "recovery") setAction("recovery");
-        else if (result)
-          setNotice("Email imethibitishwa. Unaweza kuendelea kwenye akaunti yako au /admin.");
-      })
-      .catch(() => setNotice("Kiungo hakifanyi kazi au kimeisha muda. Omba kiungo kipya."));
+    const params = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const type = params.get("type") || hash.get("type");
+    if (type === "recovery" || type === "invite") {
+      setAction("recovery");
+      return;
+    }
+    if (window.location.search.includes("code=")) {
+      void supabase.auth.exchangeCodeForSession(params.get("code")!).then(({ error }) => {
+        if (error) setNotice("Kiungo hakifanyi kazi au kimeisha muda. Omba kiungo kipya.");
+        else setNotice("Email imethibitishwa. Unaweza kuendelea kwenye akaunti yako.");
+      });
+    }
   }, []);
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      if (action === "invite") await acceptInvite(token, password);
-      else await updateUser({ password });
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
       window.location.href = "/login";
     } catch {
       setNotice("Password haijahifadhiwa. Jaribu tena au omba kiungo kipya.");
@@ -95,7 +92,10 @@ export function PasswordHelp() {
         e.preventDefault();
         setBusy(true);
         try {
-          await requestPasswordRecovery(email.trim().toLowerCase());
+          const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+            redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+          });
+          if (error) throw error;
           setNotice("Kama email imesajiliwa, angalia inbox kwa kiungo cha kurejesha password.");
         } catch {
           setNotice("Ombi halijatumwa. Jaribu tena.");

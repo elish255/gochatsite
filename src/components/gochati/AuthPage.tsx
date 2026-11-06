@@ -2,7 +2,7 @@ import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "./AuthCallbacks";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { platform } from "@/integrations/netlify/client";
+import { platform } from "@/integrations/supabase/platform";
 import { Button } from "@/components/ui/button";
 
 type Mode = "register" | "login" | "forgot" | "reset";

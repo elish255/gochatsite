@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { AppUser as User } from "@/integrations/netlify/client";
+import type { AppUser as User } from "@/integrations/supabase/platform";
 
 export const AuthSession = createContext<{ user: User | null; ready: boolean }>({
   user: null,

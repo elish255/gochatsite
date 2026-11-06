@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { getDatabase } from "@netlify/database";
-import { admin, login, verifyRequestOrigin } from "@netlify/identity";
-import type { Config, Context } from "@netlify/functions";
+import { getDatabase } from "../lib/database.js";
+import { supabaseAdmin } from "../lib/supabase.js";
+import type { Config, Context } from "../lib/types.js";
 import { assert, checkRequest, fail, HttpError, json } from "../lib/platform.js";
 import { validPhone } from "../lib/customer-care.js";
 import { deliverAdminPush } from "../lib/admin-push.js";
@@ -10,7 +10,6 @@ import { sendDarsms } from "../lib/darsms.js";
 export default async (req: Request, context: Context) => {
   try {
     checkRequest(req);
-    verifyRequestOrigin(req);
     const body = await req.json();
     assert(["login", "register"].includes(body.action), 400, "Ombi si sahihi.");
     const db = getDatabase();
@@ -36,15 +35,21 @@ export default async (req: Request, context: Context) => {
       "Weka username na password halali.",
     );
     if (body.action === "login") {
-      const [profile] = await db.sql`SELECT email FROM gochati_users WHERE username=${username}`;
+      const users = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const profile = users.data.users.find(
+        (candidate) => candidate.user_metadata?.username?.toLowerCase() === username,
+      );
       try {
-        // Always ask Identity to check credentials; never return the resolved email.
-        await login(String(profile?.["email"] || "unknown-user@invalid.invalid"), password);
-        assert(profile, 401, "Username au password si sahihi.");
+        // Always ask Supabase Auth to check credentials; never reveal the resolved email.
+        const { data: loginData, error } = await supabaseAdmin.auth.signInWithPassword({
+          email: profile?.email || "unknown-user@invalid.invalid",
+          password,
+        });
+        assert(!error && profile && loginData.session, 401, "Username au password si sahihi.");
+        return json({ data: { session: loginData.session } });
       } catch {
         throw new HttpError(401, "Username au password si sahihi.");
       }
-      return json({ data: true });
     }
     const email = String(body.email || "")
       .trim()
@@ -65,17 +70,28 @@ export default async (req: Request, context: Context) => {
     );
     assert(/^[+\d ]{9,17}$/.test(String(metadata.phone || "")), 400, "Weka namba ya simu halali.");
     const phone = validPhone(String(metadata.phone || ""));
-    const banned = await db.sql`SELECT phone FROM gochati_phone_bans WHERE phone=${phone}`;
-    assert(!banned.length, 403, "Namba hii imezuiwa kujisajili. Wasiliana na customer service.");
-    // Auto-confirmed public signup must never claim an allowlisted administrator email.
-    const reserved = await db.sql`SELECT email FROM gochati_admin_emails WHERE email=${email}`;
-    const existing =
-      await db.sql`SELECT id FROM gochati_users WHERE username=${username} OR email=${email}`;
-    assert(
-      !reserved.length && !existing.length,
-      409,
-      "Usajili haujakamilika. Username/email inaweza kuwa tayari inatumika; ingia au rejesha password.",
-    );
+  const { data: banned, error: banError } = await supabaseAdmin
+    .from("gochati_phone_bans")
+    .select("phone")
+    .eq("phone", phone)
+    .limit(1);
+  assert(!banError, 500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
+  assert(!banned?.length, 403, "Namba hii imezuiwa kujisajili. Wasiliana na customer service.");
+
+  // The archived Supabase app stores profile rows in public.profiles and keeps
+  // username/email in Supabase Auth metadata. Do not query the empty legacy table.
+  const authUsersResult = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  assert(!authUsersResult.error, 500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
+  const matchingAuthUser = authUsersResult.data.users.find(
+    (candidate) =>
+      candidate.email?.toLowerCase() === email ||
+      candidate.user_metadata?.username?.toLowerCase() === username,
+  );
+  assert(
+    !matchingAuthUser,
+    409,
+    "Taarifa hizi tayari zinatumika. Chagua username nyingine au kagua ombi lililopo.",
+  );
     const data = {
       username,
       full_name: metadata.full_name.trim(),
@@ -87,20 +103,37 @@ export default async (req: Request, context: Context) => {
     };
     let user;
     try {
-      user = await admin.createUser({ email, password, data: { user_metadata: data } });
-    } catch {
-      throw new HttpError(
-        409,
-        "Usajili haujakamilika. Kagua taarifa zako, au ingia ikiwa una akaunti.",
-      );
-    }
-    try {
-      await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country,account_status,activation_paid) VALUES (${user.id},${email},${username},${data.full_name},${data.phone},${data.country},'active',true)`;
+      const result = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: data,
+      });
+      if (result.error) throw result.error;
+      user = result.data.user;
     } catch (error) {
-      // Compensate only for the Identity account created by this request.
-      await admin.deleteUser(user.id);
-      throw error;
+      if ((error as { code?: string })?.code === "email_exists") {
+        throw new HttpError(
+          409,
+          "Email hii tayari inatumika; ingia au rejesha password.",
+        );
+      }
+      throw new HttpError(500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
     }
+
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
+      {
+        id: user.id,
+        full_name: data.full_name,
+        phone: data.phone,
+      },
+      { onConflict: "id" },
+    );
+  if (profileError) {
+    // Compensate only for the Auth account created by this request.
+    await supabaseAdmin.auth.admin.deleteUser(user.id);
+    throw profileError;
+  }
     context.waitUntil(deliverAdminPush().catch(() => {}));
     // Start only after both account records exist; SMS failure must not undo signup.
     context.waitUntil(
@@ -112,8 +145,10 @@ export default async (req: Request, context: Context) => {
         console.error("Registration SMS delivery failed.");
       }),
     );
-    await login(email, password);
-    return json({ data: true }, 201);
+    const { data: loginData, error: loginError } =
+      await supabaseAdmin.auth.signInWithPassword({ email, password });
+    assert(!loginError && loginData.session, 500, "Usajili umefanikiwa lakini kuingia kumeshindikana.");
+    return json({ data: { session: loginData.session } }, 201);
   } catch (error) {
     return fail(error);
   }
