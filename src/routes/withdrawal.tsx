@@ -35,6 +35,9 @@ function WithdrawalPage() {
   const isPremium = Boolean(account?.is_premium);
   const taxPaid = Boolean(account?.vip_tax_paid);
 
+  const minimumWithdrawal =
+    isPremium && !isVip ? 300000 : 100000;
+
   async function load() {
     const {
       data: { user },
@@ -78,8 +81,9 @@ function WithdrawalPage() {
 
     setReceipt((current: any) =>
       current
-        ? withdrawals.data?.find((item: any) => item.id === current.id) ||
-          current
+        ? withdrawals.data?.find(
+            (item: any) => item.id === current.id,
+          ) || current
         : null,
     );
 
@@ -108,7 +112,7 @@ function WithdrawalPage() {
       return;
     }
 
-    // NORMAL: lazima afikie 100,000 na alipe Premium.
+    // NORMAL ACCOUNT
     if (!isPremium && !isVip) {
       if (balance < 100000) {
         setNotice(
@@ -121,8 +125,15 @@ function WithdrawalPage() {
       return;
     }
 
-    // PREMIUM: lazima afikie 300,000 na alipe VIP.
+    // PREMIUM ACCOUNT
     if (isPremium && !isVip) {
+      if (!Number.isSafeInteger(value) || value < 300000) {
+        setNotice(
+          "Kwa akaunti ya Premium, kiasi cha withdrawal lazima kiwe TZS 300,000 au zaidi.",
+        );
+        return;
+      }
+
       if (balance < 300000) {
         setNotice(
           `Unahitaji salio la TZS 300,000. Salio lako ni TZS ${balance.toLocaleString()}.`,
@@ -134,7 +145,7 @@ function WithdrawalPage() {
       return;
     }
 
-    // VIP: kodi inalipwa mara moja tu.
+    // VIP ACCOUNT
     if (isVip && !taxPaid) {
       window.location.href = "/payment?type=tax";
       return;
@@ -223,13 +234,23 @@ function WithdrawalPage() {
 
           {isPremium && !isVip && (
             <p className="mt-2">
-              Kiwango cha VIP: TZS 300,000
+              Minimum withdrawal: TZS 300,000
+              <br />
+              Kiwango cha upgrade VIP: TZS 300,000
+            </p>
+          )}
+
+          {isVip && (
+            <p className="mt-2">
+              Minimum withdrawal: TZS 100,000
             </p>
           )}
         </div>
 
         <p className="mt-3 text-sm text-muted-foreground">
-          Minimum withdrawal ni TZS 100,000. Kiasi kisizidi salio lako.
+          Minimum withdrawal ni TZS{" "}
+          {minimumWithdrawal.toLocaleString()}.
+          Kiasi kisizidi salio lako.
         </p>
 
         <label className="auth-field">
@@ -237,7 +258,7 @@ function WithdrawalPage() {
           <div className="auth-input">
             <input
               type="number"
-              min="100000"
+              min={minimumWithdrawal}
               max={balance}
               step="1"
               aria-label="Kiasi (TZS)"
