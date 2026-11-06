@@ -35,11 +35,14 @@ export default async (req: Request, context: Context) => {
       "Weka username na password halali.",
     );
     if (body.action === "login") {
-      const [profile] = await db.sql`SELECT email FROM gochati_users WHERE username=${username}`;
+      const users = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const profile = users.data.users.find(
+        (candidate) => candidate.user_metadata?.username?.toLowerCase() === username,
+      );
       try {
-        // Always ask Identity to check credentials; never return the resolved email.
+        // Always ask Supabase Auth to check credentials; never reveal the resolved email.
         const { data: loginData, error } = await supabaseAdmin.auth.signInWithPassword({
-          email: String(profile?.["email"] || "unknown-user@invalid.invalid"),
+          email: profile?.email || "unknown-user@invalid.invalid",
           password,
         });
         assert(!error && profile && loginData.session, 401, "Username au password si sahihi.");
@@ -75,15 +78,17 @@ export default async (req: Request, context: Context) => {
   assert(!banError, 500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
   assert(!banned?.length, 403, "Namba hii imezuiwa kujisajili. Wasiliana na customer service.");
 
-  // Read signup uniqueness from the same Supabase project as Supabase Auth.
-  const { data: existing, error: existingError } = await supabaseAdmin
-    .from("gochati_users")
-    .select("id")
-    .or(`username.eq.${username},email.eq.${email}`)
-    .limit(1);
-  assert(!existingError, 500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
+  // The archived Supabase app stores profile rows in public.profiles and keeps
+  // username/email in Supabase Auth metadata. Do not query the empty legacy table.
+  const authUsersResult = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  assert(!authUsersResult.error, 500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
+  const matchingAuthUser = authUsersResult.data.users.find(
+    (candidate) =>
+      candidate.email?.toLowerCase() === email ||
+      candidate.user_metadata?.username?.toLowerCase() === username,
+  );
   assert(
-    !existing?.length,
+    !matchingAuthUser,
     409,
     "Taarifa hizi tayari zinatumika. Chagua username nyingine au kagua ombi lililopo.",
   );
@@ -98,50 +103,32 @@ export default async (req: Request, context: Context) => {
     };
     let user;
     try {
-      // A previous request may have created the Auth user before the profile insert failed.
-      // Reuse that orphaned Auth record so a retry can finish registration instead of
-      // returning a misleading duplicate-account conflict.
-      const users = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      const orphanedUser = users.data.users.find(
-        (candidate) => candidate.email?.toLowerCase() === email && !existing?.length,
-      );
-      if (orphanedUser) {
-        const updated = await supabaseAdmin.auth.admin.updateUserById(orphanedUser.id, {
-          password,
-          email_confirm: true,
-          user_metadata: data,
-        });
-        if (updated.error) throw updated.error;
-        user = updated.data.user;
-      } else {
-        const result = await supabaseAdmin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true,
-          user_metadata: data,
-        });
-        if (result.error) throw result.error;
-        user = result.data.user;
-      }
+      const result = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: data,
+      });
+      if (result.error) throw result.error;
+      user = result.data.user;
     } catch (error) {
       if ((error as { code?: string })?.code === "email_exists") {
         throw new HttpError(
           409,
-          "Usajili haujakamilika. Email hii tayari inatumika; ingia au rejesha password.",
+          "Email hii tayari inatumika; ingia au rejesha password.",
         );
       }
       throw new HttpError(500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
     }
-  const { error: profileError } = await supabaseAdmin.from("gochati_users").insert({
-    id: user.id,
-    email,
-    username,
-    full_name: data.full_name,
-    phone: data.phone,
-    country: data.country,
-    account_status: "active",
-    activation_paid: true,
-  });
+
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
+      {
+        id: user.id,
+        full_name: data.full_name,
+        phone: data.phone,
+      },
+      { onConflict: "id" },
+    );
   if (profileError) {
     // Compensate only for the Auth account created by this request.
     await supabaseAdmin.auth.admin.deleteUser(user.id);
