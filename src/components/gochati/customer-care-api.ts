@@ -1,5 +1,5 @@
 
-import { supabase } from "../../src/integrations/supabase/client";
+import { supabase } from "../../integrations/supabase/client";
 
 export async function careApi(body: Record<string, unknown>) {
   const {

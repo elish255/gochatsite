@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { careApi } from "./customer-care-api";
-import { supabase } from "../../src/integrations/supabase/client";
+import { supabase } from "../../integrations/supabase/client";
 
 type Message = {
   id: string;
