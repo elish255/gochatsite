@@ -49,11 +49,13 @@ Deno.serve(async (request: Request) => {
     const { data: signup, error: signupError } = await publicAuth.auth.signUp({
       email,
       password,
-      options: { data: { username, full_name: String(metadata.full_name).trim(), phone: String(metadata.phone).trim(), country: String(metadata.country || "") } },
+      options: { data: { username, full_name: String(metadata.full_name).trim(), phone: String(metadata.phone).trim(), country: String(metadata.country || ""), referral_username: String(metadata.referral_username || "").trim().toLowerCase() || null } },
     });
     if (signupError || !signup.user) return reply({ message: signupError?.message || "Usajili umeshindwa." }, 400);
 
-    const { error: insertError } = await admin.from("gochati_users").insert({
+    // The auth.users trigger normally creates this profile. Upsert makes this
+    // safe when the trigger has already run, while still repairing a missing row.
+    const { error: insertError } = await admin.from("gochati_users").upsert({
       id: signup.user.id,
       email,
       username,
@@ -62,7 +64,7 @@ Deno.serve(async (request: Request) => {
       country: String(metadata.country || ""),
       account_status: "pending",
       activation_paid: false,
-    });
+    }, { onConflict: "id" });
     if (insertError) {
       await admin.auth.admin.deleteUser(signup.user.id);
       return reply({ message: "Imeshindikana kuhifadhi akaunti. Hakikisha migrations za GoChati zimewekwa." }, 500);
