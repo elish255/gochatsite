@@ -99,11 +99,23 @@ function AdminPage() {
       .eq("user_id", current.id)
       .maybeSingle();
     if (adminError || !admin) {
-      setNotice("Akaunti hii haina ruhusa ya admin. Tumia akaunti ya admin ya Gochati.");
-      setReady(true);
-      setAuthorized(false);
-      return;
-    }
+  console.error("GOCHATI ADMIN CHECK:", {
+    userId: current.id,
+    email: current.email,
+    adminError,
+    admin,
+  });
+
+  setNotice(
+    adminError
+      ? "Admin check error: " + adminError.message
+      : "User ID haijapatikana kwenye gochati_admins: " + current.id
+  );
+
+  setReady(true);
+  setAuthorized(false);
+  return;
+}
     setAuthorized(true);
     const [u, w] = await Promise.all([
       platform
