@@ -136,6 +136,75 @@ export default async function handler(req: Request, res: Response) {
     if (body.rpc) {
       const args = body.args || {};
 
+      // RPC ya kuanzisha kipindi cha kulipia chat.
+      if (body.rpc === "gochati_start_earning_session") {
+        if (
+          !args ||
+          typeof args !== "object" ||
+          Array.isArray(args)
+        ) {
+          return sendError(
+            res,
+            400,
+            "Taarifa za kipindi si sahihi.",
+          );
+        }
+
+        const amount = Number(args.p_amount);
+        const minutes = Number(args.p_minutes);
+        const partner = args.p_partner;
+
+        const allowedSessions = [
+          { minutes: 1, amount: 5000 },
+          { minutes: 5, amount: 25000 },
+          { minutes: 20, amount: 30000 },
+          { minutes: 45, amount: 67000 },
+          { minutes: 60, amount: 120000 },
+          { minutes: 120, amount: 150000 },
+        ];
+
+        const validSession = allowedSessions.some(
+          (session) =>
+            session.minutes === minutes &&
+            session.amount === amount,
+        );
+
+        if (
+          !Number.isInteger(minutes) ||
+          !Number.isFinite(amount) ||
+          !validSession ||
+          typeof partner !== "string" ||
+          !partner.trim() ||
+          partner.trim().length > 100
+        ) {
+          return sendError(
+            res,
+            400,
+            "Muda au malipo ya kipindi si sahihi.",
+          );
+        }
+
+        const { data, error } = await userClient.rpc(
+          "gochati_start_earning_session",
+          {
+            p_amount: amount,
+            p_minutes: minutes,
+            p_partner: partner.trim(),
+          },
+        );
+
+        if (error) {
+          console.error(
+            "START EARNING SESSION ERROR:",
+            error,
+          );
+
+          return sendError(res, 400, error.message);
+        }
+
+        return res.status(200).json({ data });
+      }
+
       // RPC za withdrawal kwa kutumia session ya mtumiaji.
       if (
         body.rpc === "gochati_withdrawal_eligibility" ||
@@ -370,7 +439,6 @@ export default async function handler(req: Request, res: Response) {
             );
           }
 
-          // Lazima atumie ID ya session yake.
           query = query.eq("id", user.id);
         }
 
@@ -388,7 +456,6 @@ export default async function handler(req: Request, res: Response) {
             );
           }
 
-          // Lazima atumie user_id ya session yake.
           query = query.eq("user_id", user.id);
         }
       } else {
