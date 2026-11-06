@@ -1,7 +1,7 @@
 import { logoUrl } from "@/lib/gochati-media";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { platform } from "@/integrations/supabase/platform";
+import { platform } from "@/integrations/netlify/client";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/payment")({ component: PaymentPage });

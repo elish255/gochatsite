@@ -12,7 +12,7 @@ import {
 import { AdminSms } from "@/components/gochati/AdminSms";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { platform } from "@/integrations/supabase/platform";
+import { platform } from "@/integrations/netlify/client";
 import {
   AlertDialog,
   AlertDialogContent,

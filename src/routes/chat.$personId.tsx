@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { GochatShell } from "@/components/gochat-shell";
 import { money, people } from "@/lib/gochat-data";
 import { playSound } from "@/lib/gochat-sound";
-import { platform } from "@/integrations/supabase/platform";
+import { platform } from "@/integrations/netlify/client";
 
 export const Route = createFileRoute("/chat/$personId")({
   head: ({ params }) => ({ meta: [
