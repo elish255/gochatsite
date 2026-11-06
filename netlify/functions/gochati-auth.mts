@@ -67,17 +67,26 @@ export default async (req: Request, context: Context) => {
     );
     assert(/^[+\d ]{9,17}$/.test(String(metadata.phone || "")), 400, "Weka namba ya simu halali.");
     const phone = validPhone(String(metadata.phone || ""));
-    const banned = await db.sql`SELECT phone FROM gochati_phone_bans WHERE phone=${phone}`;
-    assert(!banned.length, 403, "Namba hii imezuiwa kujisajili. Wasiliana na customer service.");
-    // Auto-confirmed public signup must never claim an allowlisted administrator email.
-    const reserved = await db.sql`SELECT email FROM gochati_admin_emails WHERE email=${email}`;
-    const existing =
-      await db.sql`SELECT id FROM gochati_users WHERE username=${username} OR email=${email}`;
-    assert(
-      !reserved.length && !existing.length,
-      409,
-      "Usajili haujakamilika. Username/email inaweza kuwa tayari inatumika; ingia au rejesha password.",
-    );
+  const { data: banned, error: banError } = await supabaseAdmin
+    .from("gochati_phone_bans")
+    .select("phone")
+    .eq("phone", phone)
+    .limit(1);
+  assert(!banError, 500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
+  assert(!banned?.length, 403, "Namba hii imezuiwa kujisajili. Wasiliana na customer service.");
+
+  // Read signup uniqueness from the same Supabase project as Supabase Auth.
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from("gochati_users")
+    .select("id")
+    .or(`username.eq.${username},email.eq.${email}`)
+    .limit(1);
+  assert(!existingError, 500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
+  assert(
+    !existing?.length,
+    409,
+    "Taarifa hizi tayari zinatumika. Chagua username nyingine au kagua ombi lililopo.",
+  );
     const data = {
       username,
       full_name: metadata.full_name.trim(),
@@ -94,7 +103,7 @@ export default async (req: Request, context: Context) => {
       // returning a misleading duplicate-account conflict.
       const users = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       const orphanedUser = users.data.users.find(
-        (candidate) => candidate.email?.toLowerCase() === email && !existing.length,
+        (candidate) => candidate.email?.toLowerCase() === email && !existing?.length,
       );
       if (orphanedUser) {
         const updated = await supabaseAdmin.auth.admin.updateUserById(orphanedUser.id, {
@@ -123,13 +132,21 @@ export default async (req: Request, context: Context) => {
       }
       throw new HttpError(500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
     }
-    try {
-      await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country,account_status,activation_paid) VALUES (${user.id},${email},${username},${data.full_name},${data.phone},${data.country},'active',true)`;
-    } catch (error) {
-      // Compensate only for the Identity account created by this request.
-      await supabaseAdmin.auth.admin.deleteUser(user.id);
-      throw error;
-    }
+  const { error: profileError } = await supabaseAdmin.from("gochati_users").insert({
+    id: user.id,
+    email,
+    username,
+    full_name: data.full_name,
+    phone: data.phone,
+    country: data.country,
+    account_status: "active",
+    activation_paid: true,
+  });
+  if (profileError) {
+    // Compensate only for the Auth account created by this request.
+    await supabaseAdmin.auth.admin.deleteUser(user.id);
+    throw profileError;
+  }
     context.waitUntil(deliverAdminPush().catch(() => {}));
     // Start only after both account records exist; SMS failure must not undo signup.
     context.waitUntil(
