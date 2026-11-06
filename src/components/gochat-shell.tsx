@@ -5,7 +5,7 @@ import support from "@/assets/support.jpg";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
-import { platform } from "@/integrations/netlify/client";
+import { platform } from "@/integrations/supabase/platform";
 import { playSound } from "@/lib/gochat-sound";
 
 const registrationUrl = "https://moxeraagencies.com/register?ref=Mtukazi";

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { getDatabase } from "../lib/database.js";
 import { supabaseAdmin } from "../lib/supabase.js";
-import type { Config, Context } from "@netlify/functions";
+import type { Config, Context } from "../lib/types.js";
 import { assert, checkRequest, fail, HttpError, json } from "../lib/platform.js";
 import { validPhone } from "../lib/customer-care.js";
 import { deliverAdminPush } from "../lib/admin-push.js";
