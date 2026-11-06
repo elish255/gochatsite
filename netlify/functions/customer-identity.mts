@@ -1,5 +1,5 @@
 import type { UserValidateEvent, UserSignupEvent, UserModifiedEvent } from "@netlify/functions";
-import { getDatabase } from "@netlify/database";
+import { getDatabase } from "../lib/database.js";
 import { normalizePhone } from "../lib/customer-care.js";
 async function validate(event: UserValidateEvent | UserSignupEvent | UserModifiedEvent) {
   const phone = normalizePhone(String(event.user.userMetadata?.["phone"] || ""));

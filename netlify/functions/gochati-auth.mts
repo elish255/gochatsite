@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { getDatabase } from "@netlify/database";
-import { admin, login, verifyRequestOrigin } from "@netlify/identity";
+import { getDatabase } from "../lib/database.js";
+import { supabaseAdmin } from "../lib/supabase.js";
 import type { Config, Context } from "@netlify/functions";
 import { assert, checkRequest, fail, HttpError, json } from "../lib/platform.js";
 import { validPhone } from "../lib/customer-care.js";
@@ -10,7 +10,6 @@ import { sendDarsms } from "../lib/darsms.js";
 export default async (req: Request, context: Context) => {
   try {
     checkRequest(req);
-    verifyRequestOrigin(req);
     const body = await req.json();
     assert(["login", "register"].includes(body.action), 400, "Ombi si sahihi.");
     const db = getDatabase();
@@ -39,12 +38,15 @@ export default async (req: Request, context: Context) => {
       const [profile] = await db.sql`SELECT email FROM gochati_users WHERE username=${username}`;
       try {
         // Always ask Identity to check credentials; never return the resolved email.
-        await login(String(profile?.["email"] || "unknown-user@invalid.invalid"), password);
-        assert(profile, 401, "Username au password si sahihi.");
+        const { data: loginData, error } = await supabaseAdmin.auth.signInWithPassword({
+          email: String(profile?.["email"] || "unknown-user@invalid.invalid"),
+          password,
+        });
+        assert(!error && profile && loginData.session, 401, "Username au password si sahihi.");
+        return json({ data: { session: loginData.session } });
       } catch {
         throw new HttpError(401, "Username au password si sahihi.");
       }
-      return json({ data: true });
     }
     const email = String(body.email || "")
       .trim()
@@ -87,7 +89,14 @@ export default async (req: Request, context: Context) => {
     };
     let user;
     try {
-      user = await admin.createUser({ email, password, data: { user_metadata: data } });
+      const result = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: data,
+      });
+      if (result.error) throw result.error;
+      user = result.data.user;
     } catch {
       throw new HttpError(
         409,
@@ -98,7 +107,7 @@ export default async (req: Request, context: Context) => {
       await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country,account_status,activation_paid) VALUES (${user.id},${email},${username},${data.full_name},${data.phone},${data.country},'active',true)`;
     } catch (error) {
       // Compensate only for the Identity account created by this request.
-      await admin.deleteUser(user.id);
+      await supabaseAdmin.auth.admin.deleteUser(user.id);
       throw error;
     }
     context.waitUntil(deliverAdminPush().catch(() => {}));
@@ -112,8 +121,10 @@ export default async (req: Request, context: Context) => {
         console.error("Registration SMS delivery failed.");
       }),
     );
-    await login(email, password);
-    return json({ data: true }, 201);
+    const { data: loginData, error: loginError } =
+      await supabaseAdmin.auth.signInWithPassword({ email, password });
+    assert(!loginError && loginData.session, 500, "Usajili umefanikiwa lakini kuingia kumeshindikana.");
+    return json({ data: { session: loginData.session } }, 201);
   } catch (error) {
     return fail(error);
   }

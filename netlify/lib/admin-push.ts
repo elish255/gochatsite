@@ -1,4 +1,4 @@
-import { getDatabase } from "@netlify/database";
+import { getDatabase } from "./database.js";
 import webpush from "web-push";
 import { assert } from "./platform.js";
 import { validPushEndpoint } from "./customer-care.js";
