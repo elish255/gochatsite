@@ -44,6 +44,10 @@ async function authRequest(body: Record<string, unknown>) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("Huduma ya usajili haipatikani kwa sasa. Jaribu tena baadaye.");
+  }
   const value = await response.json();
   if (!response.ok) throw new Error(value.message || "Imeshindikana kuingia.");
   if (value.data?.session) {
