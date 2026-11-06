@@ -23,11 +23,17 @@ const anonKey =
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const authClient = createClient(supabaseUrl, anonKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
 });
 
 const adminClient = createClient(supabaseUrl, serviceKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
 });
 
 const userColumns = [
@@ -49,11 +55,15 @@ const userColumns = [
 const allowedFilters: Record<string, string[]> = {
   gochati_admins: ["user_id"],
   gochati_users: ["id"],
-  gochati_withdrawals: ["id"],
+  gochati_withdrawals: ["id", "user_id"],
   gochati_payments: ["id"],
 };
 
-function sendError(res: Response, status: number, message: string) {
+function sendError(
+  res: Response,
+  status: number,
+  message: string,
+) {
   return res.status(status).json({ message });
 }
 
@@ -63,7 +73,11 @@ export default async function handler(req: Request, res: Response) {
   }
 
   if (!supabaseUrl || !anonKey || !serviceKey) {
-    return sendError(res, 500, "Supabase server configuration is missing.");
+    return sendError(
+      res,
+      500,
+      "Supabase server configuration is missing.",
+    );
   }
 
   try {
@@ -84,25 +98,75 @@ export default async function handler(req: Request, res: Response) {
     } = await authClient.auth.getUser(accessToken);
 
     if (authError || !user) {
-      return sendError(res, 401, "Session imeisha. Ingia tena.");
+      return sendError(
+        res,
+        401,
+        "Session imeisha. Ingia tena.",
+      );
     }
 
-    // Hakikisha mtumiaji ni admin.
+    // Tambua kama mtumiaji ni Admin.
     const { data: admin, error: adminError } = await adminClient
       .from("gochati_admins")
       .select("user_id")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (adminError || !admin) {
-      return sendError(res, 403, "Huna ruhusa ya kutumia huduma hii.");
-    }
+    if (adminError) throw adminError;
+
+    const isAdmin = !!admin;
+
+    // Client inayotumia session ya mtumiaji mwenyewe.
+    // Inahitajika kwa RPC zinazotumia auth.uid().
+    const userClient = createClient(supabaseUrl, anonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    });
 
     const body = req.body || {};
 
     // RPC zinazokubaliwa.
     if (body.rpc) {
       const args = body.args || {};
+
+      // RPC za withdrawal kwa kutumia session ya mtumiaji.
+      if (
+        body.rpc === "gochati_withdrawal_eligibility" ||
+        body.rpc === "gochati_request_withdrawal"
+      ) {
+        if (
+          !args ||
+          typeof args !== "object" ||
+          Array.isArray(args)
+        ) {
+          return sendError(res, 400, "Taarifa za RPC si sahihi.");
+        }
+
+        const { data, error } = await userClient.rpc(
+          body.rpc,
+          args,
+        );
+
+        if (error) throw error;
+
+        return res.status(200).json({ data });
+      }
+
+      // RPC nyingine ni za Admin pekee.
+      if (!isAdmin) {
+        return sendError(
+          res,
+          403,
+          "Huna ruhusa ya kutumia RPC hii.",
+        );
+      }
 
       if (body.rpc === "gochati_admin_adjust_balance") {
         const userId = String(args.user_id || "");
@@ -114,15 +178,23 @@ export default async function handler(req: Request, res: Response) {
           delta === 0 ||
           Math.abs(delta) > 100000000
         ) {
-          return sendError(res, 400, "Taarifa za balance si sahihi.");
+          return sendError(
+            res,
+            400,
+            "Taarifa za balance si sahihi.",
+          );
         }
 
         const { data, error } = await adminClient.rpc(
           "gochati_admin_adjust_balance",
-          { user_id: userId, delta },
+          {
+            user_id: userId,
+            delta,
+          },
         );
 
         if (error) throw error;
+
         return res.status(200).json({ data });
       }
 
@@ -131,19 +203,33 @@ export default async function handler(req: Request, res: Response) {
         const message = String(args.message || "").trim();
 
         if (
-          !["all", "premium", "normal", "active", "inactive"].includes(audience) ||
+          ![
+            "all",
+            "premium",
+            "normal",
+            "active",
+            "inactive",
+          ].includes(audience) ||
           !message ||
           message.length > 2000
         ) {
-          return sendError(res, 400, "Ujumbe au kundi si sahihi.");
+          return sendError(
+            res,
+            400,
+            "Ujumbe au kundi si sahihi.",
+          );
         }
 
         const { data, error } = await adminClient.rpc(
           "gochati_broadcast",
-          { audience, message },
+          {
+            audience,
+            message,
+          },
         );
 
         if (error) throw error;
+
         return res.status(200).json({ data });
       }
 
@@ -154,21 +240,34 @@ export default async function handler(req: Request, res: Response) {
           !Array.isArray(userIds) ||
           userIds.length === 0 ||
           userIds.length > 100 ||
-          userIds.some((id: unknown) => typeof id !== "string")
+          userIds.some(
+            (id: unknown) => typeof id !== "string",
+          )
         ) {
-          return sendError(res, 400, "Orodha ya akaunti si sahihi.");
+          return sendError(
+            res,
+            400,
+            "Orodha ya akaunti si sahihi.",
+          );
         }
 
         if (userIds.includes(user.id)) {
-          return sendError(res, 400, "Huwezi kufuta akaunti yako mwenyewe.");
+          return sendError(
+            res,
+            400,
+            "Huwezi kufuta akaunti yako mwenyewe.",
+          );
         }
 
         const { data, error } = await adminClient.rpc(
           "gochati_admin_delete_users",
-          { user_ids: userIds },
+          {
+            user_ids: userIds,
+          },
         );
 
         if (error) throw error;
+
         return res.status(200).json({ data });
       }
 
@@ -198,16 +297,29 @@ export default async function handler(req: Request, res: Response) {
       return sendError(res, 403, "Operesheni hairuhusiwi.");
     }
 
-    if (table === "gochati_payments" && operation !== "select") {
-      return sendError(res, 403, "Malipo hayawezi kubadilishwa hapa.");
+    if (
+      table === "gochati_payments" &&
+      operation !== "select"
+    ) {
+      return sendError(
+        res,
+        403,
+        "Malipo hayawezi kubadilishwa hapa.",
+      );
     }
 
-    if (table === "gochati_notifications" && operation !== "insert") {
+    if (
+      table === "gochati_notifications" &&
+      operation !== "insert"
+    ) {
       return sendError(res, 403, "Operesheni hairuhusiwi.");
     }
 
     let query: any;
 
+    // =========================
+    // SELECT
+    // =========================
     if (operation === "select") {
       const columns =
         table === "gochati_admins"
@@ -220,12 +332,80 @@ export default async function handler(req: Request, res: Response) {
 
       const filters = body.filters || {};
 
-      for (const [column, value] of Object.entries(filters)) {
-        if (!(allowedFilters[table] || []).includes(column)) {
-          return sendError(res, 400, "Kichujio hakiruhusiwi.");
+      if (
+        !filters ||
+        typeof filters !== "object" ||
+        Array.isArray(filters)
+      ) {
+        return sendError(res, 400, "Kichujio si sahihi.");
+      }
+
+      if (!isAdmin) {
+        // Mtumiaji wa kawaida anaweza kuona profile yake
+        // na withdrawal zake pekee.
+        if (
+          table !== "gochati_users" &&
+          table !== "gochati_withdrawals"
+        ) {
+          return sendError(
+            res,
+            403,
+            "Huruhusiwi kuona taarifa hizi.",
+          );
         }
 
-        query = query.eq(column, value);
+        const filterEntries = Object.entries(filters);
+
+        if (table === "gochati_users") {
+          if (
+            filterEntries.some(
+              ([column, value]) =>
+                column !== "id" || value !== user.id,
+            )
+          ) {
+            return sendError(
+              res,
+              403,
+              "Huruhusiwi kuona akaunti hii.",
+            );
+          }
+
+          // Lazima atumie ID ya session yake.
+          query = query.eq("id", user.id);
+        }
+
+        if (table === "gochati_withdrawals") {
+          if (
+            filterEntries.some(
+              ([column, value]) =>
+                column !== "user_id" || value !== user.id,
+            )
+          ) {
+            return sendError(
+              res,
+              403,
+              "Huruhusiwi kuona withdrawal hizi.",
+            );
+          }
+
+          // Lazima atumie user_id ya session yake.
+          query = query.eq("user_id", user.id);
+        }
+      } else {
+        // Filters za Admin.
+        for (const [column, value] of Object.entries(filters)) {
+          if (
+            !(allowedFilters[table] || []).includes(column)
+          ) {
+            return sendError(
+              res,
+              400,
+              "Kichujio hakiruhusiwi.",
+            );
+          }
+
+          query = query.eq(column, value);
+        }
       }
 
       if (body.search && table === "gochati_users") {
@@ -236,6 +416,7 @@ export default async function handler(req: Request, res: Response) {
 
         if (term) {
           const pattern = `%${term}%`;
+
           query = query.or(
             [
               `full_name.ilike.${pattern}`,
@@ -248,7 +429,9 @@ export default async function handler(req: Request, res: Response) {
       }
 
       if (body.sort) {
-        const sortColumn = String(body.sort.column || "");
+        const sortColumn = String(
+          body.sort.column || "",
+        );
 
         const allowedSort = [
           "created_at",
@@ -257,7 +440,11 @@ export default async function handler(req: Request, res: Response) {
         ];
 
         if (!allowedSort.includes(sortColumn)) {
-          return sendError(res, 400, "Mpangilio wa data si sahihi.");
+          return sendError(
+            res,
+            400,
+            "Mpangilio wa data si sahihi.",
+          );
         }
 
         query = query.order(sortColumn, {
@@ -277,14 +464,41 @@ export default async function handler(req: Request, res: Response) {
       }
     }
 
+    // =========================
+    // UPDATE - ADMIN PEKEE
+    // =========================
     if (operation === "update") {
+      if (!isAdmin) {
+        return sendError(
+          res,
+          403,
+          "Huruhusiwi kubadilisha taarifa hizi.",
+        );
+      }
+
       const payload = body.payload;
 
-      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-        return sendError(res, 400, "Taarifa za mabadiliko si sahihi.");
+      if (
+        !payload ||
+        typeof payload !== "object" ||
+        Array.isArray(payload)
+      ) {
+        return sendError(
+          res,
+          400,
+          "Taarifa za mabadiliko si sahihi.",
+        );
       }
 
       const filters = body.filters || {};
+
+      if (
+        !filters ||
+        typeof filters !== "object" ||
+        Array.isArray(filters)
+      ) {
+        return sendError(res, 400, "Kichujio si sahihi.");
+      }
 
       if (table === "gochati_users") {
         const allowed = [
@@ -300,19 +514,38 @@ export default async function handler(req: Request, res: Response) {
           keys.length === 0 ||
           keys.some((key) => !allowed.includes(key))
         ) {
-          return sendError(res, 400, "Mabadiliko haya hayaruhusiwi.");
+          return sendError(
+            res,
+            400,
+            "Mabadiliko haya hayaruhusiwi.",
+          );
         }
 
         if (
           payload.account_status !== undefined &&
-          !["active", "deactivated", "banned"].includes(payload.account_status)
+          ![
+            "active",
+            "deactivated",
+            "banned",
+          ].includes(payload.account_status)
         ) {
-          return sendError(res, 400, "Hali ya akaunti si sahihi.");
+          return sendError(
+            res,
+            400,
+            "Hali ya akaunti si sahihi.",
+          );
         }
 
         for (const key of keys) {
-          if (typeof payload[key] !== "boolean" && key !== "account_status") {
-            return sendError(res, 400, "Thamani ya mabadiliko si sahihi.");
+          if (
+            typeof payload[key] !== "boolean" &&
+            key !== "account_status"
+          ) {
+            return sendError(
+              res,
+              400,
+              "Thamani ya mabadiliko si sahihi.",
+            );
           }
         }
       } else if (table === "gochati_withdrawals") {
@@ -320,23 +553,39 @@ export default async function handler(req: Request, res: Response) {
 
         if (
           keys.length === 0 ||
-          keys.some((key) => !["status", "paid_at"].includes(key)) ||
+          keys.some(
+            (key) => !["status", "paid_at"].includes(key),
+          ) ||
           payload.status !== "paid" ||
           typeof payload.paid_at !== "string"
         ) {
-          return sendError(res, 400, "Mabadiliko ya withdrawal si sahihi.");
+          return sendError(
+            res,
+            400,
+            "Mabadiliko ya withdrawal si sahihi.",
+          );
         }
       } else {
-        return sendError(res, 403, "Mabadiliko haya hayaruhusiwi.");
+        return sendError(
+          res,
+          403,
+          "Mabadiliko haya hayaruhusiwi.",
+        );
       }
 
       const filterEntries = Object.entries(filters);
 
       if (
         filterEntries.length !== 1 ||
-        !(allowedFilters[table] || []).includes(filterEntries[0][0])
+        !(allowedFilters[table] || []).includes(
+          filterEntries[0][0],
+        )
       ) {
-        return sendError(res, 400, "Kitambulisho cha taarifa hakipo.");
+        return sendError(
+          res,
+          400,
+          "Kitambulisho cha taarifa hakipo.",
+        );
       }
 
       query = adminClient.from(table).update(payload);
@@ -348,9 +597,24 @@ export default async function handler(req: Request, res: Response) {
       query = query.select("*");
     }
 
+    // =========================
+    // INSERT - ADMIN PEKEE
+    // =========================
     if (operation === "insert") {
+      if (!isAdmin) {
+        return sendError(
+          res,
+          403,
+          "Huruhusiwi kuingiza taarifa hizi.",
+        );
+      }
+
       if (table !== "gochati_notifications") {
-        return sendError(res, 403, "Insert hairuhusiwi.");
+        return sendError(
+          res,
+          403,
+          "Insert hairuhusiwi.",
+        );
       }
 
       const payload = body.payload;
@@ -362,7 +626,11 @@ export default async function handler(req: Request, res: Response) {
         !payload.message.trim() ||
         payload.message.length > 2000
       ) {
-        return sendError(res, 400, "Notification si sahihi.");
+        return sendError(
+          res,
+          400,
+          "Notification si sahihi.",
+        );
       }
 
       query = adminClient
