@@ -89,19 +89,39 @@ export default async (req: Request, context: Context) => {
     };
     let user;
     try {
-      const result = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: data,
-      });
-      if (result.error) throw result.error;
-      user = result.data.user;
-    } catch {
-      throw new HttpError(
-        409,
-        "Usajili haujakamilika. Kagua taarifa zako, au ingia ikiwa una akaunti.",
+      // A previous request may have created the Auth user before the profile insert failed.
+      // Reuse that orphaned Auth record so a retry can finish registration instead of
+      // returning a misleading duplicate-account conflict.
+      const users = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const orphanedUser = users.data.users.find(
+        (candidate) => candidate.email?.toLowerCase() === email && !existing.length,
       );
+      if (orphanedUser) {
+        const updated = await supabaseAdmin.auth.admin.updateUserById(orphanedUser.id, {
+          password,
+          email_confirm: true,
+          user_metadata: data,
+        });
+        if (updated.error) throw updated.error;
+        user = updated.data.user;
+      } else {
+        const result = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: data,
+        });
+        if (result.error) throw result.error;
+        user = result.data.user;
+      }
+    } catch (error) {
+      if ((error as { code?: string })?.code === "email_exists") {
+        throw new HttpError(
+          409,
+          "Usajili haujakamilika. Email hii tayari inatumika; ingia au rejesha password.",
+        );
+      }
+      throw new HttpError(500, "Usajili umeshindikana kwa muda. Jaribu tena baadaye.");
     }
     try {
       await db.sql`INSERT INTO gochati_users(id,email,username,full_name,phone,country,account_status,activation_paid) VALUES (${user.id},${email},${username},${data.full_name},${data.phone},${data.country},'active',true)`;
