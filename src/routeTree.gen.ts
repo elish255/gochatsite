@@ -17,6 +17,7 @@ import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WithdrawalRouteImport } from './routes/withdrawal'
+import { Route as ApiGochatiAuthRouteImport } from './routes/api/gochati-auth'
 import { Route as ChatPersonIdRouteImport } from './routes/chat.$personId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const WithdrawalRoute = WithdrawalRouteImport.update({
   path: '/withdrawal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGochatiAuthRoute = ApiGochatiAuthRouteImport.update({
+  id: '/api/gochati-auth',
+  path: '/api/gochati-auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChatPersonIdRoute = ChatPersonIdRouteImport.update({
   id: '/chat/$personId',
   path: '/chat/$personId',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
   '/withdrawal': typeof WithdrawalRoute
+  '/api/gochati-auth': typeof ApiGochatiAuthRoute
   '/chat/$personId': typeof ChatPersonIdRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
   '/withdrawal': typeof WithdrawalRoute
+  '/api/gochati-auth': typeof ApiGochatiAuthRoute
   '/chat/$personId': typeof ChatPersonIdRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
   '/withdrawal': typeof WithdrawalRoute
+  '/api/gochati-auth': typeof ApiGochatiAuthRoute
   '/chat/$personId': typeof ChatPersonIdRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/terms'
     | '/withdrawal'
+    | '/api/gochati-auth'
     | '/chat/$personId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/terms'
     | '/withdrawal'
+    | '/api/gochati-auth'
     | '/chat/$personId'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/terms'
     | '/withdrawal'
+    | '/api/gochati-auth'
     | '/chat/$personId'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   TermsRoute: typeof TermsRoute
   WithdrawalRoute: typeof WithdrawalRoute
+  ApiGochatiAuthRoute: typeof ApiGochatiAuthRoute
   ChatPersonIdRoute: typeof ChatPersonIdRoute
 }
 
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WithdrawalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/gochati-auth': {
+      id: '/api/gochati-auth'
+      path: '/api/gochati-auth'
+      fullPath: '/api/gochati-auth'
+      preLoaderRoute: typeof ApiGochatiAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chat/$personId': {
       id: '/chat/$personId'
       path: '/chat/$personId'
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   TermsRoute: TermsRoute,
   WithdrawalRoute: WithdrawalRoute,
+  ApiGochatiAuthRoute: ApiGochatiAuthRoute,
   ChatPersonIdRoute: ChatPersonIdRoute,
 }
 export const routeTree = rootRouteImport
