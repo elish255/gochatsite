@@ -404,12 +404,8 @@ export default async function handler(req: Request, res: Response) {
       );
     }
 
-    if (
-      table === "gochati_notifications" &&
-      operation !== "insert"
-    ) {
-      return sendError(res, 403, "Operesheni hairuhusiwi.");
-    }
+    // Notifications support SELECT (owner only), INSERT (admin only),
+    // and UPDATE read_at (owner only); each operation is checked below.
 
     let query: any;
 
