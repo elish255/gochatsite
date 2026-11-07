@@ -202,8 +202,23 @@ function AdminPage() {
     await load();
   }
   async function updateUser(id: string, patch: Record<string, unknown>) {
-    const { error } = await platform.from("gochati_users").update(patch).eq("id", id);
-    setNotice(error?.message || "Mabadiliko yamehifadhiwa.");
+    // VIP is also a premium tier; keep both flags consistent.
+    const changes = patch.is_vip === true ? { ...patch, is_premium: true } : patch;
+    const { data, error } = await platform
+      .from("gochati_users")
+      .update(changes)
+      .eq("id", id)
+      .select("id,is_premium,is_vip,account_status")
+      .maybeSingle();
+    if (error) {
+      setNotice("Imeshindwa kuhifadhi mabadiliko: " + error.message);
+      return;
+    }
+    if (!data) {
+      setNotice("Hakuna akaunti iliyobadilishwa. Hakiki ruhusa za Admin na user ID.");
+      return;
+    }
+    setNotice(`Imehifadhiwa: Premium ${data.is_premium ? "NDIYO" : "HAPANA"}, VIP ${data.is_vip ? "NDIYO" : "HAPANA"}. Dashboard ya mtumiaji itasasishwa akifungua upya.`);
     await load();
   }
   async function adjustBalance(id: string, current: number, mode: "add" | "subtract") {
