@@ -17,7 +17,6 @@ type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function error(res: Response, status: number, message: string) {
   return res.status(status).json({ message });
@@ -63,6 +62,7 @@ export default async function handler(req: Request, res: Response) {
       return { role: item.role, content: item.content } as ChatMessage;
     });
 
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const result = await openai.chat.completions.create({
       model: process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini",
       temperature: 0.8,

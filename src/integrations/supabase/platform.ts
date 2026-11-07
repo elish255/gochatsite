@@ -51,7 +51,15 @@ export async function api(body: Record<string, unknown>) {
     body: JSON.stringify(body),
   });
 
-  const value = await response.json();
+  const raw = await response.text();
+  let value: any;
+  try {
+    value = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error(
+      `Server imerudisha jibu lisilo sahihi (HTTP ${response.status}). Tafadhali jaribu tena.`
+    );
+  }
 
   if (!response.ok) {
     throw new Error(
