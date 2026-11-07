@@ -59,6 +59,7 @@ const allowedFilters: Record<string, string[]> = {
   gochati_users: ["id"],
   gochati_withdrawals: ["id", "user_id"],
   gochati_payments: ["id"],
+  gochati_notifications: ["id", "user_id"],
 };
 
 function sendError(
@@ -440,7 +441,8 @@ export default async function handler(req: Request, res: Response) {
         // na withdrawal zake pekee.
         if (
           table !== "gochati_users" &&
-          table !== "gochati_withdrawals"
+          table !== "gochati_withdrawals" &&
+          table !== "gochati_notifications"
         ) {
           return sendError(
             res,
@@ -479,6 +481,21 @@ export default async function handler(req: Request, res: Response) {
               res,
               403,
               "Huruhusiwi kuona withdrawal hizi.",
+            );
+          }
+
+          query = query.eq("user_id", user.id);
+        }
+
+        if (table === "gochati_notifications") {
+          if (
+            filterEntries.length !== 1 ||
+            filters.user_id !== user.id
+          ) {
+            return sendError(
+              res,
+              403,
+              "Huruhusiwi kuona notifications za mtumiaji mwingine.",
             );
           }
 
@@ -558,10 +575,35 @@ export default async function handler(req: Request, res: Response) {
     }
 
     // =========================
-    // UPDATE - ADMIN PEKEE
+    // UPDATE - ADMIN OR OWNER'S NOTIFICATION READ STATUS
     // =========================
     if (operation === "update") {
-      if (!isAdmin) {
+      const payload = body.payload;
+
+      if (!isAdmin && table === "gochati_notifications") {
+        const filters = body.filters || {};
+        const filterEntries = Object.entries(filters);
+        if (
+          !payload ||
+          typeof payload !== "object" ||
+          Array.isArray(payload) ||
+          Object.keys(payload).length !== 1 ||
+          typeof payload.read_at !== "string" ||
+          Number.isNaN(Date.parse(payload.read_at)) ||
+          filterEntries.length !== 1 ||
+          typeof filters.id !== "string" ||
+          !filters.id
+        ) {
+          return sendError(res, 400, "Taarifa za notification si sahihi.");
+        }
+
+        query = adminClient
+          .from("gochati_notifications")
+          .update({ read_at: payload.read_at })
+          .eq("id", filters.id)
+          .eq("user_id", user.id)
+          .select("*");
+      } else if (!isAdmin) {
         return sendError(
           res,
           403,
@@ -569,6 +611,9 @@ export default async function handler(req: Request, res: Response) {
         );
       }
 
+      if (!isAdmin) {
+        // Notification ya mtumiaji mwenyewe imewekewa user_id kwenye query.
+      } else {
       const payload = body.payload;
 
       if (
@@ -688,6 +733,7 @@ export default async function handler(req: Request, res: Response) {
       }
 
       query = query.select("*");
+      }
     }
 
     // =========================
