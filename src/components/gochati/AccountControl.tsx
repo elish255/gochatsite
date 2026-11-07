@@ -21,7 +21,7 @@ export function AccountControl() {
         </Button>
         <Button asChild variant="outline" className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold">
           <Link to="/login">
-            <LogIn className="size-4" /> Ingia
+            <LogIn className="size-4" /> Ingia Hapa
           </Link>
         </Button>
       </div>

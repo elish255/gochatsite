@@ -614,10 +614,20 @@ function se({ person: e, kind: t, onClose: n, active = false }) {
                     className: `mt-3 text-sm font-semibold text-destructive`,
                     children: active ? `Imeshindwa Kuanzisha, Endelea Kuchat` : `Huwezi kutumia huduma hii mpaka uwe na account hai.`,
                   }),
-                  !active && (0, K.jsx)(`a`, {
-                    href: L,
-                    className: `grad-withdraw mt-4 block w-full rounded-xl px-4 py-3 text-sm font-bold text-on-color`,
-                    children: `Fungua Account Hapa`,
+                  !active && (0, K.jsxs)(`div`, {
+                    className: `mt-4 flex w-full flex-col gap-2`,
+                    children: [
+                      (0, K.jsx)(`a`, {
+                        href: L || `/register`,
+                        className: `grad-withdraw block w-full rounded-xl px-4 py-3 text-center text-sm font-bold text-on-color`,
+                        children: `Fungua Account Hapa`,
+                      }),
+                      (0, K.jsx)(`a`, {
+                        href: `/login`,
+                        className: `block w-full rounded-xl border border-border bg-card px-4 py-3 text-center text-sm font-bold text-foreground`,
+                        children: `Ingia Hapa`,
+                      }),
+                    ],
                   }),
                 ],
               })

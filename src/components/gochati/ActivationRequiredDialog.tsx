@@ -25,6 +25,11 @@ export function ActivationRequiredDialog({ open, onClose }: { open: boolean; onC
             <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-on-color/15"><ArrowRight className="size-5" aria-hidden="true" /></span>
           </a>
         </Button>
+        <Button variant="outline" size="reference" asChild className="w-full rounded-[2rem] px-6 py-5">
+          <a href="/login" className="flex items-center justify-center gap-2">
+            <span className="text-base font-extrabold">INGIA HAPA</span>
+          </a>
+        </Button>
         <Button variant="reference" size="reference" className="py-1 text-sm text-muted-foreground" onClick={onClose}>Rudi nyuma</Button>
       </DialogContent>
     </Dialog>
