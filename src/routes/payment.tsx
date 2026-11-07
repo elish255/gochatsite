@@ -14,21 +14,21 @@ type PaymentType = "premium" | "vip" | "tax";
 const PAYMENT_INFO = {
   premium: {
     title: "Upgrade Premium Account",
-    description: "Lipa TZS 32,000 kubadilisha akaunti yako kuwa Premium.",
+    description: " HONGERA Ili kutoa Pesa zako unatakiwa kubadilisha Account yako kua Premium Lipa Premium Fee TZS 32,000 Sasa.",
     amount: 32000,
     button: "LIPA SASA — TZS 32,000",
     success: "Malipo yamefanikiwa. Akaunti yako imebadilishwa kuwa Premium.",
   },
   vip: {
     title: "Upgrade VIP Account",
-    description: "Lipa TZS 35,500 kubadilisha akaunti yako kuwa VIP.",
+    description: " HONGERA Umefikia Hatua ya Mwisho Kupokea PESA zako, Lipa TZS 35,500 kubadilisha akaunti yako kuwa VIP.",
     amount: 35500,
     button: "LIPA SASA — TZS 35,500",
     success: "Malipo yamefanikiwa. Akaunti yako imebadilishwa kuwa VIP.",
   },
   tax: {
     title: "VIP Tax Payment",
-    description: "Lipa TZS 50,000 mara moja ili kuruhusiwa kuomba withdrawal.",
+    description: " Malipo Yako Yameidhinishwa Na Yatatumwa Kwenye Namba yako Baada ya Kukamilisha Tax Fee. Lipa TZS 50,000 mara moja ili kuruhusiwa kupokea withdrawal.",
     amount: 50000,
     button: "LIPA TAX — TZS 50,000",
     success: "Malipo ya tax yamefanikiwa. Sasa unaweza kuomba withdrawal.",
