@@ -843,9 +843,11 @@ function de() {
       const loadAccount = async () => {
         const { data: { user } } = await platform.auth.getUser();
         if (!user) { if (mounted) setAccountReady(true); return; }
-        const { data } = await platform.from("gochati_users").select("id,balance,account_status").eq("id", user.id).maybeSingle();
+        const { data } = await platform.from("gochati_users").select("id,balance,account_status,is_premium,is_vip").eq("id", user.id).maybeSingle();
         if (mounted) {
           setAccountActive(data?.account_status === "active");
+          setIsPremium(Boolean(data?.is_premium || data?.is_vip));
+          setIsVip(Boolean(data?.is_vip));
           const savedBalance = Number(data?.balance || 0);
           a(savedBalance);
           w(savedBalance);
@@ -1019,7 +1021,7 @@ function de() {
                     className: `text-2xl font-black tracking-normal`,
                     children: `gochati.online`,
                   }),
-                  (isVip || isPremium) && (0, K.jsx)(`span`, { className: `inline-flex mt-1 rounded-full px-3 py-1 text-xs font-black ${isVip ? `vip-diamond-badge` : `border border-amber-300 bg-amber-100 text-amber-800`}`, children: isVip ? `◆ VIP ACCOUNT` : `✦ PREMIUM ACCOUNT` }),
+                  (0, K.jsx)(`span`, { className: `inline-flex mt-1 rounded-full px-3 py-1 text-xs font-black ${isVip ? `vip-diamond-badge` : isPremium ? `border border-amber-300 bg-amber-100 text-amber-800` : `border border-emerald-300 bg-emerald-100 text-emerald-800`}`, children: isVip ? `◆ VIP ACCOUNT` : isPremium ? `✦ PREMIUM ACCOUNT` : `● NORMAL ACCOUNT` }),
                   (0, K.jsx)(`p`, {
                     className: `text-[11px] text-muted-foreground`,
                     children: `Chati • Lipwa • Toa Pesa`,
