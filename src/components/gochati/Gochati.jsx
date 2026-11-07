@@ -1136,12 +1136,22 @@ function de() {
               }),
             ],
           }),
-          accountReady && !accountActive && (0, K.jsxs)(`a`, {
-            href: L,
-            className: `grad-brand mt-3 flex items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold text-on-color shadow-lg`,
+          accountReady && !accountActive && (0, K.jsxs)(`div`, {
+            className: `mt-3 flex w-full items-center gap-2`,
             children: [
-              (0, K.jsx)(ne, { className: `size-4` }),
-              ` Fungua Account Hapa`,
+              (0, K.jsxs)(`a`, {
+                href: L,
+                className: `grad-brand flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-center text-xs font-bold text-on-color shadow-lg`,
+                children: [
+                  (0, K.jsx)(ne, { className: `size-4 shrink-0` }),
+                  `Fungua Account Hapa`,
+                ],
+              }),
+              (0, K.jsx)(`a`, {
+                href: `/login`,
+                className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-2 py-3 text-center text-xs font-bold text-foreground shadow-sm`,
+                children: `Ingia Hapa`,
+              }),
             ],
           }),
           (0, K.jsxs)(`section`, {

@@ -13,15 +13,15 @@ export function AccountControl() {
     "grad-brand mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold text-on-color shadow-lg";
   if (!user)
     return (
-      <div className="mt-3 flex w-full flex-col gap-2">
-        <Button asChild variant="reference" className={className}>
+      <div className="mt-3 flex w-full items-center gap-2">
+        <Button asChild variant="reference" className="grad-brand flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-center text-xs font-bold text-on-color shadow-lg">
           <Link to="/register">
-            <UserPlus className="size-4" /> Fungua Account Hapa
+            <UserPlus className="size-4 shrink-0" /> Fungua Account Hapa
           </Link>
         </Button>
-        <Button asChild variant="outline" className="flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold">
+        <Button asChild variant="outline" className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-center text-xs font-bold">
           <Link to="/login">
-            <LogIn className="size-4" /> Ingia Hapa
+            <LogIn className="size-4 shrink-0" /> Ingia Hapa
           </Link>
         </Button>
       </div>
