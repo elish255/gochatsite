@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { chatPersona } from "../src/lib/chat-personas";
+import { chatPersona } from "../src/lib/chat-personas.ts";
 import { createClient } from "@supabase/supabase-js";
 
 type Request = {
