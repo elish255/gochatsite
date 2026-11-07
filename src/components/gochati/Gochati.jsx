@@ -2,6 +2,7 @@ import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
 import { platform } from "@/integrations/supabase/platform";
+import { supabase } from "@/integrations/supabase/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
 import { ActivationRequiredDialog } from "./ActivationRequiredDialog";
@@ -333,10 +334,15 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       const controller = new AbortController();
       requestRef.current = controller;
       o(history); c(``); d(true); setReplyError(``);
-      try {
-        const response = await fetch(`/api/gochati-chat`, {
-          method: `POST`, credentials: `same-origin`,
-          headers: { "Content-Type": "application/json" },
+  try {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.access_token) throw new Error(`Tafadhali ingia tena kwenye akaunti yako.`);
+  const response = await fetch(`/api/gochati-chat`, {
+  method: `POST`, credentials: `same-origin`,
+  headers: {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${session.access_token}`,
+  },
           body: JSON.stringify({ personId: e.id, messages: history.slice(-24).map((item) => ({ role: item.from === `me` ? `user` : `assistant`, content: item.text })) }),
           signal: controller.signal,
         });
