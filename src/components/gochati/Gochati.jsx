@@ -2,6 +2,7 @@ import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
 import { platform } from "@/integrations/supabase/platform";
+import { supabase } from "@/integrations/supabase/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
 import { ActivationRequiredDialog } from "./ActivationRequiredDialog";
@@ -333,10 +334,15 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       const controller = new AbortController();
       requestRef.current = controller;
       o(history); c(``); d(true); setReplyError(``);
-      try {
-        const response = await fetch(`/api/gochati-chat`, {
-          method: `POST`, credentials: `same-origin`,
-          headers: { "Content-Type": "application/json" },
+  try {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.access_token) throw new Error(`Tafadhali ingia tena kwenye akaunti yako.`);
+  const response = await fetch(`/api/gochati-chat`, {
+  method: `POST`, credentials: `same-origin`,
+  headers: {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${session.access_token}`,
+  },
           body: JSON.stringify({ personId: e.id, messages: history.slice(-24).map((item) => ({ role: item.from === `me` ? `user` : `assistant`, content: item.text })) }),
           signal: controller.signal,
         });
@@ -663,7 +669,7 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         }),
         (0, K.jsx)(`h3`, {
           className: `text-center text-lg font-bold`,
-          children: active ? `Salio la ${I(e || 0)} limehifadhiwa; Angalia Kwenye Balance` : `Akaunti yako haijawa hai`,
+          children: active ? `Hongera Umelipwa ${I(e || 0)}. Salio lako lipo Kwenye Balance` : `Huwezi kulipwa hadi ufungue Account`,
         }),
         active ? (0, K.jsx)(`button`, {
           onClick: t,
@@ -672,9 +678,9 @@ function ce({ amount: e, onClose: t, onUpgrade: upgrade, active = false }) {
         }) : (0, K.jsxs)(K.Fragment, { children: [
           (0, K.jsxs)(`p`, {
             className: `mt-3 text-center text-sm leading-relaxed text-muted-foreground`,
-            children: `Jisajili sasa kuweza kuendelea kuchat na kulipwa. Akaunti yako inakuwa active moja kwa moja.`,
+            children: `Huwezi kulipwa hadi ufungue Account. Fungua Account Sasa ili malipo yawekwe kwenye Balance yako.`,
           }),
-          (0, K.jsxs)(`a`, { href: L, className: `grad-withdraw mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-lg transition active:scale-95`, children: [`Jisajili Sasa `, (0, K.jsx)(f, { className: `size-4` })] }),
+          (0, K.jsxs)(`a`, { href: L, className: `grad-withdraw mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-lg transition active:scale-95`, children: [`Fungua Account Sasa `, (0, K.jsx)(f, { className: `size-4` })] }),
         ]}),
       ],
     }),
@@ -834,8 +840,14 @@ function de() {
       const loadAccount = async () => {
         const { data: { user } } = await platform.auth.getUser();
         if (!user) { if (mounted) setAccountReady(true); return; }
-        const { data } = await platform.from("gochati_users").select("account_status,activation_paid,is_premium,is_vip,referral_count,balance,net_income,username").eq("id", user.id).maybeSingle();
-        if (mounted && data) { setAccountActive(data.account_status === "active"); setIsPremium(!!data.is_premium); setIsVip(!!data.is_vip); setReferralCount(Number(data.referral_count || 0)); setUsername(String(data.username || "")); const savedBalance = Number(data.balance || 0); r(Number(data.net_income || 0)); a(savedBalance); w(savedBalance); setAccountReady(true); }
+        const { data } = await platform.from("profiles").select("id,balance").eq("id", user.id).maybeSingle();
+        if (mounted) {
+          setAccountActive(!!user && !!data);
+          const savedBalance = Number(data?.balance || 0);
+          a(savedBalance);
+          w(savedBalance);
+          setAccountReady(true);
+        }
       };
       void loadAccount();
       window.addEventListener("focus", loadAccount);
@@ -917,8 +929,8 @@ function de() {
       if (error) { h({ id: `earned-error-${Date.now()}`, text: `Mapato hayajaongezwa: ${error.message}` }); setTimeout(() => h(null), 7000); return; }
       const nextBalance = Number(savedBalance || 0);
       a(nextBalance); w(nextBalance);
-      const { data: profile } = await platform.from("gochati_users").select("net_income").eq("id", user.id).single();
-      if (profile) r(Number(profile.net_income || 0));
+      const { data: profile } = await platform.from("profiles").select("balance").eq("id", user.id).single();
+      if (profile) a(Number(profile.balance || 0));
       f({ open: true, amount: e });
       setTimeout(() => h(null), 5000);
     }, [accountActive]),
