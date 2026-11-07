@@ -843,9 +843,9 @@ function de() {
       const loadAccount = async () => {
         const { data: { user } } = await platform.auth.getUser();
         if (!user) { if (mounted) setAccountReady(true); return; }
-        const { data } = await platform.from("profiles").select("id,balance").eq("id", user.id).maybeSingle();
+        const { data } = await platform.from("gochati_users").select("id,balance,account_status").eq("id", user.id).maybeSingle();
         if (mounted) {
-          setAccountActive(!!user && !!data);
+          setAccountActive(data?.account_status === "active");
           const savedBalance = Number(data?.balance || 0);
           a(savedBalance);
           w(savedBalance);
