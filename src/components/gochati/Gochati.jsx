@@ -346,7 +346,10 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
           body: JSON.stringify({ personId: e.id, messages: history.slice(-24).map((item) => ({ role: item.from === `me` ? `user` : `assistant`, content: item.text })) }),
           signal: controller.signal,
         });
-        const result = await response.json();
+        const raw = await response.text();
+        let result;
+        try { result = raw ? JSON.parse(raw) : {}; }
+        catch { throw new Error(`Server imerudisha jibu lisilo sahihi (HTTP ${response.status}). Jaribu tena baadaye.`); }
         if (!response.ok || !result.reply) throw new Error(result.message || `Jibu halijapatikana. Jaribu tena.`);
         if (mountedRef.current) o((items) => [...items, { id: crypto.randomUUID(), from: `them`, text: result.reply }]);
       } catch (error) {
