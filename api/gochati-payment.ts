@@ -1,6 +1,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
+import webpush from "web-push";
 
 const BASE_URL = "https://api.splashpay.co.tz/api/v1";
 
@@ -12,6 +13,33 @@ const send = (
 
 const normalizeStatus = (value: unknown) =>
   String(value || "pending").toLowerCase();
+
+
+async function sendAdminPush(admin: any, title: string, body: string) {
+  const publicKey = process.env.VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const subject = process.env.VAPID_SUBJECT;
+  if (!publicKey || !privateKey || !subject) return;
+  try {
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+    const { data: subscriptions, error } = await admin
+      .from("gochati_push_subscriptions")
+      .select("id,subscription");
+    if (error || !subscriptions?.length) return;
+    const payload = JSON.stringify({ title, body, url: "/admin", icon: "/icon-192.png" });
+    await Promise.all(subscriptions.map(async (item: any) => {
+      try {
+        await webpush.sendNotification(item.subscription, payload);
+      } catch (error: any) {
+        if (error?.statusCode === 404 || error?.statusCode === 410) {
+          await admin.from("gochati_push_subscriptions").delete().eq("id", item.id);
+        }
+      }
+    }));
+  } catch (error) {
+    console.error("Could not send admin payment push", error);
+  }
+}
 
 const PAYMENT_AMOUNTS: Record<string, number> = {
   premium: 32000,
@@ -154,34 +182,8 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const userClient = createClient(
-      supabaseUrl,
-      anonKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    );
-
-    const { data: userResult, error: authError } =
-      await userClient.auth.getUser(token);
-
-    if (authError || !userResult.user) {
-      return send(res, 401, {
-        message:
-          "Session imeisha. Ingia tena kisha ujaribu.",
-      });
-    }
-
-    const user = userResult.user;
-
+    // Validate the caller's JWT using the server-side privileged client.
+    // This avoids false 401 responses caused by a mismatched browser/anon key.
     const admin = createClient(
       supabaseUrl,
       serviceKey,
@@ -192,6 +194,26 @@ export default async function handler(req: any, res: any) {
         },
       }
     );
+
+    const { data: userResult, error: authError } =
+      await admin.auth.getUser(token);
+
+    if (authError || !userResult.user) {
+      console.error("Gochati payment token validation failed", authError?.message);
+      return send(res, 401, {
+        message: "Session imeisha au token si sahihi. Tafadhali toka kisha ingia tena.",
+      });
+    }
+
+    const user = userResult.user;
+
+    const { data: adminRecord, error: adminLookupError } = await admin
+      .from("gochati_admins")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (adminLookupError) throw adminLookupError;
+    const isAdmin = !!adminRecord;
 
     const body =
       typeof req.body === "string"
@@ -322,6 +344,24 @@ export default async function handler(req: any, res: any) {
         });
       }
 
+      // Notify admins whenever a user starts a payment request.
+      const { error: eventError } = await admin
+        .from("gochati_admin_events")
+        .insert({
+          kind: "payment",
+          user_id: user.id,
+          username: `${profile.username || profile.full_name || "User"} · ${purpose.toUpperCase()} · TZS ${amount.toLocaleString("en-US")} · ${phone}`,
+        });
+      if (eventError) {
+        console.error("Could not create admin payment event", eventError);
+      } else {
+        await sendAdminPush(
+          admin,
+          "Gochati · Ombi jipya la malipo",
+          `${profile.username || profile.full_name || "User"} ameanza kulipa TZS ${amount.toLocaleString("en-US")} kwa ${purpose.toUpperCase()} (${phone}).`
+        );
+      }
+
       const providerResponse = await fetch(
         `${BASE_URL}/payments/mobile-money`,
         {
@@ -423,8 +463,13 @@ export default async function handler(req: any, res: any) {
             "id,user_id,amount,status,order_id,provider_reference,purpose,currency"
           )
           .eq("order_id", reference)
-          .eq("user_id", user.id)
           .maybeSingle();
+
+      if (!isAdmin && payment?.user_id !== user.id) {
+        return send(res, 404, {
+          message: "Ombi la malipo halijapatikana.",
+        });
+      }
 
       if (paymentError || !payment) {
         return send(res, 404, {

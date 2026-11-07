@@ -1,5 +1,6 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "npm:web-push@3.6.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -218,6 +219,39 @@ Deno.serve(async (request: Request) => {
         },
         500
       );
+    }
+
+    // The auth.users trigger records the registration event. Send a real
+    // browser push as well when the Admin has enabled phone notifications.
+    try {
+      const publicKey = Deno.env.get("VAPID_PUBLIC_KEY");
+      const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+      const subject = Deno.env.get("VAPID_SUBJECT");
+      if (publicKey && privateKey && subject) {
+        webpush.setVapidDetails(subject, publicKey, privateKey);
+        const { data: subscriptions } = await admin
+          .from("gochati_push_subscriptions")
+          .select("id,subscription");
+        const payload = JSON.stringify({
+          title: "Gochati · Usajili mpya",
+          body: `${username} (${fullName}) amejisajili kwenye Gochati.online.`,
+          url: "/admin",
+          icon: "/icon-192.png",
+        });
+        await Promise.all((subscriptions || []).map(async (item: any) => {
+          try {
+            await webpush.sendNotification(item.subscription, payload);
+          } catch (pushError: any) {
+            if (pushError?.statusCode === 404 || pushError?.statusCode === 410) {
+              await admin.from("gochati_push_subscriptions").delete().eq("id", item.id);
+            }
+            console.error("Registration push failed", pushError?.message || pushError);
+          }
+        }));
+      }
+    } catch (pushError) {
+      // Notification delivery must never undo a successful registration.
+      console.error("Could not send registration push", pushError);
     }
 
     return reply(

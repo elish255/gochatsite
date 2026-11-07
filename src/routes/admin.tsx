@@ -696,9 +696,17 @@ function AdminPage() {
                           onClick={async () => {
                             setPaymentBusy(payment.id);
                             try {
+                              const { data: sessionData, error: sessionError } =
+                                await platform.auth.getSession();
+                              if (sessionError || !sessionData.session?.access_token) {
+                                throw new Error("Session ya Admin imeisha. Ingia tena.");
+                              }
                               const response = await fetch("/api/gochati-payment", {
                                 method: "POST",
-                                headers: { "Content-Type": "application/json" },
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  Authorization: `Bearer ${sessionData.session.access_token}`,
+                                },
                                 body: JSON.stringify({
                                   action: "status",
                                   reference: payment.order_id,

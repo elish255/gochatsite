@@ -147,7 +147,7 @@ export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) =
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Usajili mpya na ujumbe wa customer care. Ruhusu notifications; iPhone inahitaji tovuti
+        Usajili mpya, kila ombi la LIPA SASA na ujumbe wa customer care. Ruhusu notifications; iPhone inahitaji tovuti
         kwenye Home Screen. Kila simu inawashwa kivyake.
       </p>
       {error && (
@@ -170,7 +170,9 @@ export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) =
                   <p>
                     {e.kind === "registration"
                       ? `Usajili mpya · ${e.username || "Akaunti iliyofutwa"}`
-                      : `User (${e.username || "Akaunti iliyofutwa"}) ametuma ujumbe`}
+                      : e.kind === "payment"
+                        ? `Ombi jipya la malipo · ${e.username || "User"}`
+                        : `User (${e.username || "Akaunti iliyofutwa"}) ametuma ujumbe`}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(e.created_at).toLocaleString()}
@@ -196,9 +198,13 @@ export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) =
           <p className="font-bold">
             {popup.kind === "registration"
               ? "Mtumiaji mpya amejisajili"
-              : `User (${popup.username || "Akaunti iliyofutwa"}) ametuma ujumbe`}
+              : popup.kind === "payment"
+                ? "Mtumiaji amebonyeza LIPA SASA"
+                : `User (${popup.username || "Akaunti iliyofutwa"}) ametuma ujumbe`}
           </p>
-          {popup.kind === "registration" && <p className="text-sm">{popup.username}</p>}
+          {(popup.kind === "registration" || popup.kind === "payment") && (
+            <p className="text-sm">{popup.username}</p>
+          )}
           <div className="mt-2 flex gap-2">
             {popup.kind === "support" && (
               <Button
