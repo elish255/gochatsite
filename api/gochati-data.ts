@@ -207,6 +207,30 @@ export default async function handler(req: Request, res: Response) {
         return res.status(200).json({ data });
       }
 
+      // RPC ya kukamilisha kipindi na kuweka mapato ya mtumiaji mwenyewe.
+      // Database function hutumia auth.uid(), na huhakikisha kipindi ni chake
+      // na muda wake umekwisha kabla ya kuongeza salio.
+      if (body.rpc === "gochati_complete_earning_session") {
+        const sessionId = String(args.p_session_id || "");
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId);
+
+        if (!isUuid) {
+          return sendError(res, 400, "Kitambulisho cha kipindi si sahihi.");
+        }
+
+        const { data, error } = await userClient.rpc(
+          "gochati_complete_earning_session",
+          { p_session_id: sessionId },
+        );
+
+        if (error) {
+          console.error("COMPLETE EARNING SESSION ERROR:", error);
+          return sendError(res, 400, error.message);
+        }
+
+        return res.status(200).json({ data });
+      }
+
       // RPC za withdrawal kwa kutumia session ya mtumiaji.
       if (
         body.rpc === "gochati_withdrawal_eligibility" ||
