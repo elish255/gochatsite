@@ -1007,6 +1007,9 @@ function AdminPage() {
                                   void updateUser(u.id, {
                                     activation_paid: true,
                                     account_status: "active",
+                                    ...(String(u.country || "").trim().toLowerCase() === "tz"
+                                      ? { country: "Tanzania" }
+                                      : {}),
                                   })
                                 }
                               >

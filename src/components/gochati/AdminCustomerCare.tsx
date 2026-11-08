@@ -3,6 +3,7 @@ import { Bell, BellOff, MessageCircle, ShieldBan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CustomerCareChat } from "./CustomerCareChat";
 import { careApi } from "./customer-care-api";
+import { playSound } from "@/lib/gochat-sound";
 type Event = {
   id: string;
   kind: string;
@@ -41,6 +42,11 @@ export function AdminCareNotifications({ onOpen }: { onOpen: (userId?: string) =
         setError("");
         const newest = result.data.reduce((max: string, event: Event) =>
           BigInt(event.id) > BigInt(max) ? String(event.id) : max, "0");
+        const newestRegistration = last === undefined
+          ? undefined
+          : result.data.find((event: Event) =>
+              event.kind === "registration" && BigInt(event.id) > BigInt(last!));
+        if (newestRegistration) playSound("notice");
         const unread = result.data.find((event: Event) =>
           !event.read_at && (last === undefined || BigInt(event.id) > BigInt(last)));
         if (unread) setPopup(unread);
