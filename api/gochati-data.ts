@@ -49,6 +49,7 @@ const userColumns = [
   "activation_paid",
   "is_premium",
   "is_vip",
+  "vip_tax_paid",
   "referral_count",
   "balance",
   "created_at",
@@ -640,6 +641,7 @@ export default async function handler(req: Request, res: Response) {
           "account_status",
           "is_premium",
           "is_vip",
+          "vip_tax_paid",
         ];
 
         const keys = Object.keys(payload);

@@ -33,10 +33,9 @@ function WithdrawalPage() {
 
   const isVip = Boolean(account?.is_vip);
   const isPremium = Boolean(account?.is_premium);
+  const activationPaid = Boolean(account?.activation_paid);
   const taxPaid = Boolean(account?.vip_tax_paid);
-
-  const minimumWithdrawal =
-    isPremium && !isVip ? 300000 : 100000;
+  const minimumWithdrawal = 100000;
 
   async function load() {
     const {
@@ -52,7 +51,7 @@ function WithdrawalPage() {
       platform
         .from("gochati_users")
         .select(
-          "balance, phone, account_status, is_premium, is_vip, vip_tax_paid",
+          "balance, phone, account_status, activation_paid, is_premium, is_vip, vip_tax_paid",
         )
         .eq("id", user.id)
         .single(),
@@ -107,52 +106,22 @@ function WithdrawalPage() {
   async function request() {
     if (!ready || busy || !account) return;
 
-    if (account.account_status !== "active") {
+    if (account.account_status !== "active" || !activationPaid) {
       setNotice("Akaunti yako haijawezeshwa.");
       return;
     }
 
-    // NORMAL ACCOUNT
-    if (!isPremium && !isVip) {
-      if (balance < 100000) {
-        setNotice(
-          `Unahitaji salio la TZS 100,000. Salio lako ni TZS ${balance.toLocaleString()}.`,
-        );
-        return;
-      }
-
-      window.location.href = "/payment?type=premium";
+    if (!taxPaid) {
+      setNotice(
+        "Tax Paid haijawekwa. Tafadhali wasiliana na admin ili ahakiki akaunti yako.",
+      );
       return;
     }
 
-    // PREMIUM ACCOUNT
-    if (isPremium && !isVip) {
-      if (!Number.isSafeInteger(value) || value < 300000) {
-        setNotice(
-          "Kwa akaunti ya Premium, kiasi cha withdrawal lazima kiwe TZS 300,000 au zaidi.",
-        );
-        return;
-      }
-
-      if (balance < 300000) {
-        setNotice(
-          `Unahitaji salio la TZS 300,000. Salio lako ni TZS ${balance.toLocaleString()}.`,
-        );
-        return;
-      }
-
-      window.location.href = "/payment?type=vip";
-      return;
-    }
-
-    // VIP ACCOUNT
-    if (isVip && !taxPaid) {
-      window.location.href = "/payment?type=tax";
-      return;
-    }
-
-    if (!Number.isSafeInteger(value) || value < 100000) {
-      setNotice("Minimum withdrawal ni TZS 100,000.");
+    if (!Number.isSafeInteger(value) || value < minimumWithdrawal) {
+      setNotice(
+        `Minimum withdrawal ni TZS ${minimumWithdrawal.toLocaleString()}.`,
+      );
       return;
     }
 
@@ -211,46 +180,26 @@ function WithdrawalPage() {
 
         <div className="my-4 rounded-2xl bg-secondary p-4 text-sm">
           <p className="font-bold">Hali ya akaunti</p>
-
           <p className="mt-2">
-            {isVip
-              ? "VIP"
-              : isPremium
-                ? "Premium"
-                : "Normal"}
+            {isVip ? "VIP" : isPremium ? "Premium" : "Normal"}
           </p>
-
-          {isVip && (
-            <p className="mt-1">
-              Kodi: {taxPaid ? "Imelipwa" : "Haijalipwa"}
+          <p className="mt-1">
+            Tax Paid: {taxPaid ? "Imelipwa" : "Haijawekwa"}
+          </p>
+          {!taxPaid && (
+            <p className="mt-2 text-muted-foreground">
+              Admin ndiye anayethibitisha hali ya Tax Paid kabla ya kuomba
+              withdrawal.
             </p>
           )}
-
-          {!isPremium && !isVip && (
-            <p className="mt-2">
-              Kiwango cha Chini: TZS 100,000
-            </p>
-          )}
-
-          {isPremium && !isVip && (
-            <p className="mt-2">
-              Minimum withdrawal: TZS 300,000
-              <br />
-              Kiwango cha upgrade VIP: TZS 300,000
-            </p>
-          )}
-
-          {isVip && (
-            <p className="mt-2">
-              Minimum withdrawal: TZS 100,000
-            </p>
-          )}
+          <p className="mt-2 text-muted-foreground">
+            Ombi lako litakuwa Pending hadi admin alikague na kuliidhinisha.
+          </p>
         </div>
 
         <p className="mt-3 text-sm text-muted-foreground">
-          Minimum withdrawal ni TZS{" "}
-          {minimumWithdrawal.toLocaleString()}.
-          Kiasi kisizidi salio lako.
+          Kiwango cha chini cha withdrawal ni TZS{" "}
+          {minimumWithdrawal.toLocaleString()}. Kiasi kisizidi salio lako.
         </p>
 
         <label className="auth-field">
@@ -294,7 +243,13 @@ function WithdrawalPage() {
 
         <Button
           className="auth-submit"
-          disabled={busy || !ready}
+          disabled={
+            busy ||
+            !ready ||
+            !taxPaid ||
+            !activationPaid ||
+            account?.account_status !== "active"
+          }
           onClick={() => void request()}
         >
           {busy ? "Inahifadhi..." : "Withdrawal"}
