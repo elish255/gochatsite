@@ -1,6 +1,7 @@
 import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
+import { UserGreeting } from "./UserGreeting";
 import { platform } from "@/integrations/supabase/platform";
 import { supabase } from "@/integrations/supabase/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
@@ -111,7 +112,7 @@ const M = [
       flag: o,
       photo: portraits[portraitKey],
       fallbackPhoto: portraitFallback(portraitKey),
-      online: t % 3 != 2,
+      online: true,
       rate: M[t % M.length],
     };
   }),
@@ -235,8 +236,8 @@ function q({ person: e, onChat: t, onCall: n }) {
                 ],
               }),
               (0, K.jsx)(`span`, {
-                className: `mt-1 inline-block rounded-md px-2 py-0.5 text-[10px] font-bold lowercase tracking-normal ${e.online ? `bg-success/15 text-success` : `bg-destructive/15 text-destructive`}`,
-                children: e.online ? `online` : `offline`,
+                className: `mt-1 inline-block rounded-md bg-primary/10 px-2 py-1 text-sm font-semibold text-primary`,
+                children: `Mhusika wa AI`,
               }),
               (0, K.jsxs)(`div`, {
                 className: `mt-2 inline-block rounded-lg border border-border bg-secondary/70 px-2.5 py-1 text-[11px] font-semibold`,
@@ -275,6 +276,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     [s, c] = (0, l.useState)(``),
     [u, d] = (0, l.useState)(!1),
     [f, p] = (0, l.useState)(0),
+    [chatSessionId, setChatSessionId] = (0, l.useState)(null),
     requestRef = (0, l.useRef)(null),
     mountedRef = (0, l.useRef)(true),
     [replyError, setReplyError] = (0, l.useState)(``),
@@ -306,6 +308,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
             return;
           }
           sessionId = data;
+          setChatSessionId(data);
         }
         const duration = Math.max(1, Number(r.minutes || 1)) * 60;
         const deadline = Date.now() + duration * 1000;
@@ -343,7 +346,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
   "Content-Type": "application/json",
   Authorization: `Bearer ${session.access_token}`,
   },
-          body: JSON.stringify({ personId: e.id, messages: history.slice(-24).map((item) => ({ role: item.from === `me` ? `user` : `assistant`, content: item.text })) }),
+          body: JSON.stringify({ personId: e.id, sessionId: chatSessionId, messages: history.slice(-24).map((item) => ({ role: item.from === `me` ? `user` : `assistant`, content: item.text })) }),
           signal: controller.signal,
         });
         const raw = await response.text();
@@ -461,7 +464,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                       value: s,
                       maxLength: 2000,
                       onChange: (e) => c(e.target.value),
-                      onKeyDown: (e) => e.key === `Enter` && v(),
+                      onKeyDown: (e) => e.key === `Enter` && !e.nativeEvent.isComposing && e.keyCode !== 229 && v(),
                       placeholder: `Andika ujumbe wako...`,
                       disabled: f === 0 || u,
                       className: `flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary`,
@@ -840,7 +843,6 @@ function de() {
     [accountReady, setAccountReady] = (0, l.useState)(false),
     [isPremium, setIsPremium] = (0, l.useState)(false),
     [isVip, setIsVip] = (0, l.useState)(false),
-    [username, setUsername] = (0, l.useState)(""),
     [referralCount, setReferralCount] = (0, l.useState)(0),
     [notifications, setNotifications] = (0, l.useState)([]),
     [bannerNotification, setBannerNotification] = (0, l.useState)(null),
@@ -1054,6 +1056,7 @@ function de() {
               }),
             ],
           }),
+          (0, K.jsx)(UserGreeting, {}),
           (0, K.jsxs)(`div`, {
             className: `grid grid-cols-2 gap-3`,
             children: [
@@ -1086,7 +1089,7 @@ function de() {
               (0, K.jsx)(`span`, {
                 className: `size-2.5 animate-ping rounded-full bg-success`,
               }),
-              `Wazungu 3,490 wapo mtandaoni`,
+              `Wahusika wa AI wako tayari kuzungumza`,
             ],
           }),
           bannerNotification && (0, K.jsxs)(`div`, {
@@ -1159,7 +1162,7 @@ function de() {
             children: [
               (0, K.jsx)(`h2`, {
                 className: `mb-3 text-lg font-bold`,
-                children: `Chagua Mzungu wa Kuchati Naye`,
+                children: `Chagua mhusika wa AI wa kuchati naye`,
               }),
               (0, K.jsx)(`div`, {
                 className: `flex flex-col gap-3`,

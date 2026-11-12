@@ -144,5 +144,5 @@ export function chatPersona(id: number) {
 
 export function chatOpening(id: number) {
   const person = chatPersona(id);
-  return `Habari! Mimi ni ${person.name}, mhusika wa mfano kutoka ${person.country}. Napenda ${person.topic}. Wewe unaonaje kuhusu ${person.topic}? Unaweza pia kuniuliza swali lingine.`;
+  return `Hey! I'm ${person.name}, an AI character from ${person.country}. I've been getting into ${person.topic} lately. What do you enjoy doing when you have free time?`;
 }
