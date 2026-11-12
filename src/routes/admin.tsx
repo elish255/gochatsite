@@ -2,6 +2,7 @@ import { AdminCareNotifications, AdminCustomerCare, AdminPhoneBans } from "@/com
 import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
 import { AdminOverview } from "@/components/gochati/AdminOverview";
+import { AdminSupportDialog } from "@/components/gochati/AdminSupportDialog";
 import {
   Sheet,
   SheetContent,
@@ -42,6 +43,7 @@ import {
   Wallet,
   LogOut,
   ArrowUpRight,
+  Eye,
 } from "lucide-react";
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 type Audience = "all" | "premium" | "normal" | "active" | "inactive";
@@ -56,6 +58,11 @@ function AdminPage() {
     name: string;
     phone: string;
   } | null>(null);
+  const [supportTarget, setSupportTarget] = useState<any>(null);
+  const [supportData, setSupportData] = useState<any>(null);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportBusy, setSupportBusy] = useState(false);
+  const [supportError, setSupportError] = useState("");
   const [withdrawalBusy, setWithdrawalBusy] = useState("");
   const [section, setSection] = useState("dashboard");
   const [userView, setUserView] = useState("all");
@@ -83,6 +90,43 @@ function AdminPage() {
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
   const [balanceAdjustments, setBalanceAdjustments] = useState<Record<string, string>>({});
   const [balanceBusy, setBalanceBusy] = useState<string>("");
+  async function openSupportView(target: any) {
+    setSupportTarget(target);
+    setSupportData(null);
+    setSupportError("");
+    setSupportOpen(true);
+    setSupportBusy(true);
+
+    try {
+      const { data: sessionData, error: sessionError } = await platform.auth.getSession();
+      const session = sessionData?.session;
+
+      if (sessionError || !session?.access_token) {
+        throw new Error("Session ya Admin imeisha. Ingia tena.");
+      }
+
+      const response = await fetch("/api/gochati-admin-support", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ targetUserId: target.id }),
+      });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.message || "Imeshindwa kufungua dashboard ya mtumiaji.");
+      }
+
+      setSupportData(result);
+    } catch (error: any) {
+      setSupportError(error?.message || "Imeshindwa kufungua dashboard ya mtumiaji.");
+    } finally {
+      setSupportBusy(false);
+    }
+  }
+
   async function load() {
     const {
       data: { user: current },
@@ -203,7 +247,7 @@ function AdminPage() {
   }
   async function updateUser(id: string, patch: Record<string, unknown>) {
     // VIP is also a premium tier; keep both flags consistent.
-    const changes = patch.is_vip === true ? { ...patch, is_premium: true } : patch;
+    const changes = patch["is_vip"] === true ? { ...patch, is_premium: true } : patch;
     const { data, error } = await platform
       .from("gochati_users")
       .update(changes)
@@ -417,9 +461,13 @@ function AdminPage() {
     setSection(id);
     setFilter(nextFilter);
     setUserView(view);
-    setSelectedIds([]);
-    setSmsRecipient(null);
-    setMenuOpen(false);
+  setSelectedIds([]);
+  setSmsRecipient(null);
+  setSupportOpen(false);
+  setSupportTarget(null);
+  setSupportData(null);
+  setSupportError("");
+  setMenuOpen(false);
   }
   const navigation = (
     <>
@@ -1076,10 +1124,18 @@ function AdminPage() {
                               >
                                 {u.vip_tax_paid ? "Remove Tax Paid" : "Set Tax Paid"}
                               </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => {
-                                  setSmsRecipient({
+  <Button
+  variant="outline"
+  disabled={supportBusy}
+  onClick={() => void openSupportView(u)}
+  >
+  <Eye data-icon="inline-start" />
+  {supportBusy && supportTarget?.id === u.id ? "Inafungua..." : "Angalia dashboard"}
+  </Button>
+  <Button
+  variant="outline"
+  onClick={() => {
+  setSmsRecipient({
                                     id: u.id,
                                     name: u.username || u.full_name || "mtumiaji",
                                     phone: u.phone,
@@ -1107,10 +1163,25 @@ function AdminPage() {
                           </div>
                         </article>
                       ))}
-                  </div>
-                </>
-              )}
-              {section === "withdrawals" && (
+  </div>
+  <AdminSupportDialog
+    open={supportOpen}
+    onOpenChange={(open) => {
+      setSupportOpen(open);
+      if (!open) {
+        setSupportTarget(null);
+        setSupportData(null);
+        setSupportError("");
+      }
+    }}
+    user={supportTarget}
+    data={supportData}
+    loading={supportBusy}
+    error={supportError}
+  />
+  </>
+  )}
+  {section === "withdrawals" && (
                 <>
                   <h2 className="mt-8 text-xl font-bold">Withdrawal</h2>
                   <p className="mt-2 text-sm text-muted-foreground">

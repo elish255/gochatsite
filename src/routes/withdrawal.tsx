@@ -21,6 +21,7 @@ function WithdrawalPage() {
   const [amount, setAmount] = useState("100000");
   const [phone, setPhone] = useState("");
   const [history, setHistory] = useState<any[]>([]);
+  const [now, setNow] = useState(() => Date.now());
   const [account, setAccount] = useState<any>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,9 +34,17 @@ function WithdrawalPage() {
 
   const isVip = Boolean(account?.is_vip);
   const isPremium = Boolean(account?.is_premium);
-  const activationPaid = Boolean(account?.activation_paid);
   const taxPaid = Boolean(account?.vip_tax_paid);
   const minimumWithdrawal = 100000;
+  const cooldownDurationMs = 30 * 60 * 1000;
+  const lastWithdrawalAt = history[0]?.created_at
+    ? Date.parse(history[0].created_at)
+    : Number.NaN;
+  const cooldownRemainingMs = Number.isFinite(lastWithdrawalAt)
+    ? Math.max(0, lastWithdrawalAt + cooldownDurationMs - now)
+    : 0;
+  const cooldownActive = cooldownRemainingMs > 0;
+  const cooldownCountdown = `${String(Math.floor(cooldownRemainingMs / 60000)).padStart(2, "0")}:${String(Math.floor((cooldownRemainingMs % 60000) / 1000)).padStart(2, "0")}`;
 
   async function load() {
     const {
@@ -99,24 +108,32 @@ function WithdrawalPage() {
 
     return () => {
       window.clearInterval(timer);
-      window.removeEventListener("focus", refresh);
-    };
+  window.removeEventListener("focus", refresh);
+  };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   async function request() {
     if (!ready || busy || !account) return;
 
-    if (account.account_status !== "active" || !activationPaid) {
-      setNotice("Akaunti yako haijawezeshwa.");
-      return;
-    }
+  if (account.account_status !== "active") {
+  setNotice("Akaunti yako haijawezeshwa.");
+  return;
+  }
 
-    if (!taxPaid) {
-      setNotice(
-        "Tax Paid haijawekwa. Tafadhali wasiliana na admin ili ahakiki akaunti yako.",
-      );
-      return;
-    }
+  if (cooldownActive) {
+  setNotice(`Bado huwezi kufanya withdrawal. Subiri ${cooldownCountdown}.`);
+  return;
+  }
+
+  if (!taxPaid) {
+  setNotice("Akaunti yako bado haijaruhusiwa kufanya withdrawal.");
+  return;
+  }
 
     if (!Number.isSafeInteger(value) || value < minimumWithdrawal) {
       setNotice(
@@ -147,10 +164,17 @@ function WithdrawalPage() {
         },
       );
 
-      if (error) {
-        setNotice(error.message);
-        return;
-      }
+  if (error) {
+  if (error.message.includes("WITHDRAWAL_COOLDOWN")) {
+    setNotice("Kipindi cha kusubiri bado hakijaisha. Angalia muda uliosalia.");
+    await load();
+  } else if (error.message.includes("Tax Paid")) {
+    setNotice("Akaunti yako bado haijaruhusiwa kufanya withdrawal.");
+  } else {
+    setNotice(error.message);
+  }
+  return;
+  }
 
       setReceipt({
         id: withdrawalId,
@@ -186,15 +210,7 @@ function WithdrawalPage() {
           <p className="mt-1">
             Tax Paid: {taxPaid ? "Imelipwa" : "Haijawekwa"}
           </p>
-          {!taxPaid && (
-            <p className="mt-2 text-muted-foreground">
-              Admin ndiye anayethibitisha hali ya Tax Paid kabla ya kuomba
-              withdrawal.
-            </p>
-          )}
-          <p className="mt-2 text-muted-foreground">
-            Ombi lako litakuwa Pending hadi admin alikague na kuliidhinisha.
-          </p>
+
         </div>
 
         <p className="mt-3 text-sm text-muted-foreground">
@@ -241,17 +257,16 @@ function WithdrawalPage() {
           </div>
         </label>
 
-        <Button
-          className="auth-submit"
-          disabled={
-            busy ||
-            !ready ||
-            !taxPaid ||
-            !activationPaid ||
-            account?.account_status !== "active"
-          }
-          onClick={() => void request()}
-        >
+  {cooldownActive && (
+    <p role="timer" className="mb-3 text-sm text-muted-foreground" aria-label={`Muda wa kusubiri: ${cooldownCountdown}`}>
+      Withdrawal nyingine itaruhusiwa baada ya {cooldownCountdown}.
+    </p>
+  )}
+  <Button
+  className="auth-submit"
+  disabled={busy || !ready || !account}
+  onClick={() => void request()}
+  >
           {busy ? "Inahifadhi..." : "Withdrawal"}
         </Button>
 
