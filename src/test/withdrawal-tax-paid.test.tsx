@@ -70,8 +70,97 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe("admin-confirmed Tax Paid withdrawals", () => {
-  it("submits a non-premium, non-VIP user's request as Pending", async () => {
+describe("withdrawal tier prompts", () => {
+  it("asks a Normal account to upgrade after meeting the TZS 100,000 threshold, regardless of Tax Paid", async () => {
+    mocks.profile.vip_tax_paid = false;
+    render(<Page />);
+    await screen.findByText("TZS 800,000");
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+
+    expect(
+      await screen.findByRole("heading", { name: /Hongera! Umefikia kiwango cha withdrawal/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lipa Premium — TZS 32,000" })).toBeInTheDocument();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("shows insufficient balance for a requested amount below TZS 100,000", async () => {
+    render(<Page />);
+    await screen.findByText("TZS 800,000");
+
+    fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), {
+      target: { value: "90000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Salio halitoshi kufanya Withdrawal.",
+    );
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("shows the insufficient-balance message below TZS 100,000", async () => {
+    mocks.profile.balance = 99999;
+    render(<Page />);
+    await screen.findByText("TZS 99,999");
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Salio halitoshi kufanya Withdrawal.",
+    );
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("asks Premium accounts with TZS 300,000 or more to upgrade to VIP", async () => {
+    mocks.profile.balance = 300000;
+    mocks.profile.is_premium = true;
+    render(<Page />);
+    await screen.findByText("TZS 300,000");
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+
+    expect(
+      await screen.findByRole("heading", { name: /Hongera! Umefikia kiwango cha VIP/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lipa VIP — TZS 35,500" })).toBeInTheDocument();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("shows the insufficient-balance message for Premium accounts below TZS 300,000", async () => {
+    mocks.profile.balance = 299999;
+    mocks.profile.is_premium = true;
+    render(<Page />);
+    await screen.findByText("TZS 299,999");
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Salio halitoshi kufanya Withdrawal.",
+    );
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("shows the Tax dialog for VIP accounts that have not paid Tax", async () => {
+    mocks.profile.is_vip = true;
+    mocks.profile.vip_tax_paid = false;
+    render(<Page />);
+    await screen.findByText("Tax Paid: Haijawekwa");
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Malipo ya Tax ya VIP" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lipa Tax — TZS 50,000" })).toBeInTheDocument();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("submits a VIP withdrawal only after Tax is paid", async () => {
+    mocks.profile.is_premium = true;
+    mocks.profile.is_vip = true;
+    mocks.profile.vip_tax_paid = true;
     mocks.rpc.mockImplementation(async () => {
       mocks.history = [
         {
@@ -89,7 +178,6 @@ describe("admin-confirmed Tax Paid withdrawals", () => {
 
     render(<Page />);
     await screen.findByText("TZS 800,000");
-    expect(screen.getByText(/Tax Paid: Imelipwa/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
 
@@ -100,15 +188,5 @@ describe("admin-confirmed Tax Paid withdrawals", () => {
       }),
     );
     expect(await screen.findByText("Pending")).toBeInTheDocument();
-  });
-
-  it("blocks withdrawal until an admin marks Tax Paid", async () => {
-    mocks.profile.vip_tax_paid = false;
-
-    render(<Page />);
-    await screen.findByText("Tax Paid: Haijawekwa");
-
-    expect(screen.getByRole("button", { name: "Withdrawal" })).toBeDisabled();
-    expect(mocks.rpc).not.toHaveBeenCalled();
   });
 });

@@ -1,18 +1,58 @@
-
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { platform } from "@/integrations/supabase/platform";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/withdrawal")({
   component: WithdrawalPage,
 });
+
+type WithdrawalPrompt = "premium" | "vip" | "tax";
+
+type WithdrawalAccount = {
+  balance: number | string | null;
+  phone: string | null;
+  account_status: string;
+  is_premium: boolean | null;
+  is_vip: boolean | null;
+  vip_tax_paid: boolean | null;
+};
+
+type WithdrawalRecord = {
+  id: string;
+  amount: number | string;
+  fee?: number | string | null;
+  net_amount?: number | string | null;
+  phone: string;
+  status: string;
+  created_at: string;
+};
+
+type WithdrawalReceipt = Omit<WithdrawalRecord, "created_at"> & {
+  created_at?: string;
+};
+
+const WITHDRAWAL_PROMPTS = {
+  premium: {
+    title: "Hongera! Umefikia kiwango cha withdrawal",
+    description:
+      "Ili kuendelea na withdrawal, upgrade akaunti yako kwenda Premium. Ada ya Premium ni TZS 32,000.",
+    action: "Lipa Premium — TZS 32,000",
+  },
+  vip: {
+    title: "Hongera! Umefikia kiwango cha VIP",
+    description:
+      "Salio lako limetimiza kiwango cha TZS 300,000. Upgrade kwenda VIP ili kuendelea na withdrawal. Ada ya VIP ni TZS 35,500.",
+    action: "Lipa VIP — TZS 35,500",
+  },
+  tax: {
+    title: "Malipo ya Tax ya VIP",
+    description:
+      "Lipa Tax ya TZS 50,000 ili kuendelea na withdrawal. Baada ya malipo kuthibitishwa, unaweza kutuma ombi lako.",
+    action: "Lipa Tax — TZS 50,000",
+  },
+} satisfies Record<WithdrawalPrompt, { title: string; description: string; action: string }>;
 
 function WithdrawalPage() {
   const nav = useNavigate();
@@ -20,13 +60,14 @@ function WithdrawalPage() {
   const [balance, setBalance] = useState(0);
   const [amount, setAmount] = useState("100000");
   const [phone, setPhone] = useState("");
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<WithdrawalRecord[]>([]);
   const [now, setNow] = useState(() => Date.now());
-  const [account, setAccount] = useState<any>(null);
+  const [account, setAccount] = useState<WithdrawalAccount | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
-  const [receipt, setReceipt] = useState<any>(null);
+  const [receipt, setReceipt] = useState<WithdrawalReceipt | null>(null);
+  const [withdrawalPrompt, setWithdrawalPrompt] = useState<WithdrawalPrompt | null>(null);
 
   const value = Number(amount) || 0;
   const fee = Math.round(value * 20) / 100;
@@ -37,16 +78,14 @@ function WithdrawalPage() {
   const taxPaid = Boolean(account?.vip_tax_paid);
   const minimumWithdrawal = 100000;
   const cooldownDurationMs = 30 * 60 * 1000;
-  const lastWithdrawalAt = history[0]?.created_at
-    ? Date.parse(history[0].created_at)
-    : Number.NaN;
+  const lastWithdrawalAt = history[0]?.created_at ? Date.parse(history[0].created_at) : Number.NaN;
   const cooldownRemainingMs = Number.isFinite(lastWithdrawalAt)
     ? Math.max(0, lastWithdrawalAt + cooldownDurationMs - now)
     : 0;
   const cooldownActive = cooldownRemainingMs > 0;
   const cooldownCountdown = `${String(Math.floor(cooldownRemainingMs / 60000)).padStart(2, "0")}:${String(Math.floor((cooldownRemainingMs % 60000) / 1000)).padStart(2, "0")}`;
 
-  async function load() {
+  const load = useCallback(async () => {
     const {
       data: { user },
     } = await platform.auth.getUser();
@@ -59,9 +98,7 @@ function WithdrawalPage() {
     const [profile, withdrawals] = await Promise.all([
       platform
         .from("gochati_users")
-        .select(
-          "balance, phone, account_status, activation_paid, is_premium, is_vip, vip_tax_paid",
-        )
+        .select("balance, phone, account_status, activation_paid, is_premium, is_vip, vip_tax_paid")
         .eq("id", user.id)
         .single(),
 
@@ -74,9 +111,7 @@ function WithdrawalPage() {
 
     if (profile.error || withdrawals.error) {
       setNotice(
-        profile.error?.message ||
-          withdrawals.error?.message ||
-          "Imeshindikana kupakia taarifa.",
+        profile.error?.message || withdrawals.error?.message || "Imeshindikana kupakia taarifa.",
       );
       setReady(false);
       return;
@@ -87,16 +122,14 @@ function WithdrawalPage() {
     setPhone((current) => current || profile.data?.phone || "");
     setHistory(withdrawals.data || []);
 
-    setReceipt((current: any) =>
+    setReceipt((current) =>
       current
-        ? withdrawals.data?.find(
-            (item: any) => item.id === current.id,
-          ) || current
+        ? withdrawals.data?.find((item: WithdrawalRecord) => item.id === current.id) || current
         : null,
     );
 
     setReady(true);
-  }
+  }, [nav]);
 
   useEffect(() => {
     void load();
@@ -108,9 +141,9 @@ function WithdrawalPage() {
 
     return () => {
       window.clearInterval(timer);
-  window.removeEventListener("focus", refresh);
-  };
-  }, []);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [load]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -120,30 +153,20 @@ function WithdrawalPage() {
   async function request() {
     if (!ready || busy || !account) return;
 
-  if (account.account_status !== "active") {
-  setNotice("Akaunti yako haijawezeshwa.");
-  return;
-  }
+    setNotice("");
 
-  if (cooldownActive) {
-  setNotice(`Bado huwezi kufanya withdrawal. Subiri ${cooldownCountdown}.`);
-  return;
-  }
-
-  if (!taxPaid) {
-  setNotice("Akaunti yako bado haijaruhusiwa kufanya withdrawal.");
-  return;
-  }
-
-    if (!Number.isSafeInteger(value) || value < minimumWithdrawal) {
-      setNotice(
-        `Minimum withdrawal ni TZS ${minimumWithdrawal.toLocaleString()}.`,
-      );
+    if (account.account_status !== "active") {
+      setNotice("Akaunti yako haijawezeshwa.");
       return;
     }
 
-    if (value > balance) {
-      setNotice("SALIO HALITOSHI");
+    if (cooldownActive) {
+      setNotice(`Bado huwezi kufanya withdrawal. Subiri ${cooldownCountdown}.`);
+      return;
+    }
+
+    if (!Number.isSafeInteger(value) || value < minimumWithdrawal) {
+      setNotice("Salio halitoshi kufanya Withdrawal.");
       return;
     }
 
@@ -152,32 +175,54 @@ function WithdrawalPage() {
       return;
     }
 
+    if (balance < minimumWithdrawal || value > balance) {
+      setNotice("Salio halitoshi kufanya Withdrawal.");
+      return;
+    }
+
+    if (!isVip) {
+      if (isPremium && balance < 300000) {
+        setNotice("Salio halitoshi kufanya Withdrawal.");
+        return;
+      }
+
+      setWithdrawalPrompt(isPremium ? "vip" : "premium");
+      return;
+    }
+
+    if (!taxPaid) {
+      setWithdrawalPrompt("tax");
+      return;
+    }
+
     setBusy(true);
-    setNotice("");
 
     try {
-      const { data: withdrawalId, error } = await platform.rpc(
-        "gochati_request_withdrawal",
-        {
-          p_amount: value,
-          p_phone: phone.trim(),
-        },
-      );
+      const { data: withdrawalId, error } = await platform.rpc("gochati_request_withdrawal", {
+        p_amount: value,
+        p_phone: phone.trim(),
+      });
 
-  if (error) {
-  if (error.message.includes("WITHDRAWAL_COOLDOWN")) {
-    setNotice("Kipindi cha kusubiri bado hakijaisha. Angalia muda uliosalia.");
-    await load();
-  } else if (error.message.includes("Tax Paid")) {
-    setNotice("Akaunti yako bado haijaruhusiwa kufanya withdrawal.");
-  } else {
-    setNotice(error.message);
-  }
-  return;
-  }
+      if (error) {
+        if (error.message.includes("WITHDRAWAL_COOLDOWN")) {
+          setNotice("Kipindi cha kusubiri bado hakijaisha. Angalia muda uliosalia.");
+          await load();
+        } else if (error.message.includes("UPGRADE_REQUIRED_PREMIUM")) {
+          setWithdrawalPrompt("premium");
+        } else if (error.message.includes("UPGRADE_REQUIRED_VIP")) {
+          setWithdrawalPrompt("vip");
+        } else if (error.message.includes("TAX_PAYMENT_REQUIRED")) {
+          setWithdrawalPrompt("tax");
+        } else if (error.message.includes("INSUFFICIENT_BALANCE")) {
+          setNotice("Salio halitoshi kufanya Withdrawal.");
+        } else {
+          setNotice(error.message);
+        }
+        return;
+      }
 
       setReceipt({
-        id: withdrawalId,
+        id: String(withdrawalId),
         phone: phone.trim(),
         amount: value,
         fee,
@@ -186,12 +231,14 @@ function WithdrawalPage() {
       });
 
       await load();
-    } catch (error: any) {
-      setNotice(error?.message || "Ombi limeshindikana.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Ombi limeshindikana.");
     } finally {
       setBusy(false);
     }
   }
+
+  const prompt = withdrawalPrompt ? WITHDRAWAL_PROMPTS[withdrawalPrompt] : null;
 
   return (
     <main className="auth-page">
@@ -204,18 +251,13 @@ function WithdrawalPage() {
 
         <div className="my-4 rounded-2xl bg-secondary p-4 text-sm">
           <p className="font-bold">Hali ya akaunti</p>
-          <p className="mt-2">
-            {isVip ? "VIP" : isPremium ? "Premium" : "Normal"}
-          </p>
-          <p className="mt-1">
-            Tax Paid: {taxPaid ? "Imelipwa" : "Haijawekwa"}
-          </p>
-
+          <p className="mt-2">{isVip ? "VIP" : isPremium ? "Premium" : "Normal"}</p>
+          <p className="mt-1">Tax Paid: {taxPaid ? "Imelipwa" : "Haijawekwa"}</p>
         </div>
 
         <p className="mt-3 text-sm text-muted-foreground">
-          Kiwango cha chini cha withdrawal ni TZS{" "}
-          {minimumWithdrawal.toLocaleString()}. Kiasi kisizidi salio lako.
+          Kiwango cha chini cha withdrawal ni TZS {minimumWithdrawal.toLocaleString()}. Kiasi
+          kisizidi salio lako.
         </p>
 
         <label className="auth-field">
@@ -257,16 +299,20 @@ function WithdrawalPage() {
           </div>
         </label>
 
-  {cooldownActive && (
-    <p role="timer" className="mb-3 text-sm text-muted-foreground" aria-label={`Muda wa kusubiri: ${cooldownCountdown}`}>
-      Withdrawal nyingine itaruhusiwa baada ya {cooldownCountdown}.
-    </p>
-  )}
-  <Button
-  className="auth-submit"
-  disabled={busy || !ready || !account}
-  onClick={() => void request()}
-  >
+        {cooldownActive && (
+          <p
+            role="timer"
+            className="mb-3 text-sm text-muted-foreground"
+            aria-label={`Muda wa kusubiri: ${cooldownCountdown}`}
+          >
+            Withdrawal nyingine itaruhusiwa baada ya {cooldownCountdown}.
+          </p>
+        )}
+        <Button
+          className="auth-submit"
+          disabled={busy || !ready || !account}
+          onClick={() => void request()}
+        >
           {busy ? "Inahifadhi..." : "Withdrawal"}
         </Button>
 
@@ -274,33 +320,25 @@ function WithdrawalPage() {
           <p
             role="status"
             className={
-              notice === "SALIO HALITOSHI"
-                ? "auth-error text-destructive"
-                : "auth-message"
+              notice.startsWith("Salio halitoshi") ? "auth-error text-destructive" : "auth-message"
             }
           >
             {notice}
           </p>
         )}
 
-        <h2 className="mt-6 text-lg font-bold">
-          Withdrawal History
-        </h2>
+        <h2 className="mt-6 text-lg font-bold">Withdrawal History</h2>
 
         {history.length === 0 ? (
           <p>Hakuna ombi bado.</p>
         ) : (
           history.map((item) => (
             <article className="card-soft mt-3 p-3" key={item.id}>
-              <strong>
-                TZS {Number(item.amount).toLocaleString()}
-              </strong>
+              <strong>TZS {Number(item.amount).toLocaleString()}</strong>
 
               <p
                 className={
-                  item.status === "paid"
-                    ? "text-success font-bold"
-                    : "text-amber-600 font-semibold"
+                  item.status === "paid" ? "text-success font-bold" : "text-amber-600 font-semibold"
                 }
               >
                 {item.status === "paid"
@@ -312,23 +350,11 @@ function WithdrawalPage() {
 
               <p>{new Date(item.created_at).toLocaleString()}</p>
 
-              <p>
-                Makato (20%): TZS{" "}
-                {Number(item.fee || 0).toLocaleString()}
-              </p>
+              <p>Makato (20%): TZS {Number(item.fee || 0).toLocaleString()}</p>
 
-              <p>
-                Utapokea: TZS{" "}
-                {Number(
-                  item.net_amount ?? item.amount,
-                ).toLocaleString()}
-              </p>
+              <p>Utapokea: TZS {Number(item.net_amount ?? item.amount).toLocaleString()}</p>
 
-              <Button
-                variant="outline"
-                className="mt-2"
-                onClick={() => setReceipt(item)}
-              >
+              <Button variant="outline" className="mt-2" onClick={() => setReceipt(item)}>
                 Risiti
               </Button>
             </article>
@@ -345,6 +371,41 @@ function WithdrawalPage() {
       </section>
 
       <Dialog
+        open={Boolean(prompt)}
+        onOpenChange={(open) => {
+          if (!open) setWithdrawalPrompt(null);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-3xl p-6 sm:p-8">
+          {prompt && (
+            <>
+              <DialogTitle className="text-center text-2xl">{prompt.title}</DialogTitle>
+              <DialogDescription className="text-center leading-relaxed">
+                {prompt.description}
+              </DialogDescription>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  if (withdrawalPrompt) {
+                    window.location.assign(`/payment?type=${withdrawalPrompt}`);
+                  }
+                }}
+              >
+                {prompt.action}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setWithdrawalPrompt(null)}
+              >
+                Baadaye
+              </Button>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={!!receipt}
         onOpenChange={(open) => {
           if (!open) setReceipt(null);
@@ -356,9 +417,7 @@ function WithdrawalPage() {
           </div>
 
           <DialogTitle className="text-center text-2xl">
-            {receipt?.status === "paid"
-              ? "Ombi limekamilishwa"
-              : "Ombi limepokelewa"}
+            {receipt?.status === "paid" ? "Ombi limekamilishwa" : "Ombi limepokelewa"}
           </DialogTitle>
 
           <DialogDescription className="text-center">
@@ -378,25 +437,18 @@ function WithdrawalPage() {
 
             <div className="flex justify-between gap-3">
               <dt>Requested Amount</dt>
-              <dd>
-                {Number(receipt?.amount || 0).toLocaleString()} TZS
-              </dd>
+              <dd>{Number(receipt?.amount || 0).toLocaleString()} TZS</dd>
             </div>
 
             <div className="flex justify-between gap-3">
               <dt>Makato (20%)</dt>
-              <dd>
-                {Number(receipt?.fee || 0).toLocaleString()} TZS
-              </dd>
+              <dd>{Number(receipt?.fee || 0).toLocaleString()} TZS</dd>
             </div>
 
             <div className="flex justify-between gap-3">
               <dt>Amount utakayopokea</dt>
               <dd className="font-bold text-success">
-                {Number(
-                  receipt?.net_amount ?? receipt?.amount ?? 0,
-                ).toLocaleString()}{" "}
-                TZS
+                {Number(receipt?.net_amount ?? receipt?.amount ?? 0).toLocaleString()} TZS
               </dd>
             </div>
 
@@ -411,10 +463,7 @@ function WithdrawalPage() {
             </div>
           </dl>
 
-          <Button
-            className="w-full"
-            onClick={() => setReceipt(null)}
-          >
+          <Button className="w-full" onClick={() => setReceipt(null)}>
             Done
           </Button>
         </DialogContent>
