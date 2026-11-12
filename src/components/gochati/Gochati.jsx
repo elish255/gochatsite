@@ -235,10 +235,6 @@ function q({ person: e, onChat: t, onCall: n }) {
                   e.country,
                 ],
               }),
-              (0, K.jsx)(`span`, {
-                className: `mt-1 inline-block rounded-md bg-primary/10 px-2 py-1 text-sm font-semibold text-primary`,
-                children: `Mhusika wa AI`,
-              }),
               (0, K.jsxs)(`div`, {
                 className: `mt-2 inline-block rounded-lg border border-border bg-secondary/70 px-2.5 py-1 text-[11px] font-semibold`,
                 children: [e.topic, ` · `, e.rate.label, ` — `, I(e.rate.amount)],
@@ -390,7 +386,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 }),
                 (0, K.jsx)(`p`, {
                   className: `text-xs opacity-90`,
-                  children: `Mhusika wa AI · ${e.topic || chatPersona(e.id).topic}`,
+                  children: e.topic || chatPersona(e.id).topic,
                 }),
               ],
             }),
@@ -1089,7 +1085,7 @@ function de() {
               (0, K.jsx)(`span`, {
                 className: `size-2.5 animate-ping rounded-full bg-success`,
               }),
-              `Wahusika wa AI wako tayari kuzungumza`,
+              `Wageni kutoka duniani kote wako tayari kuzungumza`,
             ],
           }),
           bannerNotification && (0, K.jsxs)(`div`, {
@@ -1162,7 +1158,7 @@ function de() {
             children: [
               (0, K.jsx)(`h2`, {
                 className: `mb-3 text-lg font-bold`,
-                children: `Chagua mhusika wa AI wa kuchati naye`,
+                children: `Chagua Mzungu wa Kuchati naye`,
               }),
               (0, K.jsx)(`div`, {
                 className: `flex flex-col gap-3`,
