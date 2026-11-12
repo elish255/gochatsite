@@ -14,10 +14,12 @@ vi.mock("@tanstack/react-router", () => ({
     <a href={to}>{children}</a>
   ),
 }));
-vi.mock("@/integrations/netlify/client", () => ({
+vi.mock("@/integrations/supabase/platform", () => ({
   platform: { auth: { signInWithUsername: mocks.login, signUp: mocks.signup } },
 }));
-vi.mock("@netlify/identity", () => ({ requestPasswordRecovery: mocks.recover }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { auth: { resetPasswordForEmail: mocks.recover } },
+}));
 beforeEach(() => {
   vi.resetAllMocks();
 });
@@ -55,20 +57,51 @@ describe("Account screens", () => {
     }
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "JISAJILI" }));
-    await waitFor(() =>
-      expect(mocks.navigate).toHaveBeenCalledWith({ to: "/", replace: true }),
-    );
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("HONGERA USAJILI WAKO UMEKAMILIKA")).toBeInTheDocument();
+    expect(screen.getByText("ANZA KUCHATI NA ULIPWE SASA")).toBeInTheDocument();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "ENDELEA" }));
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith({ to: "/", replace: true }));
     expect(mocks.signup).toHaveBeenCalledWith(expect.objectContaining({ agreeTerms: true }));
   });
+  it("lets accounts awaiting email confirmation continue to sign in", async () => {
+    mocks.signup.mockResolvedValue({ data: { session: null }, error: null });
+    render(<AuthPage mode="register" />);
+    for (const [label, value] of Object.entries({
+      "Full name": "Amina Said",
+      Email: "amina@example.test",
+      Username: "amina",
+      "Phone number": "0712345678",
+      "Choose Country": "Tanzania",
+      Password: "example-password",
+      "Repeat password": "example-password",
+    })) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    }
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "JISAJILI" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ENDELEA" }));
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith({ to: "/login", replace: true }),
+    );
+  });
+
   it("opens email recovery from the login screen", async () => {
-    mocks.recover.mockResolvedValue(undefined);
+    mocks.recover.mockResolvedValue({ error: null });
     render(<AuthPage mode="login" />);
     fireEvent.click(screen.getByRole("button", { name: /Forgot password/ }));
     fireEvent.change(screen.getByLabelText("Email ya kurejesha password"), {
       target: { value: "amina@example.test" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Tuma kiungo cha password mpya" }));
-    await waitFor(() => expect(mocks.recover).toHaveBeenCalledWith("amina@example.test"));
+    await waitFor(() =>
+      expect(mocks.recover).toHaveBeenCalledWith(
+        "amina@example.test",
+        expect.objectContaining({ redirectTo: expect.stringContaining("/auth/callback") }),
+      ),
+    );
     expect(await screen.findByRole("status")).toHaveTextContent("kiungo cha kurejesha password");
   });
 });
