@@ -1187,7 +1187,7 @@ function AdminPage() {
                     {withdrawals.map((w) => (
                       <article className="card-soft p-4" key={w.id}>
                         <p>
-                          Username: {w.username ? `@${w.username}` : "Haipatikani"} · TZS{" "}
+                          Username: {w.username ? `@${w.username}` : w.full_name || "Haipatikani"} · TZS{" "}
                           {Number(w.amount).toLocaleString()} · {w.phone}
                         </p>
                         <p>

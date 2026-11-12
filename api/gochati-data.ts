@@ -419,7 +419,9 @@ export default async function handler(req: Request, res: Response) {
           ? "user_id"
           : table === "gochati_users"
             ? userColumns.join(",")
-            : "*";
+            : table === "gochati_withdrawals" && isAdmin
+              ? "*,account:gochati_users!gochati_withdrawals_user_id_fkey(username,full_name)"
+              : "*";
 
       query = adminClient.from(table).select(columns);
 
@@ -783,7 +785,31 @@ export default async function handler(req: Request, res: Response) {
 
     if (error) throw error;
 
-    return res.status(200).json({ data });
+    const responseData =
+      table === "gochati_withdrawals" && isAdmin && Array.isArray(data)
+        ? data.map((withdrawal: Record<string, unknown>) => {
+            const relatedAccount = withdrawal.account;
+            const account = Array.isArray(relatedAccount)
+              ? relatedAccount[0]
+              : relatedAccount;
+            const profile =
+              typeof account === "object" && account !== null
+                ? (account as {
+                    username?: string | null;
+                    full_name?: string | null;
+                  })
+                : undefined;
+            const { account: _account, ...fields } = withdrawal;
+
+            return {
+              ...fields,
+              username: profile?.username ?? null,
+              full_name: profile?.full_name ?? null,
+            };
+          })
+        : data;
+
+    return res.status(200).json({ data: responseData });
   } catch (error) {
     console.error("GOCHATI DATA API ERROR:", error);
 
