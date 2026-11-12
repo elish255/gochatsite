@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { platform } from "@/integrations/supabase/platform";
 import { Button } from "@/components/ui/button";
+import { RegistrationSuccessDialog } from "./RegistrationSuccessDialog";
 
 type Mode = "register" | "login" | "forgot" | "reset";
 const countries = [
@@ -21,6 +22,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [signupHasSession, setSignupHasSession] = useState(false);
   const navigate = useNavigate();
   const register = mode === "register";
 
@@ -64,12 +67,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
           },
         });
         if (signUpError) throw signUpError;
-        if (!data.session) {
-          throw new Error(
-            "Akaunti imehifadhiwa. Ingia kwa username na password ili kuendelea kuchat.",
-          );
-        }
-        await navigate({ to: "/", replace: true });
+        setSignupHasSession(Boolean(data.session));
+        setSignupComplete(true);
       } else if (mode === "login") {
         const { error: loginError } = await platform.auth.signInWithUsername({
           username: value("username").toLowerCase(),
@@ -280,6 +279,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
           )}
         </p>
       </section>
+      <RegistrationSuccessDialog
+        open={signupComplete}
+        onContinue={() => {
+          setSignupComplete(false);
+          void navigate({ to: signupHasSession ? "/" : "/login", replace: true });
+        }}
+      />
     </main>
   );
 }
