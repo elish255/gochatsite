@@ -6,8 +6,9 @@ import { Route } from "@/routes/withdrawal";
 const mocks = vi.hoisted(() => ({
   profile: {
     account_status: "inactive",
-    activation_paid: false,
-    balance: 800000,
+  activation_paid: false,
+  vip_tax_paid: true,
+  balance: 800000,
     phone: "0712345678",
   },
   history: [] as any[],
@@ -19,7 +20,7 @@ vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
   useNavigate: () => mocks.navigate,
 }));
-vi.mock("@/integrations/netlify/client", () => ({
+vi.mock("@/integrations/supabase/platform", () => ({
   platform: {
     auth: { getUser: async () => ({ data: { user: { id: "current-user" } } }) },
     rpc: (name: string, args: unknown) =>
@@ -139,7 +140,53 @@ describe("Withdrawal account access", () => {
 });
 
 
-it("keeps a VIP request pending and refreshes history and the open receipt when admin marks paid", async () => {
+  it("keeps the button clickable while tax status is unconfirmed but blocks the request", async () => {
+    Object.assign(mocks.profile, {
+      account_status: "active",
+      activation_paid: false,
+      vip_tax_paid: false,
+    });
+    const Page = Route.options.component as () => React.JSX.Element;
+    render(<Page />);
+    await screen.findByText("TZS 800,000");
+
+    const withdrawalButton = screen.getByRole("button", { name: "Withdrawal" });
+    expect(withdrawalButton).toBeEnabled();
+    fireEvent.click(withdrawalButton);
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Akaunti yako bado haijaruhusiwa kufanya withdrawal.",
+    );
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("keeps the withdrawal button clickable and shows the cooldown countdown", async () => {
+    Object.assign(mocks.profile, {
+      account_status: "active",
+      activation_paid: true,
+      vip_tax_paid: true,
+    });
+    mocks.history = [
+      {
+        id: "recent-withdrawal",
+        amount: 100000,
+        status: "pending",
+        created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      },
+    ];
+    const Page = Route.options.component as () => React.JSX.Element;
+    render(<Page />);
+    await screen.findByText("TZS 800,000");
+
+    const withdrawalButton = screen.getByRole("button", { name: "Withdrawal" });
+    expect(withdrawalButton).toBeEnabled();
+    expect(screen.getByRole("timer")).toBeInTheDocument();
+
+    fireEvent.click(withdrawalButton);
+    expect(await screen.findByRole("status")).toHaveTextContent("Bado huwezi kufanya withdrawal");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("keeps a VIP request pending and refreshes history and the open receipt when admin marks paid", async () => {
   Object.assign(mocks.profile, { account_status: "active", activation_paid: true });
   mocks.eligibility = { is_premium: true, is_vip: true, referrals: 0, active_referrals: 0 };
   mocks.rpc.mockImplementation(async () => {
