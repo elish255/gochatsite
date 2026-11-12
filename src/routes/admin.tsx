@@ -121,7 +121,7 @@ function AdminPage() {
       platform
         .from("gochati_users")
         .select(
-          "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,referral_count,balance,created_at",
+          "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,referral_count,balance,created_at",
         )
         .order("created_at", { ascending: false })
         .limit(1000),
@@ -208,7 +208,7 @@ function AdminPage() {
       .from("gochati_users")
       .update(changes)
       .eq("id", id)
-      .select("id,is_premium,is_vip,account_status")
+      .select("id,is_premium,is_vip,vip_tax_paid,account_status")
       .maybeSingle();
     if (error) {
       setNotice("Imeshindwa kuhifadhi mabadiliko: " + error.message);
@@ -218,7 +218,9 @@ function AdminPage() {
       setNotice("Hakuna akaunti iliyobadilishwa. Hakiki ruhusa za Admin na user ID.");
       return;
     }
-    setNotice(`Imehifadhiwa: Premium ${data.is_premium ? "NDIYO" : "HAPANA"}, VIP ${data.is_vip ? "NDIYO" : "HAPANA"}. Dashboard ya mtumiaji itasasishwa akifungua upya.`);
+    setNotice(
+      `Imehifadhiwa: Premium ${data.is_premium ? "NDIYO" : "HAPANA"}, VIP ${data.is_vip ? "NDIYO" : "HAPANA"}, Tax Paid ${data.vip_tax_paid ? "NDIYO" : "HAPANA"}. Dashboard ya mtumiaji itasasishwa akifungua upya.`,
+    );
     await load();
   }
   async function adjustBalance(id: string, current: number, mode: "add" | "subtract") {
@@ -339,6 +341,7 @@ function AdminPage() {
         userView === "delete" ||
         (userView === "premium" && !u.is_premium) ||
         (userView === "vip" && !u.is_vip) ||
+        (userView === "tax" && !u.vip_tax_paid) ||
         userView === "banned") &&
       (filter === "all" ||
         (filter === "active"
@@ -473,6 +476,13 @@ function AdminPage() {
             count: rows.filter((u) => !u.is_vip).length,
             filter: "all" as const,
             view: "vip",
+          },
+          {
+            label: "Tax Verification",
+            icon: BadgeCheck,
+            count: rows.filter((u) => !u.vip_tax_paid).length,
+            filter: "all" as const,
+            view: "tax",
           },
           {
             label: "Add / Reduce Amount",
@@ -962,7 +972,9 @@ function AdminPage() {
                               <p>
                                 Hali: {u.account_status} ·{" "}
                                 {u.is_premium ? "PREMIUM" : "Normal"} ·{" "}
-                                {u.is_vip ? "VIP" : "Non-VIP"} · Walioalikwa:{" "}
+                                {u.is_vip ? "VIP" : "Non-VIP"} ·{" "}
+                                Tax Paid: {u.vip_tax_paid ? "NDIYO" : "HAPANA"} ·
+                                Walioalikwa:{" "}
                                 {u.referral_count || 0} · Balance: TZS{" "}
                                 {Number(u.balance || 0).toLocaleString()}
                               </p>
@@ -1052,6 +1064,17 @@ function AdminPage() {
                                 onClick={() => void updateUser(u.id, { is_vip: !u.is_vip })}
                               >
                                 {u.is_vip ? "Remove VIP" : "Make VIP"}
+                              </Button>
+                              <Button
+                                variant={u.vip_tax_paid ? "default" : "outline"}
+                                aria-label={`${u.vip_tax_paid ? "Remove" : "Set"} Tax Paid for ${u.username}`}
+                                onClick={() =>
+                                  void updateUser(u.id, {
+                                    vip_tax_paid: !u.vip_tax_paid,
+                                  })
+                                }
+                              >
+                                {u.vip_tax_paid ? "Remove Tax Paid" : "Set Tax Paid"}
                               </Button>
                               <Button
                                 variant="outline"
