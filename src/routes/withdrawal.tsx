@@ -228,7 +228,7 @@ function WithdrawalPage() {
 
           {!isPremium && !isVip && (
             <p className="mt-2">
-              Kiwango cha Premium: TZS 100,000
+              Kiwango cha Chini: TZS 100,000
             </p>
           )}
 
