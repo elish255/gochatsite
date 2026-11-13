@@ -252,7 +252,6 @@ function WithdrawalPage() {
         <div className="my-4 rounded-2xl bg-secondary p-4 text-sm">
           <p className="font-bold">Hali ya akaunti</p>
           <p className="mt-2">{isVip ? "VIP" : isPremium ? "Premium" : "Normal"}</p>
-          <p className="mt-1">Tax Paid: {taxPaid ? "Imelipwa" : "Haijawekwa"}</p>
         </div>
 
         <p className="mt-3 text-sm text-muted-foreground">

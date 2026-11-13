@@ -146,7 +146,8 @@ describe("withdrawal tier prompts", () => {
     mocks.profile.is_vip = true;
     mocks.profile.vip_tax_paid = false;
     render(<Page />);
-    await screen.findByText("Tax Paid: Haijawekwa");
+    await screen.findByText("VIP");
+    expect(screen.queryByText(/Tax Paid:/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
 
