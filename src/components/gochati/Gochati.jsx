@@ -2,6 +2,7 @@ import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
 import { UserGreeting } from "./UserGreeting";
+import { WithdrawalUpgradeReminder } from "./WithdrawalUpgradeReminder";
 import { platform } from "@/integrations/supabase/platform";
 import { supabase } from "@/integrations/supabase/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
@@ -983,6 +984,7 @@ function de() {
   return (0, K.jsxs)(`main`, {
     className: `min-h-screen bg-background pb-10`,
     children: [
+      (0, K.jsx)(WithdrawalUpgradeReminder, { eligible: accountReady && accountActive && !isPremium && !isVip && i >= 100000 }),
       m &&
         (0, K.jsx)(`div`, {
           className: `fixed left-1/2 top-3 z-[90] w-[94%] max-w-md -translate-x-1/2`,
