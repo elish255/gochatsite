@@ -113,11 +113,14 @@ describe("withdrawal tier prompts", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it("asks Premium accounts with TZS 300,000 or more to upgrade to VIP", async () => {
+  it("asks Premium accounts to upgrade to VIP for a TZS 300,000 withdrawal", async () => {
     mocks.profile.balance = 300000;
     mocks.profile.is_premium = true;
     render(<Page />);
     await screen.findByText("TZS 300,000");
+    fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), {
+      target: { value: "300000" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
 
@@ -128,16 +131,35 @@ describe("withdrawal tier prompts", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it("shows the insufficient-balance message for Premium accounts below TZS 300,000", async () => {
-    mocks.profile.balance = 299999;
+  it("requires Premium accounts to request at least TZS 300,000", async () => {
     mocks.profile.is_premium = true;
     render(<Page />);
-    await screen.findByText("TZS 299,999");
+    await screen.findByText("TZS 800,000");
+    fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), {
+      target: { value: "299999" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "Salio halitoshi kufanya Withdrawal.",
+      "Kiwango Cha chini kutoa ni 300,000",
+    );
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("shows the insufficient-balance message for a Premium request at TZS 300,000", async () => {
+    mocks.profile.balance = 299999;
+    mocks.profile.is_premium = true;
+    render(<Page />);
+    await screen.findByText("TZS 299,999");
+    fireEvent.change(screen.getByLabelText("Kiasi (TZS)"), {
+      target: { value: "300000" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdrawal" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Huna Salio la Kutosha kufanya Withdrawal",
     );
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
