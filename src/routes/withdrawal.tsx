@@ -75,8 +75,13 @@ function WithdrawalPage() {
 
   const isVip = Boolean(account?.is_vip);
   const isPremium = Boolean(account?.is_premium);
+  const isPremiumOnly = isPremium && !isVip;
   const taxPaid = Boolean(account?.vip_tax_paid);
   const minimumWithdrawal = 100000;
+  const minimumWithdrawalForAccount = isPremiumOnly ? 300000 : minimumWithdrawal;
+  const insufficientBalanceNotice = isPremiumOnly
+    ? "Huna Salio la Kutosha kufanya Withdrawal"
+    : "Salio halitoshi kufanya Withdrawal.";
   const cooldownDurationMs = 30 * 60 * 1000;
   const lastWithdrawalAt = history[0]?.created_at ? Date.parse(history[0].created_at) : Number.NaN;
   const cooldownRemainingMs = Number.isFinite(lastWithdrawalAt)
@@ -165,8 +170,17 @@ function WithdrawalPage() {
       return;
     }
 
-    if (!Number.isSafeInteger(value) || value < minimumWithdrawal) {
-      setNotice("Salio halitoshi kufanya Withdrawal.");
+    if (!Number.isSafeInteger(value)) {
+      setNotice("Kiasi cha withdrawal si sahihi.");
+      return;
+    }
+
+    if (value < minimumWithdrawalForAccount) {
+      setNotice(
+        isPremiumOnly
+          ? "Kiwango Cha chini kutoa ni 300,000"
+          : "Salio halitoshi kufanya Withdrawal.",
+      );
       return;
     }
 
@@ -175,17 +189,12 @@ function WithdrawalPage() {
       return;
     }
 
-    if (balance < minimumWithdrawal || value > balance) {
-      setNotice("Salio halitoshi kufanya Withdrawal.");
+    if (balance < minimumWithdrawalForAccount || value > balance) {
+      setNotice(insufficientBalanceNotice);
       return;
     }
 
     if (!isVip) {
-      if (isPremium && balance < 300000) {
-        setNotice("Salio halitoshi kufanya Withdrawal.");
-        return;
-      }
-
       setWithdrawalPrompt(isPremium ? "vip" : "premium");
       return;
     }
@@ -214,7 +223,7 @@ function WithdrawalPage() {
         } else if (error.message.includes("TAX_PAYMENT_REQUIRED")) {
           setWithdrawalPrompt("tax");
         } else if (error.message.includes("INSUFFICIENT_BALANCE")) {
-          setNotice("Salio halitoshi kufanya Withdrawal.");
+          setNotice(insufficientBalanceNotice);
         } else {
           setNotice(error.message);
         }
@@ -255,8 +264,8 @@ function WithdrawalPage() {
         </div>
 
         <p className="mt-3 text-sm text-muted-foreground">
-          Kiwango cha chini cha withdrawal ni TZS {minimumWithdrawal.toLocaleString()}. Kiasi
-          kisizidi salio lako.
+          Kiwango cha chini cha withdrawal ni TZS {minimumWithdrawalForAccount.toLocaleString()}.
+          Kiasi kisizidi salio lako.
         </p>
 
         <label className="auth-field">
@@ -264,7 +273,7 @@ function WithdrawalPage() {
           <div className="auth-input">
             <input
               type="number"
-              min={minimumWithdrawal}
+              min={minimumWithdrawalForAccount}
               max={balance}
               step="1"
               aria-label="Kiasi (TZS)"
@@ -319,7 +328,9 @@ function WithdrawalPage() {
           <p
             role="status"
             className={
-              notice.startsWith("Salio halitoshi") ? "auth-error text-destructive" : "auth-message"
+              notice.startsWith("Salio halitoshi") || notice.startsWith("Huna Salio")
+                ? "auth-error text-destructive"
+                : "auth-message"
             }
           >
             {notice}

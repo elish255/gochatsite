@@ -428,6 +428,10 @@ function UpgradePaymentPage({
           </>
         ) : (
           <>
+            <p className="mb-4 text-sm font-semibold leading-relaxed text-destructive" role="note">
+              Hakikisha Namba uliyoweka Ina Salio la kutosha kabla ya kugusa LIPA Sasa
+            </p>
+
             <label className="auth-field">
               <span>Namba ya simu ya malipo</span>
 
