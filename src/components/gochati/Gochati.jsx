@@ -139,6 +139,22 @@ const M = [
     `Emmanuel K.`,
     `Halima Y.`,
     `Peter S.`,
+    `John M.`,
+    `Mariam A.`,
+    `Godfrey K.`,
+    `Rehema S.`,
+    `Joseph W.`,
+    `Fatuma A.`,
+    `Daniel K.`,
+    `Esther L.`,
+    `Ibrahim H.`,
+    `Lucy N.`,
+    `Khamis O.`,
+    `Mwanaidi J.`,
+    `Elia C.`,
+    `Saida M.`,
+    `Yusuph B.`,
+    `Agnes T.`,
   ],
   H = [
     `Dar es Salaam`,
@@ -151,16 +167,38 @@ const M = [
     `Zanzibar`,
     `Iringa`,
     `Kigoma`,
+    `Njombe`,
+    `Moshi`,
+    `Songea`,
+    `Shinyanga`,
+    `Tabora`,
+    `Mtwara`,
+    `Lindi`,
+    `Singida`,
+    `Musoma`,
+    `Bukoba`,
+    `Pemba`,
+    `Kahama`,
   ],
-  U = [`M-Pesa`, `Tigo Pesa`, `Airtel Money`, `HaloPesa`, `Mixx by Yas`];
+  U = [`M-Pesa`, `Tigo Pesa`, `Airtel Money`, `HaloPesa`, `Mixx by Yas`],
+  feeTypes = [`Premium Fee`, `Upgrade Fee`];
 function W() {
   let e = V[Math.floor(Math.random() * V.length)],
     t = H[Math.floor(Math.random() * H.length)],
     n = U[Math.floor(Math.random() * U.length)],
     r = (Math.floor(Math.random() * 28) + 5) * 1e4,
-    i = Math.floor(Math.random() * 12) + 1;
+    i = Math.floor(Math.random() * 12) + 1,
+    id = Math.random().toString(36).slice(2);
+  if (Math.random() < 0.5) {
+    let firstName = e.split(` `)[0],
+      fee = feeTypes[Math.floor(Math.random() * feeTypes.length)];
+    return {
+      id,
+      text: `${firstName} kutoka ${t} Amelipia ${fee} • Dakika ${i} zilizopita`,
+    };
+  }
   return {
-    id: Math.random().toString(36).slice(2),
+    id,
     text: `${e} kutoka ${t} ametoa ${I(r)} kupitia ${n} • Dakika ${i} zilizopita`,
   };
 }
