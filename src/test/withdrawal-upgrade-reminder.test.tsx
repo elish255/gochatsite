@@ -8,12 +8,12 @@ afterEach(() => {
 });
 
 describe("WithdrawalUpgradeReminder", () => {
-  it("shows for eligible accounts and returns two minutes after dismissal", () => {
+  it("shows for eligible accounts and returns five minutes after dismissal", () => {
     vi.useFakeTimers();
     render(<WithdrawalUpgradeReminder eligible />);
 
     expect(screen.getByRole("dialog")).toHaveTextContent(
-      "Umefikia Kiwango Cha kutoa Pesa, Gusa Toa Pesa Weka kiasi Kisha Kamilisha Malipo ya Upgrade ili kupokea Withdrawal Yako",
+      "Umefikia Kiwango Cha kutoa Pesa, Ungana na Watanzania Wengine Kunufaika na Hii Fursa Gusa Upgrade ili kupokea Withdrawal Yako",
     );
     expect(screen.getByRole("link", { name: "Upgrade" })).toHaveAttribute("href", "/withdrawal");
 
@@ -22,6 +22,11 @@ describe("WithdrawalUpgradeReminder", () => {
 
     act(() => {
       vi.advanceTimersByTime(2 * 60 * 1000);
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(3 * 60 * 1000);
     });
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
