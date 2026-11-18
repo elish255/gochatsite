@@ -194,6 +194,7 @@ function W() {
       fee = feeTypes[Math.floor(Math.random() * feeTypes.length)];
     return {
       id,
+      kind: `upgrade`,
       text: `${firstName} kutoka ${t} Amelipia ${fee} • Dakika ${i} zilizopita`,
     };
   }
@@ -1027,7 +1028,10 @@ function de() {
         (0, K.jsx)(`div`, {
           className: `fixed left-1/2 top-3 z-[90] w-[94%] max-w-md -translate-x-1/2`,
           children: (0, K.jsxs)(`div`, {
-            className: `animate-pop-in grad-balance flex items-start gap-3 rounded-2xl p-3.5 text-on-color shadow-2xl`,
+            className:
+              m.kind === `upgrade`
+                ? `animate-pop-in flex items-start gap-3 rounded-2xl bg-upgrade p-3.5 text-upgrade-foreground shadow-2xl`
+                : `animate-pop-in grad-balance flex items-start gap-3 rounded-2xl p-3.5 text-on-color shadow-2xl`,
             children: [
               (0, K.jsx)(p, {
                 className: `mt-0.5 size-5 shrink-0 animate-lop`,
@@ -1282,7 +1286,10 @@ function de() {
                 (0, K.jsxs)(
                   `span`,
                   {
-                    className: `text-xs font-semibold text-success`,
+                    className:
+                      e.kind === `upgrade`
+                        ? `rounded-full bg-upgrade px-3 py-0.5 text-xs font-semibold text-upgrade-foreground`
+                        : `text-xs font-semibold text-success`,
                     children: [`✅ `, e.text],
                   },
                   e.id + t,
@@ -1347,7 +1354,10 @@ function de() {
                     (0, K.jsxs)(
                       `p`,
                       {
-                        className: `rounded-lg bg-secondary px-3 py-2 text-[11px] font-semibold`,
+                        className:
+                          e.kind === `upgrade`
+                            ? `rounded-lg bg-upgrade px-3 py-2 text-[11px] font-semibold text-upgrade-foreground`
+                            : `rounded-lg bg-secondary px-3 py-2 text-[11px] font-semibold`,
                         children: [`💸 `, e.text],
                       },
                       e.id + `v` + t,
