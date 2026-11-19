@@ -158,7 +158,7 @@ async function sendToRecipients(recipients: Recipient[], template: string) {
       const phone = normalizeTanzaniaPhone(recipient.phone || "");
       let ok = false;
       if (phone) {
-        const text = template.replaceAll("[Username]", recipient.username || "");
+        const text = template.replace(/\[\s*username\s*\]/gi, recipient.username || "");
         ok = await sendSwalaSms(phone, text).catch((error) => {
           if (error instanceof HttpError) throw error;
           console.error("Swala SMS request failed", error);
