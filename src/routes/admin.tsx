@@ -742,6 +742,7 @@ function AdminPage() {
               <AdminCareNotifications onOpen={(userId) => { setCareUserId(userId); navigate("customer-care"); }} />
               {section === "customer-care" && <AdminCustomerCare {...(careUserId ? { userId: careUserId } : {})} />}
               {section === "phone-bans" && <AdminPhoneBans />}
+              {section === "dashboard" && <AdminPaymentPrices vipOnly />}
               {section === "dashboard" && (
                 <AdminOverview
                   users={rows}
