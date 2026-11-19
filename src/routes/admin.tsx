@@ -198,7 +198,7 @@ function AdminPage() {
       platform
         .from("gochati_users")
         .select(
-          "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,vip_amount_override,referral_count,balance,created_at",
+          "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked,payment_push_attempts,referral_count,balance,created_at",
         )
         .order("created_at", { ascending: false })
         .limit(1000),
@@ -1061,6 +1061,15 @@ function AdminPage() {
                                 {u.referral_count || 0} · Balance: TZS{" "}
                                 {Number(u.balance || 0).toLocaleString()}
                               </p>
+                              {u.payment_blocked ? (
+                                <p className="font-bold text-destructive">
+                                  Malipo yamezuiwa (amepush mara {u.payment_push_attempts || 0} bila kulipa)
+                                </p>
+                              ) : u.payment_push_attempts > 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                  Push bila kulipa: {u.payment_push_attempts}
+                                </p>
+                              ) : null}
                               <div className="mt-3 flex flex-wrap items-center gap-2">
                                 <input
                                   aria-label={`Kiasi cha kubadilisha balance ya ${u.username}`}
@@ -1172,6 +1181,20 @@ function AdminPage() {
                                   }
                                 >
                                   Unban
+                                </Button>
+                              )}
+                              {(u.payment_blocked || u.payment_push_attempts > 0) && (
+                                <Button
+                                  variant={u.payment_blocked ? "destructive" : "outline"}
+                                  onClick={() =>
+                                    void updateUser(u.id, {
+                                      payment_blocked: false,
+                                      payment_blocked_at: null,
+                                      payment_push_attempts: 0,
+                                    })
+                                  }
+                                >
+                                  {u.payment_blocked ? "Ondoa zuio la malipo" : "Futa hesabu ya push"}
                                 </Button>
                               )}
                               <Button

@@ -88,6 +88,8 @@ async function applySuccessfulPayment(
     throw new Error("Invalid payment purpose");
   }
 
+  changes.payment_push_attempts = 0;
+
   const { error } = await admin
     .from("gochati_users")
     .update(changes)
@@ -332,6 +334,28 @@ export default async function handler(req: any, res: any) {
             message: "Tayari umelipa tax. Huhitaji kulipa tena.",
           });
         }
+      }
+
+      const { data: attemptRows, error: attemptError } = await admin.rpc(
+        "gochati_register_payment_attempt",
+        { p_user: user.id }
+      );
+      if (attemptError) throw attemptError;
+      const attempt = Array.isArray(attemptRows) ? attemptRows[0] : attemptRows;
+
+      if (attempt?.blocked) {
+        return send(res, 423, {
+          code: "payment_blocked",
+          message: "Account yako imezuiwa, Mtafute mtoa huduma kwa Msaada.",
+        });
+      }
+
+      if (Number(attempt?.attempts) === 3) {
+        return send(res, 429, {
+          code: "payment_warning",
+          message:
+            "Umepush zaidi ya Mara Mbili bila Kulipia, Account Yako itasimamishwa Ikiwa utagusa Lipa sasa na Hutakamilisha Malipo",
+        });
       }
 
       const reference = `INV-${randomUUID()}`;
