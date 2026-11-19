@@ -11,6 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { AdminSms } from "@/components/gochati/AdminSms";
+import { AdminPaymentPrices } from "@/components/gochati/AdminPaymentPrices";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { platform } from "@/integrations/supabase/platform";
@@ -90,6 +91,38 @@ function AdminPage() {
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
   const [balanceAdjustments, setBalanceAdjustments] = useState<Record<string, string>>({});
   const [balanceBusy, setBalanceBusy] = useState<string>("");
+  const [vipDrafts, setVipDrafts] = useState<Record<string, string>>({});
+  const [vipBusy, setVipBusy] = useState("");
+  async function saveVipOverride(id: string, clear = false) {
+    const raw = vipDrafts[id];
+    const amount = clear ? null : Number(raw);
+    if (!clear && (!Number.isInteger(amount) || (amount as number) < 100 || (amount as number) > 10_000_000)) {
+      setNotice("Weka kiasi sahihi cha VIP (TZS 100 hadi 10,000,000).");
+      return;
+    }
+    setVipBusy(id);
+    const { data, error } = await platform
+      .from("gochati_users")
+      .update({ vip_amount_override: amount })
+      .eq("id", id)
+      .select("id,vip_amount_override")
+      .maybeSingle();
+    setVipBusy("");
+    if (error || !data) {
+      setNotice("Imeshindwa kubadilisha kiasi cha VIP: " + (error?.message || "hakuna ruhusa"));
+      return;
+    }
+    const update = (list: any[]) =>
+      list.map((r) => (r.id === id ? { ...r, vip_amount_override: data.vip_amount_override } : r));
+    setRows(update);
+    setSearchRows((prev) => (prev ? update(prev) : prev));
+    setVipDrafts((prev) => ({ ...prev, [id]: "" }));
+    setNotice(
+      data.vip_amount_override
+        ? `Kiasi cha VIP kwa mtumiaji huyu sasa ni TZS ${Number(data.vip_amount_override).toLocaleString("en-US")}.`
+        : "Mtumiaji huyu sasa analipa bei ya kawaida ya VIP.",
+    );
+  }
   async function openSupportView(target: any) {
     setSupportTarget(target);
     setSupportData(null);
@@ -165,7 +198,7 @@ function AdminPage() {
       platform
         .from("gochati_users")
         .select(
-          "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,referral_count,balance,created_at",
+          "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,vip_amount_override,referral_count,balance,created_at",
         )
         .order("created_at", { ascending: false })
         .limit(1000),
@@ -726,6 +759,7 @@ function AdminPage() {
                   <AdminSms key={smsRecipient?.id || "groups"} recipient={smsRecipient} />
                 </>
               )}
+              {section === "payments" && <AdminPaymentPrices />}
               {section === "payments" && (
                 <section className="card-soft mt-4 p-4">
                   <h2 className="text-xl font-bold">Malipo ya SplashPay</h2>
@@ -1059,6 +1093,44 @@ function AdminPage() {
                                 >
                                   − Punguza balance
                                 </Button>
+                              </div>
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <span className="text-sm">
+                                  Kiasi cha VIP:{" "}
+                                  <strong>
+                                    {u.vip_amount_override
+                                      ? `TZS ${Number(u.vip_amount_override).toLocaleString("en-US")} (maalum)`
+                                      : "Bei ya kawaida"}
+                                  </strong>
+                                </span>
+                                <input
+                                  aria-label={`Kiasi maalum cha VIP kwa ${u.username}`}
+                                  type="number"
+                                  min="100"
+                                  step="1"
+                                  inputMode="numeric"
+                                  value={vipDrafts[u.id] || ""}
+                                  onChange={(e) =>
+                                    setVipDrafts((prev) => ({ ...prev, [u.id]: e.target.value }))
+                                  }
+                                  placeholder="Kiasi cha VIP (TZS)"
+                                  className="w-40 rounded-lg border p-2 bg-background text-foreground"
+                                />
+                                <Button
+                                  disabled={vipBusy === u.id}
+                                  onClick={() => void saveVipOverride(u.id)}
+                                >
+                                  Weka kiasi cha VIP
+                                </Button>
+                                {u.vip_amount_override ? (
+                                  <Button
+                                    variant="outline"
+                                    disabled={vipBusy === u.id}
+                                    onClick={() => void saveVipOverride(u.id, true)}
+                                  >
+                                    Rudisha bei ya kawaida
+                                  </Button>
+                                ) : null}
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-2">

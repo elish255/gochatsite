@@ -236,8 +236,7 @@ export default async function handler(req: any, res: any) {
         !Object.prototype.hasOwnProperty.call(
           PAYMENT_AMOUNTS,
           purpose
-        ) ||
-        amount !== PAYMENT_AMOUNTS[purpose]
+        )
       ) {
         return send(res, 400, {
           message: "Kiasi cha malipo si sahihi.",
@@ -248,7 +247,7 @@ export default async function handler(req: any, res: any) {
         await admin
           .from("gochati_users")
           .select(
-            "full_name,username,balance,is_premium,is_vip,vip_tax_paid"
+            "full_name,username,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override"
           )
           .eq("id", user.id)
           .maybeSingle();
@@ -257,6 +256,28 @@ export default async function handler(req: any, res: any) {
         return send(res, 404, {
           message:
             "Taarifa za akaunti hazijapatikana.",
+        });
+      }
+
+      const { data: priceRow } = await admin
+        .from("gochati_payment_prices")
+        .select("amount")
+        .eq("purpose", purpose)
+        .maybeSingle();
+
+      const userOverride =
+        purpose === "vip" ? Number(profile.vip_amount_override) : 0;
+      const expectedAmount =
+        userOverride > 0
+          ? userOverride
+          : Number(priceRow?.amount) > 0
+            ? Number(priceRow?.amount)
+            : PAYMENT_AMOUNTS[purpose];
+
+      if (amount !== expectedAmount) {
+        return send(res, 400, {
+          message:
+            "Kiasi cha malipo kimebadilika. Tafadhali fungua ukurasa upya.",
         });
       }
 

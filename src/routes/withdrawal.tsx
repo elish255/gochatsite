@@ -33,26 +33,35 @@ type WithdrawalReceipt = Omit<WithdrawalRecord, "created_at"> & {
   created_at?: string;
 };
 
-const WITHDRAWAL_PROMPTS = {
-  premium: {
-    title: "Hongera! Umefikia kiwango cha withdrawal",
-    description:
-      "Ili kuendelea na withdrawal, upgrade akaunti yako kwenda Premium. Ada ya Premium ni TZS 32,000.",
-    action: "Lipa Premium — TZS 32,000",
-  },
-  vip: {
-    title: "Hongera! Umefikia kiwango cha VIP",
-    description:
-      "Salio lako limetimiza kiwango cha TZS 300,000. Upgrade kwenda VIP ili kuendelea na withdrawal. Ada ya VIP ni TZS 35,500.",
-    action: "Lipa VIP — TZS 35,500",
-  },
-  tax: {
-    title: "Malipo ya Tax ya VIP",
-    description:
-      "Lipa Tax ya TZS 50,000 ili kuendelea na withdrawal. Baada ya malipo kuthibitishwa, unaweza kutuma ombi lako.",
-    action: "Lipa Tax — TZS 50,000",
-  },
-} satisfies Record<WithdrawalPrompt, { title: string; description: string; action: string }>;
+const DEFAULT_PRICES: Record<WithdrawalPrompt, number> = {
+  premium: 32000,
+  vip: 35500,
+  tax: 50000,
+};
+
+const formatTzs = (n: number) => `TZS ${n.toLocaleString("en-US")}`;
+
+function buildWithdrawalPrompts(
+  prices: Record<WithdrawalPrompt, number>,
+): Record<WithdrawalPrompt, { title: string; description: string; action: string }> {
+  return {
+    premium: {
+      title: "Hongera! Umefikia kiwango cha withdrawal",
+      description: `Ili kuendelea na withdrawal, upgrade akaunti yako kwenda Premium. Ada ya Premium ni ${formatTzs(prices.premium)}.`,
+      action: `Lipa Premium — ${formatTzs(prices.premium)}`,
+    },
+    vip: {
+      title: "Hongera! Umefikia kiwango cha VIP",
+      description: `Salio lako limetimiza kiwango cha TZS 300,000. Upgrade kwenda VIP ili kuendelea na withdrawal. Ada ya VIP ni ${formatTzs(prices.vip)}.`,
+      action: `Lipa VIP — ${formatTzs(prices.vip)}`,
+    },
+    tax: {
+      title: "Malipo ya Tax ya VIP",
+      description: `Lipa Tax ya ${formatTzs(prices.tax)} ili kuendelea na withdrawal. Baada ya malipo kuthibitishwa, unaweza kutuma ombi lako.`,
+      action: `Lipa Tax — ${formatTzs(prices.tax)}`,
+    },
+  };
+}
 
 function WithdrawalPage() {
   const nav = useNavigate();
@@ -68,6 +77,7 @@ function WithdrawalPage() {
   const [ready, setReady] = useState(false);
   const [receipt, setReceipt] = useState<WithdrawalReceipt | null>(null);
   const [withdrawalPrompt, setWithdrawalPrompt] = useState<WithdrawalPrompt | null>(null);
+  const [prices, setPrices] = useState(DEFAULT_PRICES);
 
   const value = Number(amount) || 0;
   const fee = Math.round(value * 20) / 100;
@@ -103,7 +113,7 @@ function WithdrawalPage() {
     const [profile, withdrawals] = await Promise.all([
       platform
         .from("gochati_users")
-        .select("balance, phone, account_status, activation_paid, is_premium, is_vip, vip_tax_paid")
+        .select("balance, phone, account_status, activation_paid, is_premium, is_vip, vip_tax_paid, vip_amount_override")
         .eq("id", user.id)
         .single(),
 
@@ -121,6 +131,17 @@ function WithdrawalPage() {
       setReady(false);
       return;
     }
+
+    const priceRows = await platform.from("gochati_payment_prices").select("purpose,amount");
+    const nextPrices = { ...DEFAULT_PRICES };
+    for (const row of priceRows?.data || []) {
+      if (row.purpose in nextPrices && Number(row.amount) > 0) {
+        nextPrices[row.purpose as WithdrawalPrompt] = Number(row.amount);
+      }
+    }
+    const vipOverride = Number(profile.data?.vip_amount_override);
+    if (vipOverride > 0) nextPrices.vip = vipOverride;
+    setPrices(nextPrices);
 
     setAccount(profile.data);
     setBalance(Number(profile.data?.balance || 0));
@@ -247,7 +268,7 @@ function WithdrawalPage() {
     }
   }
 
-  const prompt = withdrawalPrompt ? WITHDRAWAL_PROMPTS[withdrawalPrompt] : null;
+  const prompt = withdrawalPrompt ? buildWithdrawalPrompts(prices)[withdrawalPrompt] : null;
 
   return (
     <main className="auth-page">
