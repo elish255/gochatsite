@@ -4,6 +4,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { platform } from "@/integrations/supabase/platform";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { SupportButton } from "@/components/gochati/SupportButton";
 
 export const Route = createFileRoute("/payment")({
   component: PaymentPage,
@@ -105,6 +112,8 @@ function UpgradePaymentPage({
   const [paid, setPaid] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [reference, setReference] = useState("");
+  const [pushAlert, setPushAlert] = useState<"warning" | "blocked" | null>(null);
+  const [pushBlocked, setPushBlocked] = useState(false);
 
   const nav = useNavigate();
 
@@ -126,7 +135,7 @@ function UpgradePaymentPage({
       const { data, error } = await platform
         .from("gochati_users")
         .select(
-          "account_status,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override"
+          "account_status,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked"
         )
         .eq("id", user.id)
         .maybeSingle();
@@ -162,6 +171,11 @@ function UpgradePaymentPage({
           "Akaunti yako imesimamishwa. Wasiliana na huduma kwa wateja."
         );
         return;
+      }
+
+      if (data.payment_blocked) {
+        setPushBlocked(true);
+        setPushAlert("blocked");
       }
 
       const balance = Number(data.balance || 0);
@@ -318,6 +332,11 @@ function UpgradePaymentPage({
   }
 
   async function startPayment() {
+    if (pushBlocked) {
+      setPushAlert("blocked");
+      return;
+    }
+
     setBusy(true);
     setNotice("");
 
@@ -346,6 +365,17 @@ function UpgradePaymentPage({
       });
 
       const data = await response.json().catch(() => ({}));
+
+      if (data?.code === "payment_blocked") {
+        setPushBlocked(true);
+        setPushAlert("blocked");
+        return;
+      }
+
+      if (data?.code === "payment_warning") {
+        setPushAlert("warning");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -499,6 +529,34 @@ function UpgradePaymentPage({
           </>
         )}
       </section>
+
+      <Dialog
+        open={pushAlert !== null}
+        onOpenChange={(open) => {
+          if (!open) setPushAlert(null);
+        }}
+      >
+        <DialogContent
+          role="alertdialog"
+          className="max-w-sm rounded-3xl text-center"
+        >
+          <DialogTitle className="text-center text-2xl font-extrabold text-destructive">
+            {pushAlert === "blocked" ? "AKAUNTI IMEZUIWA" : "ONYO"}
+          </DialogTitle>
+          <DialogDescription className="text-base font-semibold leading-relaxed text-destructive">
+            {pushAlert === "blocked"
+              ? "Account yako imezuiwa, Mtafute mtoa huduma kwa Msaada."
+              : "Umepush zaidi ya Mara Mbili bila Kulipia, Account Yako itasimamishwa Ikiwa utagusa Lipa sasa na Hutakamilisha Malipo"}
+          </DialogDescription>
+          {pushAlert === "blocked" ? (
+            <div className="flex justify-center">
+              <SupportButton />
+            </div>
+          ) : (
+            <Button onClick={() => setPushAlert(null)}>Nimeelewa</Button>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
