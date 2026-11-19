@@ -1,6 +1,6 @@
 /** Vercel Serverless Function for POST /api/gochati-sms (admin-only Swala SMS sender). */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 
 type VercelRequest = { method?: string; body?: unknown; headers: Record<string, string | string[] | undefined> };
 type VercelResponse = { status(code: number): VercelResponse; json(body: unknown): void; send(body: string): void; setHeader(name: string, value: string): void };
@@ -95,6 +95,43 @@ async function sendThresholdSms(db: SupabaseClient, userId: string) {
     await db.from("gochati_users").update({ withdrawal_threshold_sms_at: null }).eq("id", userId);
   }
   return { sent: ok };
+}
+
+const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+
+function generatePassword(length = 8) {
+  const bytes = randomBytes(length);
+  return Array.from(bytes, (n) => PASSWORD_ALPHABET[n % PASSWORD_ALPHABET.length]).join("");
+}
+
+async function resetPasswordBySms(rawPhone: unknown) {
+  const phone = normalizeTanzaniaPhone(typeof rawPhone === "string" ? rawPhone : "");
+  if (!phone) throw new HttpError(400, "Weka namba ya simu sahihi, mfano 0712345678.");
+
+  const { url, serviceKey } = supabaseConfig();
+  const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await db.rpc("gochati_claim_password_reset", { p_digits: phone.slice(-9) });
+  if (error) {
+    console.error("Password reset lookup failed", error);
+    throw new HttpError(500, "Ombi halijakamilika. Jaribu tena.");
+  }
+
+  for (const account of (data ?? []) as { id: string; username: string }[]) {
+    const password = generatePassword();
+    const { error: updateError } = await db.auth.admin.updateUserById(account.id, { password });
+    if (updateError) {
+      console.error("Password reset update failed", updateError.message);
+      await db.from("gochati_users").update({ password_reset_sms_at: null }).eq("id", account.id);
+      continue;
+    }
+    const text = `GOCHATI: Habari ${account.username}, password yako mpya ni: ${password}\nIngia kwa username "${account.username}" na password hii. Usimpe mtu yeyote.`;
+    const sent = await sendSwalaSms(phone, text).catch((sendError) => {
+      console.error("Password reset SMS failed", sendError);
+      return false;
+    });
+    if (!sent) await db.from("gochati_users").update({ password_reset_sms_at: null }).eq("id", account.id);
+  }
+  return { ok: true };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -216,6 +253,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   try {
     const body = parseBody(req.body);
+
+    if (body.action === "reset_password") {
+      return res.status(200).json(await resetPasswordBySms(body.phone));
+    }
 
     if (body.action === "threshold") {
       const { db: userDb, userId } = await requireUser(req);
