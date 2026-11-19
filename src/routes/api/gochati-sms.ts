@@ -57,7 +57,7 @@ async function requireAdmin(request: Request): Promise<SupabaseClient> {
 
 const WITHDRAWAL_THRESHOLD = 100000;
 const THRESHOLD_SMS_TEMPLATE =
-  "[Username] Hongera Sana!\nKiwango cha kutoa pesa kimefikiwa\nUmefikia Kiwango Cha kutoa Pesa, Ungana na Watanzania Wengine Kunufaika na Hii Fursa Kamilisha Upgrade ili kupokea Withdrawal Yako";
+  "[Username] Hongera Sana!\nUmefikia Kiwango Cha kutoa Pesa, Ungana na Watanzania Wengine Kunufaika na Hii Fursa Kamilisha Upgrade ili kupokea Withdrawal Yako";
 
 async function requireUser(request: Request) {
   const { url, anonKey, serviceKey } = supabaseConfig();
