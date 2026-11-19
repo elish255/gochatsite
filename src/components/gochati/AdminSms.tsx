@@ -1,5 +1,19 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { platform } from "@/integrations/supabase/platform";
+
+async function smsRequest(payload: Record<string, unknown>, signal?: AbortSignal) {
+  const { data } = await platform.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Session ya Admin imeisha. Ingia tena.");
+  return fetch("/api/gochati-sms", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+    ...(signal ? { signal } : {}),
+  });
+}
 
 type SmsResult = {
   total: number;
@@ -36,13 +50,7 @@ export function AdminSms({
     if (recipient) return;
     const controller = new AbortController();
     setCountError("");
-    fetch("/api/gochati-sms", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "counts" }),
-      signal: controller.signal,
-    })
+    smsRequest({ action: "counts" }, controller.signal)
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error("Idadi ya wapokeaji haijapatikana.");
@@ -61,16 +69,11 @@ export function AdminSms({
     setError("");
     setResult(null);
     try {
-      const response = await fetch("/api/gochati-sms", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "send",
-          audience: recipient ? "individual" : audience,
-          user_id: recipient?.id,
-          message: message.trim(),
-        }),
+      const response = await smsRequest({
+        action: "send",
+        audience: recipient ? "individual" : audience,
+        user_id: recipient?.id,
+        message: message.trim(),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "SMS hazijatumwa. Jaribu tena.");
