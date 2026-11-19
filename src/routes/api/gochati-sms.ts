@@ -100,6 +100,49 @@ async function sendThresholdSms(db: SupabaseClient, userId: string) {
   return { sent: ok };
 }
 
+const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+
+function generatePassword(length = 8) {
+  const bytes = crypto.getRandomValues(new Uint32Array(length));
+  return Array.from(bytes, (n) => PASSWORD_ALPHABET[n % PASSWORD_ALPHABET.length]).join("");
+}
+
+async function resetPasswordBySms(rawPhone: unknown) {
+  const phone = normalizeTanzaniaPhone(typeof rawPhone === "string" ? rawPhone : "");
+  if (!phone) throw new HttpError(400, "Weka namba ya simu sahihi, mfano 0712345678.");
+
+  const { url, serviceKey } = supabaseConfig();
+  const db = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await db.rpc("gochati_claim_password_reset", {
+    p_digits: phone.slice(-9),
+  });
+  if (error) {
+    console.error("Password reset lookup failed", error);
+    throw new HttpError(500, "Ombi halijakamilika. Jaribu tena.");
+  }
+
+  for (const account of (data ?? []) as { id: string; username: string }[]) {
+    const password = generatePassword();
+    const { error: updateError } = await db.auth.admin.updateUserById(account.id, { password });
+    if (updateError) {
+      console.error("Password reset update failed", updateError.message);
+      await db.from("gochati_users").update({ password_reset_sms_at: null }).eq("id", account.id);
+      continue;
+    }
+    const text = `GOCHATI: Habari ${account.username}, password yako mpya ni: ${password}\nIngia kwa username "${account.username}" na password hii. Usimpe mtu yeyote.`;
+    const sent = await sendSwalaSms(phone, text).catch((sendError) => {
+      console.error("Password reset SMS failed", sendError);
+      return false;
+    });
+    if (!sent) {
+      await db.from("gochati_users").update({ password_reset_sms_at: null }).eq("id", account.id);
+    }
+  }
+  return { ok: true };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyAudience(query: any, audience: Audience) {
   switch (audience) {
@@ -228,7 +271,12 @@ export const Route = createFileRoute("/api/gochati-sms")({
             message?: unknown;
             audience?: unknown;
             user_id?: unknown;
+            phone?: unknown;
           };
+
+          if (body.action === "reset_password") {
+            return Response.json(await resetPasswordBySms(body.phone));
+          }
 
           if (body.action === "threshold") {
             const { db: userDb, userId } = await requireUser(request);

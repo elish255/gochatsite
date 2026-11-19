@@ -76,7 +76,7 @@ export function AuthCallbacks() {
   );
 }
 export function PasswordHelp() {
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
@@ -91,14 +91,20 @@ export function PasswordHelp() {
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
+        setNotice("");
         try {
-          const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-            redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+          const response = await fetch("/api/gochati-sms", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "reset_password", phone: phone.trim() }),
           });
-          if (error) throw error;
-          setNotice("Kama email imesajiliwa, angalia inbox kwa kiungo cha kurejesha password.");
-        } catch {
-          setNotice("Ombi halijatumwa. Jaribu tena.");
+          const result = (await response.json().catch(() => ({}))) as { message?: string };
+          if (!response.ok) throw new Error(result.message || "Ombi halijatumwa. Jaribu tena.");
+          setNotice(
+            "Kama namba hii imesajiliwa, utapokea SMS kutoka GOCHATI yenye password mpya. Itumie kuingia na username yako.",
+          );
+        } catch (cause) {
+          setNotice(cause instanceof Error ? cause.message : "Ombi halijatumwa. Jaribu tena.");
         } finally {
           setBusy(false);
         }
@@ -106,16 +112,25 @@ export function PasswordHelp() {
       className="mt-4"
     >
       <p className="text-sm text-muted-foreground">
-        Weka email ya usajili. Utapokea kiungo cha kuweka password mpya.
+        Weka namba ya simu uliyojisajili nayo. Utapokea SMS kutoka GOCHATI yenye password mpya.
       </p>
       <label className="auth-field">
-        <span>Email ya kurejesha password</span>
+        <span>Namba ya simu</span>
         <div className="auth-input">
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="0712345678"
+            pattern="[+]?[0-9 ]{9,16}"
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
         </div>
       </label>
       <Button type="submit" disabled={busy}>
-        {busy ? "Inatuma..." : "Tuma kiungo cha password mpya"}
+        {busy ? "Inatuma..." : "Tuma password mpya kwa SMS"}
       </Button>
       <Button type="button" variant="ghost" disabled={busy} onClick={() => setOpen(false)}>
         Ghairi
