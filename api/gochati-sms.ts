@@ -50,6 +50,53 @@ async function requireAdmin(req: VercelRequest): Promise<SupabaseClient> {
   return adminClient;
 }
 
+const WITHDRAWAL_THRESHOLD = 100000;
+const THRESHOLD_SMS_TEMPLATE =
+  "[Username] Hongera Sana!\nKiwango cha kutoa pesa kimefikiwa\nUmefikia Kiwango Cha kutoa Pesa, Ungana na Watanzania Wengine Kunufaika na Hii Fursa Kamilisha Upgrade ili kupokea Withdrawal Yako";
+
+async function requireUser(req: VercelRequest) {
+  const { url, anonKey, serviceKey } = supabaseConfig();
+  const raw = req.headers.authorization;
+  const header = (Array.isArray(raw) ? raw[0] : raw) || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!token) throw new HttpError(401, "Hujaingia.");
+  const options = { auth: { persistSession: false, autoRefreshToken: false } };
+  const { data, error } = await createClient(url, anonKey, options).auth.getUser(token);
+  if (error || !data.user) throw new HttpError(401, "Session haijathibitishwa.");
+  return { db: createClient(url, serviceKey, options), userId: data.user.id };
+}
+
+async function sendThresholdSms(db: SupabaseClient, userId: string) {
+  const { data: claimed, error } = await db
+    .from("gochati_users")
+    .update({ withdrawal_threshold_sms_at: new Date().toISOString() })
+    .eq("id", userId)
+    .is("withdrawal_threshold_sms_at", null)
+    .eq("account_status", "active")
+    .gte("balance", WITHDRAWAL_THRESHOLD)
+    .not("is_premium", "is", true)
+    .not("is_vip", "is", true)
+    .select("username, phone")
+    .maybeSingle();
+  if (error) throw new HttpError(500, "Imeshindwa kuhakiki kiwango.");
+  if (!claimed) return { sent: false };
+
+  const recipient = claimed as Recipient;
+  const phone = normalizeTanzaniaPhone(recipient.phone || "");
+  const ok = phone
+    ? await sendSwalaSms(phone, THRESHOLD_SMS_TEMPLATE.replace(USERNAME_PLACEHOLDER, recipient.username || "")).catch(
+        (sendError) => {
+          console.error("Threshold SMS failed", sendError);
+          return false;
+        },
+      )
+    : false;
+  if (!ok && phone) {
+    await db.from("gochati_users").update({ withdrawal_threshold_sms_at: null }).eq("id", userId);
+  }
+  return { sent: ok };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyAudience(query: any, audience: Audience) {
   switch (audience) {
@@ -168,8 +215,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ message: "Method not allowed." });
   }
   try {
-    const db = await requireAdmin(req);
     const body = parseBody(req.body);
+
+    if (body.action === "threshold") {
+      const { db: userDb, userId } = await requireUser(req);
+      return res.status(200).json(await sendThresholdSms(userDb, userId));
+    }
+
+    const db = await requireAdmin(req);
 
     if (body.action === "counts") return res.status(200).json({ counts: await audienceCounts(db) });
 

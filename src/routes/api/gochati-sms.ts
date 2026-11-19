@@ -55,6 +55,51 @@ async function requireAdmin(request: Request): Promise<SupabaseClient> {
   return adminClient;
 }
 
+const WITHDRAWAL_THRESHOLD = 100000;
+const THRESHOLD_SMS_TEMPLATE =
+  "[Username] Hongera Sana!\nKiwango cha kutoa pesa kimefikiwa\nUmefikia Kiwango Cha kutoa Pesa, Ungana na Watanzania Wengine Kunufaika na Hii Fursa Kamilisha Upgrade ili kupokea Withdrawal Yako";
+
+async function requireUser(request: Request) {
+  const { url, anonKey, serviceKey } = supabaseConfig();
+  const header = request.headers.get("Authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!token) throw new HttpError(401, "Hujaingia.");
+  const options = { auth: { persistSession: false, autoRefreshToken: false } };
+  const { data, error } = await createClient(url, anonKey, options).auth.getUser(token);
+  if (error || !data.user) throw new HttpError(401, "Session haijathibitishwa.");
+  return { db: createClient(url, serviceKey, options), userId: data.user.id };
+}
+
+async function sendThresholdSms(db: SupabaseClient, userId: string) {
+  const { data: claimed, error } = await db
+    .from("gochati_users")
+    .update({ withdrawal_threshold_sms_at: new Date().toISOString() })
+    .eq("id", userId)
+    .is("withdrawal_threshold_sms_at", null)
+    .eq("account_status", "active")
+    .gte("balance", WITHDRAWAL_THRESHOLD)
+    .not("is_premium", "is", true)
+    .not("is_vip", "is", true)
+    .select("username, phone")
+    .maybeSingle();
+  if (error) throw new HttpError(500, "Imeshindwa kuhakiki kiwango.");
+  if (!claimed) return { sent: false };
+
+  const recipient = claimed as Recipient;
+  const phone = normalizeTanzaniaPhone(recipient.phone || "");
+  const text = THRESHOLD_SMS_TEMPLATE.replace(/\[\s*username\s*\]/gi, recipient.username || "");
+  const ok = phone
+    ? await sendSwalaSms(phone, text).catch((sendError) => {
+        console.error("Threshold SMS failed", sendError);
+        return false;
+      })
+    : false;
+  if (!ok && phone) {
+    await db.from("gochati_users").update({ withdrawal_threshold_sms_at: null }).eq("id", userId);
+  }
+  return { sent: ok };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyAudience(query: any, audience: Audience) {
   switch (audience) {
@@ -178,13 +223,19 @@ export const Route = createFileRoute("/api/gochati-sms")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const db = await requireAdmin(request);
           const body = (await request.json().catch(() => ({}))) as {
             action?: unknown;
             message?: unknown;
             audience?: unknown;
             user_id?: unknown;
           };
+
+          if (body.action === "threshold") {
+            const { db: userDb, userId } = await requireUser(request);
+            return Response.json(await sendThresholdSms(userDb, userId));
+          }
+
+          const db = await requireAdmin(request);
 
           if (body.action === "counts") {
             return Response.json({ counts: await audienceCounts(db) });
