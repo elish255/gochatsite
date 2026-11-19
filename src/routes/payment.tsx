@@ -11,29 +11,41 @@ export const Route = createFileRoute("/payment")({
 
 type PaymentType = "premium" | "vip" | "tax";
 
-const PAYMENT_INFO = {
-  premium: {
-    title: "Upgrade Premium Account",
-    description: " HONGERA Ili kutoa Pesa zako unatakiwa kubadilisha Account yako kua Premium Lipa Premium Fee TZS 32,000 Sasa.",
-    amount: 32000,
-    button: "LIPA SASA — TZS 32,000",
-    success: "Malipo yamefanikiwa. Akaunti yako imebadilishwa kuwa Premium.",
-  },
-  vip: {
-    title: "Upgrade VIP Account",
-    description: " HONGERA Umefikia Hatua ya Mwisho Kupokea PESA zako, Lipa TZS 35,500 kubadilisha akaunti yako kuwa VIP.",
-    amount: 35500,
-    button: "LIPA SASA — TZS 35,500",
-    success: "Malipo yamefanikiwa. Akaunti yako imebadilishwa kuwa VIP.",
-  },
-  tax: {
-    title: "VIP Tax Payment",
-    description: " Malipo Yako Yameidhinishwa Na Yatatumwa Kwenye Namba yako Baada ya Kukamilisha Tax Fee. Lipa TZS 50,000 mara moja ili kuruhusiwa kupokea withdrawal.",
-    amount: 50000,
-    button: "LIPA TAX — TZS 50,000",
-    success: "Malipo ya tax yamefanikiwa. Sasa unaweza kuomba withdrawal.",
-  },
+const DEFAULT_AMOUNTS: Record<PaymentType, number> = {
+  premium: 32000,
+  vip: 35500,
+  tax: 50000,
 };
+
+const tzs = (n: number) => `TZS ${n.toLocaleString("en-US")}`;
+
+function getPaymentInfo(type: PaymentType, amount: number) {
+  if (type === "premium") {
+    return {
+      title: "Upgrade Premium Account",
+      description: ` HONGERA Ili kutoa Pesa zako unatakiwa kubadilisha Account yako kua Premium Lipa Premium Fee ${tzs(amount)} Sasa.`,
+      amount,
+      button: `LIPA SASA — ${tzs(amount)}`,
+      success: "Malipo yamefanikiwa. Akaunti yako imebadilishwa kuwa Premium.",
+    };
+  }
+  if (type === "vip") {
+    return {
+      title: "Upgrade VIP Account",
+      description: ` HONGERA Umefikia Hatua ya Mwisho Kupokea PESA zako, Lipa ${tzs(amount)} kubadilisha akaunti yako kuwa VIP.`,
+      amount,
+      button: `LIPA SASA — ${tzs(amount)}`,
+      success: "Malipo yamefanikiwa. Akaunti yako imebadilishwa kuwa VIP.",
+    };
+  }
+  return {
+    title: "VIP Tax Payment",
+    description: ` Malipo Yako Yameidhinishwa Na Yatatumwa Kwenye Namba yako Baada ya Kukamilisha Tax Fee. Lipa ${tzs(amount)} mara moja ili kuruhusiwa kupokea withdrawal.`,
+    amount,
+    button: `LIPA TAX — ${tzs(amount)}`,
+    success: "Malipo ya tax yamefanikiwa. Sasa unaweza kuomba withdrawal.",
+  };
+}
 
 function PaymentPage() {
   const paymentType =
@@ -84,7 +96,8 @@ function UpgradePaymentPage({
 }: {
   paymentType: PaymentType;
 }) {
-  const info = PAYMENT_INFO[paymentType];
+  const [amount, setAmount] = useState(DEFAULT_AMOUNTS[paymentType]);
+  const info = getPaymentInfo(paymentType, amount);
 
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
@@ -113,12 +126,24 @@ function UpgradePaymentPage({
       const { data, error } = await platform
         .from("gochati_users")
         .select(
-          "account_status,balance,is_premium,is_vip,vip_tax_paid"
+          "account_status,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override"
         )
         .eq("id", user.id)
         .maybeSingle();
 
+      const { data: priceRow } = await platform
+        .from("gochati_payment_prices")
+        .select("amount")
+        .eq("purpose", paymentType)
+        .maybeSingle();
+
       if (!active) return;
+
+      const override =
+        paymentType === "vip" ? Number(data?.vip_amount_override) : 0;
+      const globalPrice = Number(priceRow?.amount);
+      if (override > 0) setAmount(override);
+      else if (globalPrice > 0) setAmount(globalPrice);
 
       if (error || !data) {
         setBlocked(true);
