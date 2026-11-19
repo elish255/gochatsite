@@ -1,3 +1,5 @@
+import { fillTemplate, personalityFor } from "./chat-personalities";
+
 const femaleNames = [
   "Emma",
   "Sophie",
@@ -139,10 +141,16 @@ export function chatPersona(id: number) {
     country: countries[index % countries.length],
     age: 22 + ((index * 7) % 26),
     topic: chatTopics[index],
+    personality: personalityFor(index),
   };
 }
 
 export function chatOpening(id: number) {
   const person = chatPersona(id);
-  return `Hey! I'm ${person.name}, an AI character from ${person.country}. I've been getting into ${person.topic} lately. What do you enjoy doing when you have free time?`;
+  const personality = person.personality ?? personalityFor(0)!;
+  return fillTemplate(personality.opening, {
+    name: person.name ?? "Alex",
+    country: person.country ?? "Europe",
+    topic: person.topic ?? "music",
+  });
 }
