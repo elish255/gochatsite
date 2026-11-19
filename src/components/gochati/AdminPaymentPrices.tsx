@@ -69,8 +69,8 @@ export function AdminPaymentPrices({ vipOnly = false }: { vipOnly?: boolean }) {
     setMessage({ text: `${LABELS[purpose]} sasa ni ${formatTzs(saved)} kwa watumiaji wote.`, ok: true });
   }
 
-  const vipCurrent = prices.vip ?? 0;
-  const vipDraft = drafts.vip ?? "";
+  const vipCurrent = prices["vip"] ?? 0;
+  const vipDraft = drafts["vip"] ?? "";
   const vipChanged = vipDraft !== "" && Number(vipDraft) !== vipCurrent;
 
   return (
