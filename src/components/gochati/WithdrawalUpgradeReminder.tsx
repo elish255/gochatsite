@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { platform } from "@/integrations/supabase/platform";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -72,8 +73,28 @@ function BalloonCluster({ side, balloons }: { side: "left" | "right"; balloons: 
   );
 }
 
+async function notifyThresholdReached() {
+  const { data } = await platform.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return;
+  await fetch("/api/gochati-sms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action: "threshold" }),
+  });
+}
+
 export function WithdrawalUpgradeReminder({ eligible }: WithdrawalUpgradeReminderProps) {
   const [open, setOpen] = useState(false);
+  const thresholdNotified = useRef(false);
+
+  useEffect(() => {
+    if (!eligible || thresholdNotified.current) return;
+    thresholdNotified.current = true;
+    notifyThresholdReached().catch(() => {
+      thresholdNotified.current = false;
+    });
+  }, [eligible]);
 
   useEffect(() => {
     setOpen(eligible);
