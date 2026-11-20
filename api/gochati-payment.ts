@@ -292,15 +292,16 @@ export default async function handler(req: any, res: any) {
 
       const balance = Number(profile.balance || 0);
 
-      const accountActive = profile.account_status === "active";
+      const activationComplete =
+        profile.account_status === "active" && profile.activation_paid === true;
 
-      if (purpose === "activation" && (accountActive || profile.activation_paid)) {
+      if (purpose === "activation" && profile.activation_paid === true) {
         return send(res, 409, {
           message: "Akaunti yako tayari imeshawashwa.",
         });
       }
 
-      if (purpose !== "activation" && !accountActive) {
+      if (purpose !== "activation" && !activationComplete) {
         return send(res, 403, {
           message: "Lipia Activation Fee kwanza ili akaunti yako iwe hai.",
         });

@@ -191,15 +191,18 @@ function UpgradePaymentPage({
 
       const balance = Number(data.balance || 0);
 
+      const activationComplete =
+        data.account_status === "active" && data.activation_paid === true;
+
       if (paymentType === "activation") {
-        if (data.account_status === "active" || data.activation_paid) {
+        if (activationComplete) {
           setPaid(true);
           setNotice("Akaunti yako tayari iko hai.");
         }
         return;
       }
 
-      if (data.account_status !== "active") {
+      if (!activationComplete) {
         window.location.replace("/payment?type=activation");
         return;
       }

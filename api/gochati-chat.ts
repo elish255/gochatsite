@@ -599,14 +599,17 @@ export default async function handler(req: Request, res: Response) {
 
     const { data: account, error: accountError } = await supabase
       .from("gochati_users")
-      .select("account_status")
+      .select("account_status,activation_paid")
       .eq("id", data.user.id)
       .maybeSingle();
     if (accountError) return error(res, 503, "Akaunti haikuthibitishwa. Jaribu tena.");
     if (account?.account_status === "banned" || account?.account_status === "deactivated")
       return error(res, 403, "Akaunti yako imesimamishwa. Wasiliana na huduma kwa wateja.");
 
-    if (account?.account_status !== "active") {
+    const activationComplete =
+      account?.account_status === "active" && account.activation_paid === true;
+
+    if (!activationComplete) {
       const sentByUser = conversation.filter((item) => item.role === "user").length;
       if (sentByUser > FREE_MESSAGES_BEFORE_ACTIVATION)
         return res.status(402).json({
@@ -617,7 +620,7 @@ export default async function handler(req: Request, res: Response) {
       return error(res, 403, "Anza kipindi cha chat kabla ya kutuma ujumbe.");
     }
 
-    if (account?.account_status === "active") {
+    if (activationComplete) {
       const { data: session, error: sessionError } = await supabase
         .from("gochati_chat_sessions")
         .select("id,partner_id,started_at,duration_minutes,status")
