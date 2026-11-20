@@ -445,6 +445,7 @@ type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const supabaseUrl = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"] || "";
 const supabaseKey = process.env["SUPABASE_SERVICE_ROLE_KEY"] || "";
+const FREE_MESSAGES_BEFORE_ACTIVATION = 2;
 
 function error(res: Response, status: number, message: string) {
   return res.status(status).json({ message });
@@ -596,31 +597,51 @@ export default async function handler(req: Request, res: Response) {
     const totalMessageLength = conversation.reduce((total, item) => total + item.content.length, 0);
     if (totalMessageLength > 16000) return error(res, 400, "Historia ya mazungumzo ni ndefu mno.");
 
-    if (!sessionId) return error(res, 403, "Anza kipindi cha chat kabla ya kutuma ujumbe.");
-
-    const { data: session, error: sessionError } = await supabase
-      .from("gochati_chat_sessions")
-      .select("id,partner_id,started_at,duration_minutes,status")
-      .eq("id", sessionId)
-      .eq("user_id", data.user.id)
-      .eq("partner_id", `person-${persona.id}`)
+    const { data: account, error: accountError } = await supabase
+      .from("gochati_users")
+      .select("account_status")
+      .eq("id", data.user.id)
       .maybeSingle();
+    if (accountError) return error(res, 503, "Akaunti haikuthibitishwa. Jaribu tena.");
+    if (account?.account_status === "banned" || account?.account_status === "deactivated")
+      return error(res, 403, "Akaunti yako imesimamishwa. Wasiliana na huduma kwa wateja.");
 
-    if (sessionError) {
-      console.error("[v0] gochati-chat session verification failed", sessionError.code);
-      return error(res, 503, "Kipindi cha chat hakikuthibitishwa. Jaribu tena.");
+    if (account?.account_status !== "active") {
+      const sentByUser = conversation.filter((item) => item.role === "user").length;
+      if (sentByUser > FREE_MESSAGES_BEFORE_ACTIVATION)
+        return res.status(402).json({
+          code: "activation_required",
+          message: "Umefikia mwisho wa mazungumzo ya bure. Lipia Activation Fee kuendelea.",
+        });
+    } else if (!sessionId) {
+      return error(res, 403, "Anza kipindi cha chat kabla ya kutuma ujumbe.");
     }
 
-    const sessionEndsAt = session
-      ? Date.parse(session.started_at) + Number(session.duration_minutes) * 60_000
-      : Number.NaN;
-    if (
-      !session ||
-      session.status !== "active" ||
-      !Number.isFinite(sessionEndsAt) ||
-      Date.now() >= sessionEndsAt
-    )
-      return error(res, 403, "Kipindi cha chat hakijaidhinishwa au kimeisha.");
+    if (account?.account_status === "active") {
+      const { data: session, error: sessionError } = await supabase
+        .from("gochati_chat_sessions")
+        .select("id,partner_id,started_at,duration_minutes,status")
+        .eq("id", sessionId)
+        .eq("user_id", data.user.id)
+        .eq("partner_id", `person-${persona.id}`)
+        .maybeSingle();
+
+      if (sessionError) {
+        console.error("[v0] gochati-chat session verification failed", sessionError.code);
+        return error(res, 503, "Kipindi cha chat hakikuthibitishwa. Jaribu tena.");
+      }
+
+      const sessionEndsAt = session
+        ? Date.parse(session.started_at) + Number(session.duration_minutes) * 60_000
+        : Number.NaN;
+      if (
+        !session ||
+        session.status !== "active" ||
+        !Number.isFinite(sessionEndsAt) ||
+        Date.now() >= sessionEndsAt
+      )
+        return error(res, 403, "Kipindi cha chat hakijaidhinishwa au kimeisha.");
+    }
 
     let reply = "";
     try {

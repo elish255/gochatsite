@@ -283,7 +283,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
         open={signupComplete}
         onContinue={() => {
           setSignupComplete(false);
-          void navigate({ to: signupHasSession ? "/" : "/login", replace: true });
+          if (signupHasSession) window.location.replace("/payment?type=activation");
+          else void navigate({ to: "/login", replace: true });
         }}
       />
     </main>

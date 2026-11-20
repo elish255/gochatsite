@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
 import { ActivationRequiredDialog } from "./ActivationRequiredDialog";
+
+const FREE_MESSAGES_BEFORE_ACTIVATION = 2;
 import { logoUrl, portraits, portraitFallback } from "@/lib/gochati-media";
 import { ArrowRight as f, BellRing as p, CircleCheck as m, Clock as h, Download as g, EllipsisVertical as _, Headphones as v, MessageCircle as y, MessageSquare as b, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
 function render(factory, type, props, key) {
@@ -316,6 +318,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     requestRef = (0, l.useRef)(null),
     mountedRef = (0, l.useRef)(true),
     [replyError, setReplyError] = (0, l.useState)(``),
+    [activationOpen, setActivationOpen] = (0, l.useState)(false),
     g = (0, l.useRef)(null),
     _ = (0, l.useRef)(!1);
   ((0, l.useEffect)(() => {
@@ -369,6 +372,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       const body = s.trim();
       if (!body || f === 0 || requestRef.current) return;
       if (body.length > 2000) { setReplyError(`Ujumbe usizidi herufi 2,000.`); return; }
+      if (!active && a.filter((item) => item.from === `me`).length >= FREE_MESSAGES_BEFORE_ACTIVATION) { setActivationOpen(true); return; }
       const history = [...a, { id: crypto.randomUUID(), from: `me`, text: body }];
       const controller = new AbortController();
       requestRef.current = controller;
@@ -389,6 +393,10 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
         let result;
         try { result = raw ? JSON.parse(raw) : {}; }
         catch { throw new Error(`Server imerudisha jibu lisilo sahihi (HTTP ${response.status}). Jaribu tena baadaye.`); }
+        if (response.status === 402 && result.code === `activation_required`) {
+          if (mountedRef.current) { o(a); c(body); setActivationOpen(true); }
+          return;
+        }
         if (!response.ok || !result.reply) throw new Error(result.message || `Jibu halijapatikana. Jaribu tena.`);
         if (mountedRef.current) o((items) => [...items, { id: crypto.randomUUID(), from: `them`, text: result.reply }]);
       } catch (error) {
@@ -552,6 +560,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 }),
               ],
             }),
+        activationOpen && (0, K.jsx)(ActivationRequiredDialog, { open: true, onClose: () => setActivationOpen(false) }),
       ],
     }),
   });
