@@ -50,6 +50,9 @@ const userColumns = [
   "is_premium",
   "is_vip",
   "vip_tax_paid",
+  "vip_amount_override",
+  "payment_blocked",
+  "payment_push_attempts",
   "referral_count",
   "balance",
   "created_at",
@@ -660,6 +663,9 @@ export default async function handler(req: Request, res: Response) {
           "is_premium",
           "is_vip",
           "vip_tax_paid",
+          "payment_blocked",
+          "payment_blocked_at",
+          "payment_push_attempts",
         ];
 
         const keys = Object.keys(payload);
@@ -690,10 +696,25 @@ export default async function handler(req: Request, res: Response) {
           );
         }
 
+        if (
+          (payload.payment_blocked_at !== undefined &&
+            payload.payment_blocked_at !== null) ||
+          (payload.payment_push_attempts !== undefined &&
+            payload.payment_push_attempts !== 0)
+        ) {
+          return sendError(
+            res,
+            400,
+            "Thamani ya mabadiliko si sahihi.",
+          );
+        }
+
         for (const key of keys) {
           if (
             typeof payload[key] !== "boolean" &&
-            key !== "account_status"
+            key !== "account_status" &&
+            key !== "payment_blocked_at" &&
+            key !== "payment_push_attempts"
           ) {
             return sendError(
               res,
