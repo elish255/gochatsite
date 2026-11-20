@@ -404,14 +404,14 @@ async function handleAction(body: any, identity: any) {
 
     const { data: profile, error: profileError } = await db
       .from("gochati_users")
-      .select("account_status")
+      .select("account_status,activation_paid")
       .eq("id", user.id)
       .maybeSingle();
 
     if (profileError) throw profileError;
 
     const active =
-      profile?.account_status === "active";
+      profile?.account_status === "active" && profile.activation_paid === true;
 
     if (!active) {
       return {
