@@ -120,6 +120,22 @@ export default async function handler(req: Request, res: Response) {
 
     const isAdmin = !!admin;
 
+    if (!isAdmin) {
+      const { data: blockRow, error: blockError } = await adminClient
+        .from("gochati_users")
+        .select("payment_blocked")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (blockError) throw blockError;
+      if (blockRow?.payment_blocked) {
+        return sendError(
+          res,
+          403,
+          "Account yako imezuiwa, Mtafute mtoa huduma kwa Msaada.",
+        );
+      }
+    }
+
     // Client inayotumia session ya mtumiaji mwenyewe.
     // Inahitajika kwa RPC zinazotumia auth.uid().
     const userClient = createClient(supabaseUrl, anonKey, {

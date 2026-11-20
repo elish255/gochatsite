@@ -1,4 +1,5 @@
 import { AuthCallbacks } from "@/components/gochati/AuthCallbacks";
+import { AccountBlockGuard } from "@/components/gochati/AccountBlockGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -127,6 +128,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <AuthCallbacks />
       <Outlet />
+      <AccountBlockGuard />
     </QueryClientProvider>
   );
 }
