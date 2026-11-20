@@ -16,9 +16,10 @@ export const Route = createFileRoute("/payment")({
   component: PaymentPage,
 });
 
-type PaymentType = "premium" | "vip" | "tax";
+type PaymentType = "activation" | "premium" | "vip" | "tax";
 
 const DEFAULT_AMOUNTS: Record<PaymentType, number> = {
+  activation: 16000,
   premium: 32000,
   vip: 35500,
   tax: 50000,
@@ -27,6 +28,15 @@ const DEFAULT_AMOUNTS: Record<PaymentType, number> = {
 const tzs = (n: number) => `TZS ${n.toLocaleString("en-US")}`;
 
 function getPaymentInfo(type: PaymentType, amount: number) {
+  if (type === "activation") {
+    return {
+      title: "Activation Fee",
+      description: ` Karibu Gochati! Lipa Activation Fee ${tzs(amount)} mara moja ili akaunti yako iwe hai, uendelee kuchati bila kikomo na uanze kulipwa kwa kila mazungumzo.`,
+      amount,
+      button: `LIPA SASA — ${tzs(amount)}`,
+      success: "Malipo yamefanikiwa. Akaunti yako sasa iko hai, endelea kuchati na kulipwa.",
+    };
+  }
   if (type === "premium") {
     return {
       title: "Upgrade Premium Account",
@@ -61,6 +71,7 @@ function PaymentPage() {
       : null;
 
   if (
+    paymentType !== "activation" &&
     paymentType !== "premium" &&
     paymentType !== "vip" &&
     paymentType !== "tax"
@@ -135,7 +146,7 @@ function UpgradePaymentPage({
       const { data, error } = await platform
         .from("gochati_users")
         .select(
-          "account_status,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked"
+          "account_status,activation_paid,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked"
         )
         .eq("id", user.id)
         .maybeSingle();
@@ -179,6 +190,19 @@ function UpgradePaymentPage({
       }
 
       const balance = Number(data.balance || 0);
+
+      if (paymentType === "activation") {
+        if (data.account_status === "active" || data.activation_paid) {
+          setPaid(true);
+          setNotice("Akaunti yako tayari iko hai.");
+        }
+        return;
+      }
+
+      if (data.account_status !== "active") {
+        window.location.replace("/payment?type=activation");
+        return;
+      }
 
       if (paymentType === "premium") {
         if (data.is_premium || data.is_vip) {

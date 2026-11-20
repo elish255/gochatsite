@@ -42,6 +42,7 @@ async function sendAdminPush(admin: any, title: string, body: string) {
 }
 
 const PAYMENT_AMOUNTS: Record<string, number> = {
+  activation: 16000,
   premium: 32000,
   vip: 35500,
   tax: 50000,
@@ -68,7 +69,13 @@ async function applySuccessfulPayment(
 
   let changes: Record<string, unknown>;
 
-  if (purpose === "premium") {
+  if (purpose === "activation") {
+    changes = {
+      activation_paid: true,
+      account_status: "active",
+      updated_at: now,
+    };
+  } else if (purpose === "premium") {
     changes = {
       is_premium: true,
       updated_at: now,
@@ -249,7 +256,7 @@ export default async function handler(req: any, res: any) {
         await admin
           .from("gochati_users")
           .select(
-            "full_name,username,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override"
+            "full_name,username,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override,activation_paid,account_status"
           )
           .eq("id", user.id)
           .maybeSingle();
@@ -284,6 +291,20 @@ export default async function handler(req: any, res: any) {
       }
 
       const balance = Number(profile.balance || 0);
+
+      const accountActive = profile.account_status === "active";
+
+      if (purpose === "activation" && (accountActive || profile.activation_paid)) {
+        return send(res, 409, {
+          message: "Akaunti yako tayari imeshawashwa.",
+        });
+      }
+
+      if (purpose !== "activation" && !accountActive) {
+        return send(res, 403, {
+          message: "Lipia Activation Fee kwanza ili akaunti yako iwe hai.",
+        });
+      }
 
       if (purpose === "premium") {
         if (profile.is_premium || profile.is_vip) {
