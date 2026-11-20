@@ -186,8 +186,7 @@ Deno.serve(async (request: Request) => {
       );
     }
 
-    // Create or update profile as ACTIVE immediately.
-    // No activation payment is required for new registrations.
+    // New registrations stay inactive until the activation payment succeeds.
     const { error: insertError } = await admin
       .from("gochati_users")
       .upsert(
@@ -199,8 +198,8 @@ Deno.serve(async (request: Request) => {
           phone,
           country,
 
-          account_status: "active",
-          activation_paid: true,
+          account_status: "inactive",
+          activation_paid: false,
         },
         {
           onConflict: "id",
