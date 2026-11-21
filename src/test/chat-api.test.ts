@@ -124,6 +124,7 @@ it("generates a fluent, contextual reply using the AI Gateway model", async () =
   expect(generation.messages).toEqual(input.messages);
   expect(generation.instructions).toContain("fictional AI chat character");
   expect(generation.instructions).toContain("one short, relevant follow-up question");
+  expect(generation.instructions).toContain("If the user answers a question you just asked");
 });
 
 it("rejects unauthenticated access before contacting the model", async () => {
@@ -185,6 +186,41 @@ it.each([
 
   expect(result.statusCode).toBe(400);
   expect(mocks.generateText).not.toHaveBeenCalled();
+});
+
+it("recognizes a Swahili answer to a greeting in its fallback", async () => {
+  mocks.generateText.mockRejectedValueOnce(new Error("provider failure"));
+
+  const result = await invoke({
+    ...input,
+    messages: [
+      { role: "assistant", content: "Habari yako?" },
+      { role: "user", content: "Nzuri sana rafiki" },
+    ],
+  });
+
+  expect(result.statusCode).toBe(200);
+  expect(result.body).toEqual(
+    expect.objectContaining({ reply: expect.stringMatching(/niko|siku|ujumbe|hali/i) }),
+  );
+  expect((result.body as { reply: string }).reply).not.toContain("Wow, sikutegemea hilo");
+});
+
+it("keeps English fallback replies in English", async () => {
+  mocks.generateText.mockRejectedValueOnce(new Error("provider failure"));
+
+  const result = await invoke({
+    ...input,
+    messages: [
+      { role: "assistant", content: "How are you?" },
+      { role: "user", content: "I'm doing well, thanks!" },
+    ],
+  });
+
+  expect(result.statusCode).toBe(200);
+  expect(result.body).toEqual(
+    expect.objectContaining({ reply: expect.stringMatching(/I'm doing well|Pretty good/i) }),
+  );
 });
 
 it("uses a safe conversational fallback if AI generation is unavailable", async () => {
