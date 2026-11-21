@@ -160,3 +160,21 @@ it("shows the activation fee and payment action", () => {
     "/payment?type=activation",
   );
 });
+
+it("offers a valid session when an open free chat gains activation access", async () => {
+  const onClose = vi.fn();
+  const onPaid = vi.fn();
+  const view = render(
+    <ChatSession person={person} active={false} onClose={onClose} onPaid={onPaid} />,
+  );
+  view.rerender(<ChatSession person={person} active onClose={onClose} onPaid={onPaid} />);
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  await act(async () => {
+    fireEvent.click(screen.getByText("Dakika 5"));
+  });
+  expect(mocks.rpc).toHaveBeenCalledWith("gochati_start_earning_session", {
+    p_amount: 25000,
+    p_minutes: 5,
+    p_partner: "person-1",
+  });
+});

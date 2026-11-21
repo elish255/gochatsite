@@ -1,3 +1,5 @@
+import { activationFeeEnabled } from "../src/lib/server/activation-policy.js";
+import { hasActivationAccess } from "../src/lib/activation-policy.js";
 import { generateText } from "ai";
 import { createClient } from "@supabase/supabase-js";
 
@@ -676,8 +678,10 @@ export default async function handler(req: Request, res: Response) {
     if (account?.account_status === "banned" || account?.account_status === "deactivated")
       return error(res, 403, "Akaunti yako imesimamishwa. Wasiliana na huduma kwa wateja.");
 
-    const activationComplete =
-      account?.account_status === "active" && account.activation_paid === true;
+    const activationComplete = hasActivationAccess({
+      ...account,
+      activation_fee_enabled: await activationFeeEnabled(supabase),
+    });
 
     if (!activationComplete) {
       const sentByUser = conversation.filter((item) => item.role === "user").length;

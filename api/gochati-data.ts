@@ -1,3 +1,4 @@
+import { activationFeeEnabled } from "../src/lib/server/activation-policy.js";
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -154,6 +155,34 @@ export default async function handler(req: Request, res: Response) {
     });
 
     const body = req.body || {};
+
+    if (body.table === "gochati_activation_settings") {
+      if (!isAdmin) return sendError(res, 403, "Admin pekee ndiye anaruhusiwa.");
+      if (body.operation === "select") {
+        const { data, error } = await adminClient
+          .from("gochati_activation_settings")
+          .select("enabled")
+          .eq("id", true)
+          .single();
+        if (error) throw error;
+        return res.status(200).json({ data });
+      }
+      if (body.operation !== "update" || typeof body.payload?.enabled !== "boolean") {
+        return sendError(res, 400, "Chagua hali sahihi ya Activation Fee.");
+      }
+      const { data, error } = await adminClient
+        .from("gochati_activation_settings")
+        .update({
+          enabled: body.payload.enabled,
+          updated_at: new Date().toISOString(),
+          updated_by: user.id,
+        })
+        .eq("id", true)
+        .select("enabled")
+        .single();
+      if (error) throw error;
+      return res.status(200).json({ data });
+    }
 
     // RPC zinazokubaliwa.
     if (body.rpc) {
@@ -845,6 +874,17 @@ export default async function handler(req: Request, res: Response) {
             };
           })
         : data;
+
+    if (table === "gochati_users" && operation === "select" && data) {
+      const enabled = await activationFeeEnabled(adminClient);
+      const withPolicy = (profile: Record<string, unknown>) => ({
+        ...profile,
+        activation_fee_enabled: enabled,
+      });
+      return res
+        .status(200)
+        .json({ data: Array.isArray(data) ? data.map(withPolicy) : withPolicy(data) });
+    }
 
     return res.status(200).json({ data: responseData });
   } catch (error) {

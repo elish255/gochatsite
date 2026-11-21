@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  enabled: vi.fn(),
   getUser: vi.fn(),
   from: vi.fn(),
   select: vi.fn(),
@@ -32,6 +33,10 @@ vi.mock("@supabase/supabase-js", () => ({
       },
     };
   },
+}));
+
+vi.mock("../../src/lib/server/activation-policy.js", () => ({
+  activationFeeEnabled: mocks.enabled,
 }));
 
 vi.mock("ai", () => ({ generateText: mocks.generateText }));
@@ -82,6 +87,7 @@ async function invoke(body: unknown, authorization = "Bearer test-token") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.enabled.mockResolvedValue(true);
   mocks.getUser.mockResolvedValue({ data: { user: { id: "user-one" } }, error: null });
   mocks.maybeSingle
     .mockResolvedValueOnce({
@@ -231,4 +237,35 @@ it("uses a safe conversational fallback if AI generation is unavailable", async 
   expect(result.statusCode).toBe(200);
   expect(result.body).toEqual(expect.objectContaining({ reply: expect.any(String) }));
   expect(JSON.stringify(result.body)).not.toContain("provider failure");
+});
+
+it("allows an unpaid user with a valid session while activation is disabled", async () => {
+  mocks.enabled.mockResolvedValue(false);
+  mocks.maybeSingle.mockReset();
+  mocks.maybeSingle
+    .mockResolvedValueOnce({
+      data: { account_status: "inactive", activation_paid: false },
+      error: null,
+    })
+    .mockResolvedValueOnce({
+      data: {
+        id: sessionId,
+        started_at: new Date().toISOString(),
+        duration_minutes: 5,
+        status: "active",
+      },
+      error: null,
+    });
+  const result = await invoke({
+    ...input,
+    messages: [
+      { role: "user", content: "One" },
+      { role: "assistant", content: "Hi" },
+      { role: "user", content: "Two" },
+      { role: "assistant", content: "Hello" },
+      { role: "user", content: "Three" },
+    ],
+  });
+  expect(result.statusCode).toBe(200);
+  expect(mocks.generateText).toHaveBeenCalled();
 });

@@ -1,3 +1,4 @@
+import { hasAccountAccess } from "@/lib/activation-policy";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { platform } from "@/integrations/supabase/platform";
@@ -14,6 +15,7 @@ type WithdrawalAccount = {
   balance: number | string | null;
   phone: string | null;
   account_status: string;
+  activation_fee_enabled?: boolean;
   is_premium: boolean | null;
   is_vip: boolean | null;
   vip_tax_paid: boolean | null;
@@ -181,7 +183,7 @@ function WithdrawalPage() {
 
     setNotice("");
 
-    if (account.account_status !== "active") {
+    if (!hasAccountAccess(account)) {
       setNotice("Akaunti yako haijawezeshwa.");
       return;
     }
