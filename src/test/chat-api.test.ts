@@ -83,16 +83,21 @@ async function invoke(body: unknown, authorization = "Bearer test-token") {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.getUser.mockResolvedValue({ data: { user: { id: "user-one" } }, error: null });
-  mocks.maybeSingle.mockResolvedValue({
-    data: {
-      id: sessionId,
-      partner_id: "person-1",
-      started_at: new Date(Date.now() - 1000).toISOString(),
-      duration_minutes: 1,
-      status: "active",
-    },
-    error: null,
-  });
+  mocks.maybeSingle
+    .mockResolvedValueOnce({
+      data: { account_status: "active", activation_paid: true },
+      error: null,
+    })
+    .mockResolvedValueOnce({
+      data: {
+        id: sessionId,
+        partner_id: "person-1",
+        started_at: new Date(Date.now() - 1000).toISOString(),
+        duration_minutes: 1,
+        status: "active",
+      },
+      error: null,
+    });
   mocks.generateText.mockResolvedValue({
     text: "I love live music, especially small jazz shows. What kind of music do you enjoy?",
   });
@@ -105,8 +110,10 @@ it("generates a fluent, contextual reply using the AI Gateway model", async () =
   expect(result.body).toEqual({
     reply: "I love live music, especially small jazz shows. What kind of music do you enjoy?",
   });
-  expect(mocks.from).toHaveBeenCalledWith("gochati_chat_sessions");
+  expect(mocks.from).toHaveBeenNthCalledWith(1, "gochati_users");
+  expect(mocks.from).toHaveBeenNthCalledWith(2, "gochati_chat_sessions");
   expect(mocks.eq.mock.calls).toEqual([
+    ["id", "user-one"],
     ["id", sessionId],
     ["user_id", "user-one"],
     ["partner_id", "person-1"],
@@ -126,8 +133,41 @@ it("rejects unauthenticated access before contacting the model", async () => {
   expect(mocks.generateText).not.toHaveBeenCalled();
 });
 
+it("blocks the third message from an inactive account immediately", async () => {
+  mocks.maybeSingle.mockReset();
+  mocks.maybeSingle.mockResolvedValueOnce({
+    data: { account_status: "inactive", activation_paid: false },
+    error: null,
+  });
+
+  const result = await invoke({
+    ...input,
+    messages: [
+      { role: "assistant", content: "Habari!" },
+      { role: "user", content: "Meseji ya kwanza" },
+      { role: "assistant", content: "Karibu." },
+      { role: "user", content: "Meseji ya pili" },
+      { role: "assistant", content: "Tuendelee." },
+      { role: "user", content: "Meseji ya tatu" },
+    ],
+  });
+
+  expect(result.statusCode).toBe(402);
+  expect(result.body).toEqual({
+    code: "activation_required",
+    message: "Umefikia mwisho wa mazungumzo ya bure. Lipia Activation Fee kuendelea.",
+  });
+  expect(mocks.generateText).not.toHaveBeenCalled();
+});
+
 it("requires an active, matching chat session", async () => {
-  mocks.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+  mocks.maybeSingle.mockReset();
+  mocks.maybeSingle
+    .mockResolvedValueOnce({
+      data: { account_status: "active", activation_paid: true },
+      error: null,
+    })
+    .mockResolvedValueOnce({ data: null, error: null });
 
   const result = await invoke(input);
 

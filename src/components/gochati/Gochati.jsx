@@ -309,7 +309,7 @@ function q({ person: e, onChat: t, onCall: n }) {
   });
 }
 function oe({ person: e, onClose: t, onPaid: n, active = false }) {
-  let [r, i] = (0, l.useState)(null),
+  let [r, i] = (0, l.useState)(active ? null : { label: `Mazungumzo ya bure`, minutes: 0, amount: 0 }),
     [a, o] = (0, l.useState)([]),
     [s, c] = (0, l.useState)(``),
     [u, d] = (0, l.useState)(!1),
@@ -330,7 +330,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       return () => { mountedRef.current = false; requestRef.current?.abort(); };
     }, []),
     (0, l.useEffect)(() => {
-      if (!r) return;
+      if (!r || !active) return;
       let interval = null;
       let cancelled = false;
       let sessionId = null;
@@ -370,7 +370,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     }, [a, u]));
   let v = async () => {
       const body = s.trim();
-      if (!body || f === 0 || requestRef.current) return;
+      if (!body || (active && f === 0) || requestRef.current) return;
       if (body.length > 2000) { setReplyError(`Ujumbe usizidi herufi 2,000.`); return; }
       if (!active && a.filter((item) => item.from === `me`).length >= FREE_MESSAGES_BEFORE_ACTIVATION) { setActivationOpen(true); return; }
       const history = [...a, { id: crypto.randomUUID(), from: `me`, text: body }];
@@ -438,7 +438,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 }),
               ],
             }),
-            r &&
+            r && active &&
               (0, K.jsxs)(`span`, {
                 className: `flex items-center gap-1.5 rounded-full bg-overlay/30 px-3 py-1.5 text-sm font-bold tabular-nums`,
                 children: [(0, K.jsx)(h, { className: `size-4` }), y, `:`, b],
@@ -510,12 +510,12 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                       onChange: (e) => c(e.target.value),
                       onKeyDown: (e) => e.key === `Enter` && !e.nativeEvent.isComposing && e.keyCode !== 229 && v(),
                       placeholder: `Andika ujumbe wako...`,
-                      disabled: f === 0 || u,
+                      disabled: (active && f === 0) || u,
                       className: `flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary`,
                     }),
                     (0, K.jsx)(`button`, {
                       onClick: v,
-                      disabled: f === 0 || u,
+                      disabled: (active && f === 0) || u,
                       "aria-label": `Tuma`,
                       className: `grad-brand rounded-xl p-3 text-on-color disabled:opacity-50`,
                       children: (0, K.jsx)(w, { className: `size-5` }),
