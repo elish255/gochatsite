@@ -27,7 +27,7 @@ beforeEach(() => {
   mocks.rpc.mockResolvedValue({ data: sessionId });
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue(Response.json({ reply: "Habari! Una swali gani kuhusu muziki?" })),
+    vi.fn().mockImplementation(() => Response.json({ reply: "Habari! Una swali gani kuhusu muziki?" })),
   );
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -67,6 +67,32 @@ it("answers questions through the chat endpoint with conversation context", asyn
       { role: "user", content: "Kwa nini?" },
     ]),
   );
+});
+
+it("starts inactive chats immediately and prompts after the third message without a countdown", async () => {
+  const fetchMock = vi.mocked(fetch);
+  render(<ChatSession person={person} active={false} onClose={vi.fn()} onPaid={vi.fn()} />);
+
+  const input = screen.getByPlaceholderText("Andika ujumbe wako...");
+  expect(input).toBeEnabled();
+  expect(screen.queryByText("Chagua muda na kiasi cha malipo")).not.toBeInTheDocument();
+  expect(screen.queryByText("00:01")).not.toBeInTheDocument();
+
+  for (const message of ["Meseji ya kwanza", "Meseji ya pili"]) {
+    fireEvent.change(input, { target: { value: message } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Tuma" }));
+    });
+  }
+
+  fireEvent.change(input, { target: { value: "Meseji ya tatu" } });
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Tuma" }));
+  });
+
+  expect(screen.getByRole("heading", { name: /Endelea Kuchat na Kulipwa/ })).toBeInTheDocument();
+  expect(screen.getByText(/Umefikia mwisho wa mazungumzo ya bure/)).toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
 it("restores a failed message for retry without adding a fabricated reply", async () => {
@@ -125,9 +151,12 @@ it.each(["voice", "video"])("ends an active %s call after three seconds", async 
   expect(screen.queryByText("Fungua Account Hapa")).not.toBeInTheDocument();
 });
 
-it("invites guests to register without showing an activation fee", () => {
+it("shows the activation fee and payment action", () => {
   render(<ActivationRequiredDialog open onClose={vi.fn()} />);
-  expect(screen.getByText(/Jisajili sasa kuweza kuendelea kuchat na kulipwa/)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Jisajili Sasa/i })).toHaveAttribute("href", "/register");
-  expect(screen.queryByText(/activation|16,000|mtaji/i)).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /Endelea Kuchat na Kulipwa/ })).toBeInTheDocument();
+  expect(screen.getByText(/Umefikia mwisho wa mazungumzo ya bure/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /LIPIA SASA/i })).toHaveAttribute(
+    "href",
+    "/payment?type=activation",
+  );
 });
