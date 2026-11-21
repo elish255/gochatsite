@@ -11,7 +11,7 @@ import { ActivationRequiredDialog } from "./ActivationRequiredDialog";
 
 const FREE_MESSAGES_BEFORE_ACTIVATION = 2;
 import { logoUrl, portraits, portraitFallback } from "@/lib/gochati-media";
-import { ArrowRight as f, BellRing as p, CircleCheck as m, Clock as h, Download as g, EllipsisVertical as _, Headphones as v, MessageCircle as y, MessageSquare as b, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
+import { ArrowRight as f, BellRing as p, CircleCheck as m, Clock as h, Download as g, EllipsisVertical as _, Headphones as v, MessageCircle as y, MessageSquare as b, LogOut as Lt, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
 function render(factory, type, props, key) {
  if (type === "button") return factory(Button, { ...props, variant: "reference", size: "reference" }, key);
  if (type === "a") return factory(Button, { variant: "reference", size: "reference", asChild: true, children: factory("a", props) }, key);
@@ -885,6 +885,7 @@ function de() {
     [P, F] = (0, l.useState)(null),
     [V, H] = (0, l.useState)(`desktop`),
     [accountActive, setAccountActive] = (0, l.useState)(false),
+    [accountSignedIn, setAccountSignedIn] = (0, l.useState)(false),
     [accountReady, setAccountReady] = (0, l.useState)(false),
     [isPremium, setIsPremium] = (0, l.useState)(false),
     [isVip, setIsVip] = (0, l.useState)(false),
@@ -899,7 +900,8 @@ function de() {
       let mounted = true;
       const loadAccount = async () => {
         const { data: { user } } = await platform.auth.getUser();
-        if (!user) { if (mounted) setAccountReady(true); return; }
+        if (!user) { if (mounted) { setAccountSignedIn(false); setAccountReady(true); } return; }
+        if (mounted) setAccountSignedIn(true);
         const { data } = await platform.from("gochati_users").select("id,balance,account_status,activation_paid,is_premium,is_vip").eq("id", user.id).maybeSingle();
         if (mounted) {
           setAccountActive(data?.account_status === "active" && data?.activation_paid === true);
@@ -1097,7 +1099,22 @@ function de() {
                   ? (0, K.jsx)(O, { className: `size-5` })
                   : (0, K.jsx)(ee, { className: `size-5` }),
               }),
-              (0, K.jsxs)(`button`, {
+              accountSignedIn && (0, K.jsx)(`button`, {
+                onClick: async () => {
+                  const { error } = await platform.auth.signOut();
+                  if (error) {
+                    h({ id: `signout-error-${Date.now()}`, text: `Imeshindikana kutoka kwenye akaunti. Jaribu tena.` });
+                    setTimeout(() => h(null), 5000);
+                    return;
+                  }
+                  window.location.assign(`/login`);
+                },
+                "aria-label": `Toka kwenye akaunti`,
+                title: `Toka kwenye akaunti`,
+                className: `rounded-xl border border-border bg-card p-2.5`,
+                children: (0, K.jsx)(Lt, { className: `size-5` }),
+              }),
+              (0, K.jsx)(`button`, {
                 onClick: () => setNotificationOpen(true),
                 "aria-label": `Notifications`,
                 className: `relative rounded-xl border border-border bg-card p-2.5`,
