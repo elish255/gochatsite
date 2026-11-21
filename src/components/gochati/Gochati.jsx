@@ -890,6 +890,7 @@ function de() {
     [isPremium, setIsPremium] = (0, l.useState)(false),
     [isVip, setIsVip] = (0, l.useState)(false),
     [referralCount, setReferralCount] = (0, l.useState)(0),
+    [referralCode, setReferralCode] = (0, l.useState)(""),
     [notifications, setNotifications] = (0, l.useState)([]),
     [bannerNotification, setBannerNotification] = (0, l.useState)(null),
     [notificationOpen, setNotificationOpen] = (0, l.useState)(false);
@@ -902,8 +903,10 @@ function de() {
         const { data: { user } } = await platform.auth.getUser();
         if (!user) { if (mounted) { setAccountSignedIn(false); setAccountReady(true); } return; }
         if (mounted) setAccountSignedIn(true);
-        const { data } = await platform.from("gochati_users").select("id,balance,account_status,activation_paid,is_premium,is_vip").eq("id", user.id).maybeSingle();
+        const { data } = await platform.from("gochati_users").select("id,balance,account_status,activation_paid,is_premium,is_vip,username,referral_count").eq("id", user.id).maybeSingle();
         if (mounted) {
+          setReferralCode(data?.username || "");
+          setReferralCount(Number(data?.referral_count || 0));
           setAccountActive(data?.account_status === "active" && data?.activation_paid === true);
           setIsPremium(Boolean(data?.is_premium || data?.is_vip));
           setIsVip(Boolean(data?.is_vip));
@@ -1203,6 +1206,52 @@ function de() {
                   }),
                 ],
               }),
+            ],
+          }),
+          accountSignedIn && referralCode && (0, K.jsxs)(`section`, {
+            className: `mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm`,
+            children: [
+              (0, K.jsxs)(`div`, {
+                className: `flex items-center justify-between gap-3`,
+                children: [
+                  (0, K.jsxs)(`div`, {
+                    children: [
+                      (0, K.jsx)(`h2`, { className: `text-sm font-bold`, children: `Alika Rafiki` }),
+                      (0, K.jsx)(`p`, { className: `mt-1 text-xs text-muted-foreground`, children: `Msimbo wako wa kipekee wa referral` }),
+                    ],
+                  }),
+                  (0, K.jsxs)(`div`, {
+                    className: `rounded-xl bg-primary/10 px-3 py-2 text-right`,
+                    children: [
+                      (0, K.jsx)(`p`, { className: `text-lg font-black text-primary`, children: referralCount }),
+                      (0, K.jsx)(`p`, { className: `text-[10px] font-semibold text-muted-foreground`, children: `Walioalikwa` }),
+                    ],
+                  }),
+                ],
+              }),
+              (0, K.jsxs)(`div`, {
+                className: `mt-3 flex flex-wrap items-center gap-2`,
+                children: [
+                  (0, K.jsx)(`code`, { className: `rounded-lg border border-border bg-background px-3 py-2 text-sm font-bold tracking-wide`, children: referralCode }),
+                  (0, K.jsx)(`button`, {
+                    type: `button`,
+                    onClick: async () => {
+                      const inviteLink = `${window.location.origin}/register?ref=${encodeURIComponent(referralCode)}`;
+                      try {
+                        await navigator.clipboard.writeText(inviteLink);
+                        F(`Kiungo cha mwaliko kimenakiliwa.`);
+                        N(!0);
+                      } catch {
+                        F(`Nakili kiungo hiki: ${inviteLink}`);
+                        N(!0);
+                      }
+                    },
+                    className: `flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground`,
+                    children: `Nakili kiungo cha mwaliko`,
+                  }),
+                ],
+              }),
+              (0, K.jsx)(`p`, { className: `mt-2 text-xs leading-relaxed text-muted-foreground`, children: `Rafiki akisajili kupitia kiungo hiki, ataunganishwa na akaunti yako na kuonekana kwenye idadi ya referrals.` }),
             ],
           }),
           accountReady && !accountActive && (0, K.jsxs)(`div`, {
