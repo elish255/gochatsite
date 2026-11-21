@@ -1,3 +1,4 @@
+import { hasActivationAccess } from "@/lib/activation-policy";
 import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { SupportButton } from "./SupportButton";
@@ -330,7 +331,13 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       return () => { mountedRef.current = false; requestRef.current?.abort(); };
     }, []),
     (0, l.useEffect)(() => {
-      if (!r || !active) return;
+      if (active && r?.minutes === 0) {
+        i(null);
+        setChatSessionId(null);
+      }
+    }, [active, r]),
+    (0, l.useEffect)(() => {
+      if (!r || !active || r.minutes === 0) return;
       let interval = null;
       let cancelled = false;
       let sessionId = null;
@@ -560,7 +567,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 }),
               ],
             }),
-        activationOpen && (0, K.jsx)(ActivationRequiredDialog, { open: true, onClose: () => setActivationOpen(false) }),
+        activationOpen && !active && (0, K.jsx)(ActivationRequiredDialog, { open: true, onClose: () => setActivationOpen(false) }),
       ],
     }),
   });
@@ -907,7 +914,7 @@ function de() {
         if (mounted) {
           setReferralCode(data?.username || "");
           setReferralCount(Number(data?.referral_count || 0));
-          setAccountActive(data?.account_status === "active" && data?.activation_paid === true);
+          setAccountActive(hasActivationAccess(data));
           setIsPremium(Boolean(data?.is_premium || data?.is_vip));
           setIsVip(Boolean(data?.is_vip));
           const savedBalance = Number(data?.balance || 0);

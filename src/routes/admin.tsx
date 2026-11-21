@@ -1,3 +1,4 @@
+import { AdminActivationFee } from "@/components/gochati/AdminActivationFee";
 import { AdminCareNotifications, AdminCustomerCare, AdminPhoneBans } from "@/components/gochati/AdminCustomerCare";
 import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
@@ -742,7 +743,12 @@ function AdminPage() {
               <AdminCareNotifications onOpen={(userId) => { setCareUserId(userId); navigate("customer-care"); }} />
               {section === "customer-care" && <AdminCustomerCare {...(careUserId ? { userId: careUserId } : {})} />}
               {section === "phone-bans" && <AdminPhoneBans />}
-              {section === "dashboard" && <AdminPaymentPrices vipOnly />}
+              {section === "dashboard" && (
+                <>
+                  <AdminActivationFee />
+                  <AdminPaymentPrices vipOnly />
+                </>
+              )}
               {section === "dashboard" && (
                 <AdminOverview
                   users={rows}
@@ -760,7 +766,12 @@ function AdminPage() {
                   <AdminSms key={smsRecipient?.id || "groups"} recipient={smsRecipient} />
                 </>
               )}
-              {section === "payments" && <AdminPaymentPrices />}
+              {section === "payments" && (
+                <>
+                  <AdminActivationFee />
+                  <AdminPaymentPrices />
+                </>
+              )}
               {section === "payments" && (
                 <section className="card-soft mt-4 p-4">
                   <h2 className="text-xl font-bold">Malipo ya SplashPay</h2>

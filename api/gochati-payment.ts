@@ -1,3 +1,5 @@
+import { activationFeeEnabled } from "../src/lib/server/activation-policy.js";
+import { hasActivationAccess } from "../src/lib/activation-policy.js";
 
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
@@ -16,9 +18,9 @@ const normalizeStatus = (value: unknown) =>
 
 
 async function sendAdminPush(admin: any, title: string, body: string) {
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT;
+  const publicKey = process.env["VAPID_PUBLIC_KEY"];
+  const privateKey = process.env["VAPID_PRIVATE_KEY"];
+  const subject = process.env["VAPID_SUBJECT"];
   if (!publicKey || !privateKey || !subject) return;
   try {
     webpush.setVapidDetails(subject, publicKey, privateKey);
@@ -95,7 +97,7 @@ async function applySuccessfulPayment(
     throw new Error("Invalid payment purpose");
   }
 
-  changes.payment_push_attempts = 0;
+  changes["payment_push_attempts"] = 0;
 
   const { error } = await admin
     .from("gochati_users")
@@ -292,8 +294,17 @@ export default async function handler(req: any, res: any) {
 
       const balance = Number(profile.balance || 0);
 
-      const activationComplete =
-        profile.account_status === "active" && profile.activation_paid === true;
+      if (["banned", "deactivated"].includes(profile.account_status)) {
+        return send(res, 403, { message: "Akaunti yako imesimamishwa." });
+      }
+      const enabled = await activationFeeEnabled(admin);
+      if (purpose === "activation" && !enabled) {
+        return send(res, 409, { message: "Activation Fee imezimwa. Rudi kwenye akaunti yako." });
+      }
+      const activationComplete = hasActivationAccess({
+        ...profile,
+        activation_fee_enabled: enabled,
+      });
 
       if (purpose === "activation" && profile.activation_paid === true) {
         return send(res, 409, {

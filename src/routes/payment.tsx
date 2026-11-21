@@ -1,3 +1,4 @@
+import { hasActivationAccess } from "@/lib/activation-policy";
 
 import { logoUrl } from "@/lib/gochati-media";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -191,10 +192,13 @@ function UpgradePaymentPage({
 
       const balance = Number(data.balance || 0);
 
-      const activationComplete =
-        data.account_status === "active" && data.activation_paid === true;
+      const activationComplete = hasActivationAccess(data);
 
       if (paymentType === "activation") {
+        if (data.activation_fee_enabled === false) {
+          await nav({ to: "/", replace: true });
+          return;
+        }
         if (activationComplete) {
           setPaid(true);
           setNotice("Akaunti yako tayari iko hai.");
