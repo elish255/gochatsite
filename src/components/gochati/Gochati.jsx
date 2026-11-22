@@ -114,7 +114,7 @@ const N = [
       photo: portraits[portraitKey],
       fallbackPhoto: portraitFallback(portraitKey),
       online: true,
-      rate: { label: `Baada ya meseji 10`, amount: chatExchangePrice(t + 1) },
+      rate: { amount: chatExchangePrice(t + 1) },
     };
   }),
   I = (e) => `TZS ` + e.toLocaleString(`en-US`),
@@ -277,7 +277,7 @@ function q({ person: e, onChat: t, onCall: n }) {
               }),
               (0, K.jsxs)(`div`, {
                 className: `mt-2 inline-block rounded-lg border border-border bg-secondary/70 px-2.5 py-1 text-[11px] font-semibold`,
-                children: [e.topic, ` · `, e.rate.label, ` — `, I(e.rate.amount)],
+                children: [e.topic, ` · `, I(e.rate.amount)],
               }),
             ],
           }),
@@ -314,7 +314,6 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     [chatSessionId, setChatSessionId] = (0, l.useState)(null),
     [sessionError, setSessionError] = (0, l.useState)(``),
     [pendingExchangeId, setPendingExchangeId] = (0, l.useState)(null),
-    [exchangeProgress, setExchangeProgress] = (0, l.useState)(0),
     [exchangeCompleted, setExchangeCompleted] = (0, l.useState)(false),
     requestRef = (0, l.useRef)(null),
     mountedRef = (0, l.useRef)(true),
@@ -338,7 +337,6 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       let cancelled = false;
       setChatSessionId(null);
       setSessionError(``);
-      setExchangeProgress(0);
       setExchangeCompleted(false);
       platform.rpc("gochati_start_exchange_session", { p_partner: `person-${e.id}` }).then(({ data, error }) => {
         if (cancelled) return;
@@ -385,7 +383,6 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
         if (mountedRef.current) {
           o((items) => [...items, { id: crypto.randomUUID(), from: `them`, text: result.reply }]);
           if (active) {
-            setExchangeProgress(Number(result.messageCount) || 0);
             if (result.rewarded && Number.isFinite(Number(result.balance))) {
               n(Number(result.balance), r.amount);
               setExchangeCompleted(true);
@@ -432,9 +429,9 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
               ],
             }),
             r && active &&
-              (0, K.jsxs)(`span`, {
+              (0, K.jsx)(`span`, {
                 className: `flex items-center gap-1.5 rounded-full bg-overlay/30 px-3 py-1.5 text-xs font-bold`,
-                children: [I(r.amount), ` baada ya meseji 10`],
+                children: I(r.amount),
               }),
             (0, K.jsx)(`button`, {
               onClick: t,
@@ -450,9 +447,8 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 (0, K.jsxs)(`div`, {
                   className: `flex-1 space-y-3 overflow-y-auto bg-background/60 p-4`,
                   children: [
-                    exchangeCompleted && (0, K.jsx)(`p`, { role: `status`, className: `text-sm text-muted-foreground`, children: `Umefikisha meseji 10 na umelipwa ${I(r.amount)}. Funga chat kisha ufungue tena kuanza exchange mpya.` }),
+                    exchangeCompleted && (0, K.jsx)(`p`, { role: `status`, className: `text-sm text-muted-foreground`, children: `Malipo ya ${I(r.amount)} yameongezwa kwenye salio lako. Fungua chat mpya kuendelea.` }),
         sessionError && (0, K.jsx)(`p`, { role: `alert`, className: `text-sm text-destructive`, children: sessionError }),
-        active && !exchangeCompleted && (0, K.jsx)(`p`, { role: `status`, className: `text-xs text-muted-foreground`, children: `Meseji ${exchangeProgress}/10 — malipo yatatolewa baada ya kukamilisha meseji 10.` }),
                     active && !chatSessionId && !sessionError && (0, K.jsx)(`p`, { role: `status`, className: `text-sm text-muted-foreground`, children: `Tunaandaa chat yako...` }),
                     replyError && (0, K.jsx)(`p`, { role: `alert`, className: `text-sm text-destructive`, children: replyError }),
                     a.map((e) =>
