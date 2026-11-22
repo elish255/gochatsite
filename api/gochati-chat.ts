@@ -480,7 +480,6 @@ function replyFor(
     phrases.some((phrase) => text === normalize(phrase) || text.includes(normalize(phrase)));
   const previousReplies = conversation
     .filter((item) => item.role === "assistant")
-    .slice(-4)
     .map((item) => normalize(item.content));
   const choose = (options: string[]): string => {
     const fresh = options.filter((option) => !previousReplies.includes(normalize(option)));
@@ -785,6 +784,12 @@ export default async function handler(req: Request, res: Response) {
       );
     }
 
+    const previousReplies = new Set(
+      conversation
+        .filter((item) => item.role === "assistant")
+        .map((item) => normalize(item.content)),
+    );
+    if (reply && previousReplies.has(normalize(reply))) reply = "";
     if (!reply) reply = replyFor(latest.content, persona, conversation);
 
     if (activationComplete) {

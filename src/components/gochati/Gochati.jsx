@@ -347,7 +347,14 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     }, [active, e.id]),
     (0, l.useEffect)(() => {
       g.current?.scrollIntoView({ behavior: `smooth` });
-    }, [a, u]));
+    }, [a, u]),
+    (0, l.useEffect)(() => {
+      if (!exchangeCompleted) return;
+      const timeout = window.setTimeout(() => {
+        if (mountedRef.current) t();
+      }, 3200);
+      return () => window.clearTimeout(timeout);
+    }, [exchangeCompleted, t]));
   let v = async () => {
       const body = s.trim();
       if (!body || (active && !chatSessionId) || requestRef.current) return;
@@ -521,6 +528,27 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
               className: `flex flex-1 items-center justify-center p-5 text-sm text-muted-foreground`,
               children: `Tunaandaa chat yako...`,
             }),
+        exchangeCompleted && (0, K.jsx)(`div`, {
+          className: `fixed inset-0 z-[80] grid place-items-center bg-overlay/80 p-5 backdrop-blur-sm`,
+          children: (0, K.jsxs)(`div`, {
+            role: `alertdialog`,
+            "aria-modal": true,
+            "aria-labelledby": `exchange-complete-title`,
+            className: `card-soft w-full max-w-sm p-6 text-center shadow-xl`,
+            children: [
+              (0, K.jsx)(m, { className: `mx-auto size-12 text-primary`, "aria-hidden": true }),
+              (0, K.jsx)(`h2`, {
+                id: `exchange-complete-title`,
+                className: `mt-4 text-xl font-bold text-foreground`,
+                children: `Chat imefungwa na umelipwa`,
+              }),
+              (0, K.jsx)(`p`, {
+                className: `mt-2 text-sm leading-relaxed text-muted-foreground`,
+                children: `Malipo ya ${I(r.amount)} yameongezwa kwenye salio lako. Dirisha la chat linafungwa...`,
+              }),
+            ],
+          }),
+        }),
         activationOpen && !active && (0, K.jsx)(ActivationRequiredDialog, { open: true, onClose: () => setActivationOpen(false) }),
       ],
     }),
