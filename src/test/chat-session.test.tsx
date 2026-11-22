@@ -114,6 +114,32 @@ it("starts inactive chats immediately and prompts after the third message withou
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
+it("allows a guest two demo messages, then requires registration", async () => {
+  const fetchMock = vi.mocked(fetch);
+  render(<ChatSession person={person} guest onClose={vi.fn()} onPaid={vi.fn()} />);
+
+  const input = screen.getByPlaceholderText("Andika ujumbe wako...");
+  for (const [index, message] of ["Habari", "Nipeleke kwenye mazungumzo"].entries()) {
+    fireEvent.change(input, { target: { value: message } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Tuma" }));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(screen.getByText(index === 0
+      ? "Asante kwa ujumbe wako! Mimi ni Mia. Ungependa kuzungumza kuhusu nini?"
+      : "Nimefurahia mazungumzo haya ya majaribio. Jisajili ili uendelee kuchat na Mia.")).toBeInTheDocument();
+  }
+
+  expect(screen.getByRole("heading", { name: "Umefikia meseji 2 za majaribio" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "JISAJILI SASA" })).toHaveAttribute("href", "/register");
+  expect(screen.getByRole("link", { name: "Tayari una akaunti? Ingia" })).toHaveAttribute("href", "/login");
+  expect(input).toBeDisabled();
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(mocks.getSession).not.toHaveBeenCalled();
+});
+
 it("restores a failed message for retry without adding a fabricated reply", async () => {
   vi.mocked(fetch).mockResolvedValueOnce(
     Response.json({ message: "Chat haipatikani." }, { status: 503 }),
