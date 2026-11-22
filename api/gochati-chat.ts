@@ -1,3 +1,5 @@
+import { activationFeeEnabled } from "../src/lib/server/activation-policy.js";
+import { hasActivationAccess } from "../src/lib/activation-policy.js";
 import { generateText } from "ai";
 import { createClient } from "@supabase/supabase-js";
 
@@ -684,8 +686,10 @@ export default async function handler(req: Request, res: Response) {
     if (account?.account_status === "banned" || account?.account_status === "deactivated")
       return error(res, 403, "Akaunti yako imesimamishwa. Wasiliana na huduma kwa wateja.");
 
-    const activationComplete =
-      account?.account_status === "active" && account.activation_paid === true;
+    const activationComplete = hasActivationAccess({
+      ...account,
+      activation_fee_enabled: await activationFeeEnabled(supabase),
+    });
 
     if (!activationComplete) {
       const sentByUser = conversation.filter((item) => item.role === "user").length;
@@ -746,7 +750,7 @@ export default async function handler(req: Request, res: Response) {
     if (!reply) reply = replyFor(latest.content, persona, conversation);
 
     if (activationComplete) {
-      const { data: balance, error: creditError } = await supabase.rpc(
+      const { data: reward, error: creditError } = await supabase.rpc(
         "gochati_complete_chat_exchange",
         {
           p_user_id: data.user.id,
@@ -755,11 +759,11 @@ export default async function handler(req: Request, res: Response) {
           p_partner: `person-${persona.id}`,
         },
       );
-      if (creditError || balance === null) {
-        console.error("[v0] gochati-chat exchange credit failed", creditError?.code);
+      if (creditError || !reward || typeof reward !== "object") {
+        console.error("[v0] gochati-chat exchange reward failed", creditError?.code);
         return error(res, 503, "Jibu limetengenezwa lakini malipo hayakukamilika. Jaribu tena.");
       }
-      return res.status(200).json({ reply, balance });
+      return res.status(200).json({ reply, ...reward });
     }
 
     return res.status(200).json({ reply });

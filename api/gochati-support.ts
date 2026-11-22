@@ -1,3 +1,5 @@
+import { activationFeeEnabled } from "../src/lib/server/activation-policy.js";
+import { hasActivationAccess } from "../src/lib/activation-policy.js";
 
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
@@ -410,8 +412,10 @@ async function handleAction(body: any, identity: any) {
 
     if (profileError) throw profileError;
 
-    const active =
-      profile?.account_status === "active" && profile.activation_paid === true;
+    const active = hasActivationAccess({
+      ...profile,
+      activation_fee_enabled: await activationFeeEnabled(db),
+    });
 
     if (!active) {
       return {

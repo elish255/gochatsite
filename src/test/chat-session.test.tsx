@@ -39,7 +39,12 @@ beforeEach(() => {
     vi
       .fn()
       .mockImplementation(() =>
-        Response.json({ reply: "Habari! Una swali gani kuhusu muziki?", balance: 10000 }),
+        Response.json({
+          reply: "Habari! Una swali gani kuhusu muziki?",
+          balance: 10000,
+          messageCount: 1,
+          rewarded: false,
+        }),
       ),
   );
   Element.prototype.scrollIntoView = vi.fn();
@@ -140,15 +145,26 @@ it("credits each complete exchange without starting a countdown", async () => {
   expect(mocks.rpc).toHaveBeenCalledWith("gochati_start_exchange_session", {
     p_partner: "person-1",
   });
-  expect(screen.getByText("TZS 48,500 / exchange kamili")).toBeInTheDocument();
+  expect(screen.getByText("TZS 48,500 baada ya meseji 10")).toBeInTheDocument();
   expect(screen.queryByText("00:59")).not.toBeInTheDocument();
-  fireEvent.change(input, { target: { value: "Habari yako" } });
-  await act(async () => {
-    fireEvent.click(screen.getByRole("button", { name: "Tuma" }));
-  });
-  expect(screen.getByText("Habari yako")).toBeInTheDocument();
-  expect(onPaid).toHaveBeenCalledExactlyOnceWith(10000, 48500);
-  expect(input).toBeEnabled();
+  for (let messageNumber = 1; messageNumber <= 10; messageNumber += 1) {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      Response.json({
+        reply: `Jibu la ${messageNumber}`,
+        balance: messageNumber === 10 ? 10000 : 0,
+        messageCount: messageNumber,
+        rewarded: messageNumber === 10,
+      }),
+    );
+    fireEvent.change(input, { target: { value: `Ujumbe wa ${messageNumber}` } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Tuma" }));
+    });
+    expect(onPaid).toHaveBeenCalledTimes(messageNumber === 10 ? 1 : 0);
+  }
+
+  expect(screen.getByText("Umefikisha meseji 10 na umelipwa TZS 48,500. Funga chat kisha ufungue tena kuanza exchange mpya.")).toBeInTheDocument();
+  expect(input).toBeDisabled();
 });
 
 it.each(["voice", "video"])("ends an active %s call after three seconds", async (kind) => {
@@ -169,4 +185,19 @@ it("shows the activation fee and payment action", () => {
     "href",
     "/payment?type=activation",
   );
+});
+
+it("offers a valid session when an open free chat gains activation access", async () => {
+  const onClose = vi.fn();
+  const onPaid = vi.fn();
+  const view = render(
+    <ChatSession person={person} active={false} onClose={onClose} onPaid={onPaid} />,
+  );
+  view.rerender(<ChatSession person={person} active onClose={onClose} onPaid={onPaid} />);
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(mocks.rpc).toHaveBeenCalledWith("gochati_start_exchange_session", {
+    p_partner: "person-1",
+  });
 });

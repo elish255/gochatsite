@@ -1,3 +1,4 @@
+import { hasActivationAccess } from "@/lib/activation-policy";
 import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { chatExchangePrice } from "@/lib/chat-exchange-prices";
@@ -313,6 +314,8 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     [chatSessionId, setChatSessionId] = (0, l.useState)(null),
     [sessionError, setSessionError] = (0, l.useState)(``),
     [pendingExchangeId, setPendingExchangeId] = (0, l.useState)(null),
+    [exchangeProgress, setExchangeProgress] = (0, l.useState)(0),
+    [exchangeCompleted, setExchangeCompleted] = (0, l.useState)(false),
     requestRef = (0, l.useRef)(null),
     mountedRef = (0, l.useRef)(true),
     [replyError, setReplyError] = (0, l.useState)(``),
@@ -331,9 +334,12 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     }, [active, e.id]),
     (0, l.useEffect)(() => {
       if (!active) { setChatSessionId(null); setSessionError(``); return; }
+
       let cancelled = false;
       setChatSessionId(null);
       setSessionError(``);
+      setExchangeProgress(0);
+      setExchangeCompleted(false);
       platform.rpc("gochati_start_exchange_session", { p_partner: `person-${e.id}` }).then(({ data, error }) => {
         if (cancelled) return;
         if (error || !data) { setSessionError(`Imeshindikana kuanzisha chat. Funga dirisha hili kisha ujaribu tena.`); return; }
@@ -379,7 +385,12 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
         if (mountedRef.current) {
           o((items) => [...items, { id: crypto.randomUUID(), from: `them`, text: result.reply }]);
           if (active) {
-            if (Number.isFinite(Number(result.balance))) n(Number(result.balance), r.amount);
+            setExchangeProgress(Number(result.messageCount) || 0);
+            if (result.rewarded && Number.isFinite(Number(result.balance))) {
+              n(Number(result.balance), r.amount);
+              setExchangeCompleted(true);
+              setChatSessionId(null);
+            }
             setPendingExchangeId(null);
           }
         }
@@ -423,7 +434,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
             r && active &&
               (0, K.jsxs)(`span`, {
                 className: `flex items-center gap-1.5 rounded-full bg-overlay/30 px-3 py-1.5 text-xs font-bold`,
-                children: [I(r.amount), ` / exchange kamili`],
+                children: [I(r.amount), ` baada ya meseji 10`],
               }),
             (0, K.jsx)(`button`, {
               onClick: t,
@@ -439,7 +450,9 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 (0, K.jsxs)(`div`, {
                   className: `flex-1 space-y-3 overflow-y-auto bg-background/60 p-4`,
                   children: [
-                    sessionError && (0, K.jsx)(`p`, { role: `alert`, className: `text-sm text-destructive`, children: sessionError }),
+                    exchangeCompleted && (0, K.jsx)(`p`, { role: `status`, className: `text-sm text-muted-foreground`, children: `Umefikisha meseji 10 na umelipwa ${I(r.amount)}. Funga chat kisha ufungue tena kuanza exchange mpya.` }),
+        sessionError && (0, K.jsx)(`p`, { role: `alert`, className: `text-sm text-destructive`, children: sessionError }),
+        active && !exchangeCompleted && (0, K.jsx)(`p`, { role: `status`, className: `text-xs text-muted-foreground`, children: `Meseji ${exchangeProgress}/10 — malipo yatatolewa baada ya kukamilisha meseji 10.` }),
                     active && !chatSessionId && !sessionError && (0, K.jsx)(`p`, { role: `status`, className: `text-sm text-muted-foreground`, children: `Tunaandaa chat yako...` }),
                     replyError && (0, K.jsx)(`p`, { role: `alert`, className: `text-sm text-destructive`, children: replyError }),
                     a.map((e) =>
@@ -512,7 +525,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
               className: `flex flex-1 items-center justify-center p-5 text-sm text-muted-foreground`,
               children: `Tunaandaa chat yako...`,
             }),
-        activationOpen && (0, K.jsx)(ActivationRequiredDialog, { open: true, onClose: () => setActivationOpen(false) }),
+        activationOpen && !active && (0, K.jsx)(ActivationRequiredDialog, { open: true, onClose: () => setActivationOpen(false) }),
       ],
     }),
   });
@@ -859,7 +872,7 @@ function de() {
         if (mounted) {
           setReferralCode(data?.username || "");
           setReferralCount(Number(data?.referral_count || 0));
-          setAccountActive(data?.account_status === "active" && data?.activation_paid === true);
+          setAccountActive(hasActivationAccess(data));
           setIsPremium(Boolean(data?.is_premium || data?.is_vip));
           setIsVip(Boolean(data?.is_vip));
           const savedBalance = Number(data?.balance || 0);
