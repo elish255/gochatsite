@@ -228,6 +228,24 @@ it("recognizes a Swahili answer to a greeting in its fallback", async () => {
   expect((result.body as { reply: string }).reply).not.toContain("Wow, sikutegemea hilo");
 });
 
+it("replaces an AI reply that exactly repeats an earlier assistant message", async () => {
+  const repeatedReply = "That sounds interesting. What happened next?";
+  mocks.generateText.mockResolvedValueOnce({ text: repeatedReply });
+
+  const result = await invoke({
+    ...input,
+    messages: [
+      { role: "assistant", content: "Hey! I'm Emma, an AI character from Germany." },
+      { role: "user", content: "How was your weekend?" },
+      { role: "assistant", content: repeatedReply },
+      { role: "user", content: "I went hiking in the hills." },
+    ],
+  });
+
+  expect(result.statusCode).toBe(200);
+  expect((result.body as { reply: string }).reply).not.toBe(repeatedReply);
+});
+
 it("keeps English fallback replies in English", async () => {
   mocks.generateText.mockRejectedValueOnce(new Error("provider failure"));
 
