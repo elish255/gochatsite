@@ -1,6 +1,7 @@
 import { hasActivationAccess } from "@/lib/activation-policy";
 import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
+import { chatExchangePrice } from "@/lib/chat-exchange-prices";
 import { SupportButton } from "./SupportButton";
 import { UserGreeting } from "./UserGreeting";
 import { WithdrawalUpgradeReminder } from "./WithdrawalUpgradeReminder";
@@ -12,18 +13,14 @@ import { ActivationRequiredDialog } from "./ActivationRequiredDialog";
 
 const FREE_MESSAGES_BEFORE_ACTIVATION = 2;
 import { logoUrl, portraits, portraitFallback } from "@/lib/gochati-media";
-import { ArrowRight as f, BellRing as p, CircleCheck as m, Clock as h, Download as g, EllipsisVertical as _, Headphones as v, MessageCircle as y, MessageSquare as b, LogOut as Lt, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
+import { ArrowRight as f, BellRing as p, CircleCheck as m, Download as g, EllipsisVertical as _, Headphones as v, MessageCircle as y, MessageSquare as b, LogOut as Lt, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
 function render(factory, type, props, key) {
  if (type === "button") return factory(Button, { ...props, variant: "reference", size: "reference" }, key);
  if (type === "a") return factory(Button, { variant: "reference", size: "reference", asChild: true, children: factory("a", props) }, key);
  return factory(type, props, key);
 }
 const runtime = { Fragment, jsx: (type, props, key) => render(reactJsx, type, props, key), jsxs: (type, props, key) => render(reactJsxs, type, props, key) };
-const M = [
-    { label: `Dakika 1`, minutes: 1, amount: 5e3 },
-    { label: `Dakika 5`, minutes: 5, amount: 25e3 },
-  ],
-  N = [
+const N = [
     `Emma`,
     `Sophie`,
     `Hannah`,
@@ -117,7 +114,7 @@ const M = [
       photo: portraits[portraitKey],
       fallbackPhoto: portraitFallback(portraitKey),
       online: true,
-      rate: M[t % M.length],
+      rate: { label: `Baada ya meseji 10`, amount: chatExchangePrice(t + 1) },
     };
   }),
   I = (e) => `TZS ` + e.toLocaleString(`en-US`),
@@ -241,7 +238,7 @@ var G = [
   K = runtime;
 function q({ person: e, onChat: t, onCall: n }) {
   return (0, K.jsxs)(`div`, {
-    className: `card-soft flex flex-col gap-3 p-4 sm:flex-row sm:items-center`,
+    className: `card-soft flex flex-col gap-3 p-4 md:flex-row md:items-center`,
     children: [
       (0, K.jsxs)(`div`, {
         className: `flex items-center gap-4`,
@@ -287,21 +284,21 @@ function q({ person: e, onChat: t, onCall: n }) {
         ],
       }),
       (0, K.jsxs)(`div`, {
-        className: `flex flex-row items-center gap-2 sm:ml-auto`,
+        className: `flex w-full flex-row items-center gap-2 md:ml-auto md:w-auto`,
         children: [
           (0, K.jsxs)(`button`, {
             onClick: t,
-            className: `flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground transition active:scale-95 sm:flex-none`,
+            className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground transition active:scale-95 md:flex-none`,
             children: [(0, K.jsx)(y, { className: `size-4` }), ` Chat`],
           }),
           (0, K.jsxs)(`button`, {
             onClick: () => n(`voice`),
-            className: `flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-voice px-3 py-2.5 text-xs font-bold text-on-color transition active:scale-95 sm:flex-none`,
+            className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-voice px-3 py-2.5 text-xs font-bold text-on-color transition active:scale-95 md:flex-none`,
             children: [(0, K.jsx)(S, { className: `size-4` }), ` Voice Call`],
           }),
           (0, K.jsxs)(`button`, {
             onClick: () => n(`video`),
-            className: `flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-video px-3 py-2.5 text-xs font-bold text-on-color transition active:scale-95 sm:flex-none`,
+            className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-video px-3 py-2.5 text-xs font-bold text-on-color transition active:scale-95 md:flex-none`,
             children: [(0, K.jsx)(k, { className: `size-4` }), ` Video Call`],
           }),
         ],
@@ -310,18 +307,20 @@ function q({ person: e, onChat: t, onCall: n }) {
   });
 }
 function oe({ person: e, onClose: t, onPaid: n, active = false }) {
-  let [r, i] = (0, l.useState)(active ? null : { label: `Mazungumzo ya bure`, minutes: 0, amount: 0 }),
+  let [r, i] = (0, l.useState)(active ? { label: `Exchange kamili`, amount: e.rate?.amount ?? chatExchangePrice(Number(e.id)) } : { label: `Mazungumzo ya bure`, amount: 0 }),
     [a, o] = (0, l.useState)([]),
     [s, c] = (0, l.useState)(``),
     [u, d] = (0, l.useState)(!1),
-    [f, p] = (0, l.useState)(0),
     [chatSessionId, setChatSessionId] = (0, l.useState)(null),
+    [sessionError, setSessionError] = (0, l.useState)(``),
+    [pendingExchangeId, setPendingExchangeId] = (0, l.useState)(null),
+    [exchangeProgress, setExchangeProgress] = (0, l.useState)(0),
+    [exchangeCompleted, setExchangeCompleted] = (0, l.useState)(false),
     requestRef = (0, l.useRef)(null),
     mountedRef = (0, l.useRef)(true),
     [replyError, setReplyError] = (0, l.useState)(``),
     [activationOpen, setActivationOpen] = (0, l.useState)(false),
-    g = (0, l.useRef)(null),
-    _ = (0, l.useRef)(!1);
+    g = (0, l.useRef)(null);
   ((0, l.useEffect)(() => {
     if (!r) return;
     o([{ id: `opening-${e.id}`, from: `them`, text: chatOpening(e.id) }]);
@@ -331,55 +330,33 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       return () => { mountedRef.current = false; requestRef.current?.abort(); };
     }, []),
     (0, l.useEffect)(() => {
-      if (active && r?.minutes === 0) {
-        i(null);
-        setChatSessionId(null);
-      }
-    }, [active, r]),
+      i(active ? { label: `Exchange kamili`, amount: e.rate?.amount ?? chatExchangePrice(Number(e.id)) } : { label: `Mazungumzo ya bure`, amount: 0 });
+    }, [active, e.id]),
     (0, l.useEffect)(() => {
-      if (!r || !active || r.minutes === 0) return;
-      let interval = null;
+      if (!active) { setChatSessionId(null); setSessionError(``); return; }
+
       let cancelled = false;
-      let sessionId = null;
-      _.current = false;
-      const startCountdown = async () => {
-        if (active) {
-          const { data: { user } } = await platform.auth.getUser();
-          if (!user || cancelled) return;
-          const { data, error } = await platform.rpc("gochati_start_earning_session", { p_amount: r.amount, p_minutes: r.minutes, p_partner: `person-${e.id}` });
-          if (cancelled) return;
-          if (error || !data) {
-            o((items) => [...items, { id: Date.now(), from: `them`, text: `Imeshindikana kuanza kipindi cha kulipwa. Tafadhali funga chat na ujaribu tena.` }]);
-            p(0);
-            return;
-          }
-          sessionId = data;
-          setChatSessionId(data);
-        }
-        const duration = Math.max(1, Number(r.minutes || 1)) * 60;
-        const deadline = Date.now() + duration * 1000;
-        p(duration);
-        interval = setInterval(() => {
-          const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-          p(remaining);
-          if (remaining === 0 && !_.current) {
-            _.current = true;
-            clearInterval(interval);
-            void n(r.amount, sessionId);
-          }
-        }, 250);
-      };
-      void startCountdown();
-      return () => { cancelled = true; if (interval) clearInterval(interval); };
-    }, [r, n, active, e.id]),
+      setChatSessionId(null);
+      setSessionError(``);
+      setExchangeProgress(0);
+      setExchangeCompleted(false);
+      platform.rpc("gochati_start_exchange_session", { p_partner: `person-${e.id}` }).then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data) { setSessionError(`Imeshindikana kuanzisha chat. Funga dirisha hili kisha ujaribu tena.`); return; }
+        setChatSessionId(data);
+      }).catch(() => { if (!cancelled) setSessionError(`Imeshindikana kuanzisha chat. Funga dirisha hili kisha ujaribu tena.`); });
+      return () => { cancelled = true; };
+    }, [active, e.id]),
     (0, l.useEffect)(() => {
       g.current?.scrollIntoView({ behavior: `smooth` });
     }, [a, u]));
   let v = async () => {
       const body = s.trim();
-      if (!body || (active && f === 0) || requestRef.current) return;
+      if (!body || (active && !chatSessionId) || requestRef.current) return;
       if (body.length > 2000) { setReplyError(`Ujumbe usizidi herufi 2,000.`); return; }
       if (!active && a.filter((item) => item.from === `me`).length >= FREE_MESSAGES_BEFORE_ACTIVATION) { setActivationOpen(true); return; }
+      const exchangeId = pendingExchangeId || crypto.randomUUID();
+      if (active && !pendingExchangeId) setPendingExchangeId(exchangeId);
       const history = [...a, { id: crypto.randomUUID(), from: `me`, text: body }];
       const controller = new AbortController();
       requestRef.current = controller;
@@ -393,7 +370,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
   "Content-Type": "application/json",
   Authorization: `Bearer ${session.access_token}`,
   },
-          body: JSON.stringify({ personId: e.id, sessionId: chatSessionId, messages: history.slice(-24).map((item) => ({ role: item.from === `me` ? `user` : `assistant`, content: item.text })) }),
+          body: JSON.stringify({ personId: e.id, sessionId: chatSessionId, exchangeId: active ? exchangeId : undefined, messages: history.slice(-24).map((item) => ({ role: item.from === `me` ? `user` : `assistant`, content: item.text })) }),
           signal: controller.signal,
         });
         const raw = await response.text();
@@ -405,7 +382,18 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
           return;
         }
         if (!response.ok || !result.reply) throw new Error(result.message || `Jibu halijapatikana. Jaribu tena.`);
-        if (mountedRef.current) o((items) => [...items, { id: crypto.randomUUID(), from: `them`, text: result.reply }]);
+        if (mountedRef.current) {
+          o((items) => [...items, { id: crypto.randomUUID(), from: `them`, text: result.reply }]);
+          if (active) {
+            setExchangeProgress(Number(result.messageCount) || 0);
+            if (result.rewarded && Number.isFinite(Number(result.balance))) {
+              n(Number(result.balance), r.amount);
+              setExchangeCompleted(true);
+              setChatSessionId(null);
+            }
+            setPendingExchangeId(null);
+          }
+        }
       } catch (error) {
         if (mountedRef.current && !controller.signal.aborted) {
           setReplyError(error.message || `Chat haipatikani kwa sasa. Jaribu tena.`);
@@ -414,10 +402,8 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       } finally {
         requestRef.current = null;
         if (mountedRef.current) d(false);
-      }
-    },
-    y = String(Math.floor(f / 60)).padStart(2, `0`),
-    b = String(f % 60).padStart(2, `0`);
+        }
+      };
   return (0, K.jsx)(`div`, {
     className: `fixed inset-0 z-[70] flex items-end justify-center bg-overlay/60 p-0 backdrop-blur-sm sm:items-center sm:p-4`,
     children: (0, K.jsxs)(`div`, {
@@ -447,8 +433,8 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
             }),
             r && active &&
               (0, K.jsxs)(`span`, {
-                className: `flex items-center gap-1.5 rounded-full bg-overlay/30 px-3 py-1.5 text-sm font-bold tabular-nums`,
-                children: [(0, K.jsx)(h, { className: `size-4` }), y, `:`, b],
+                className: `flex items-center gap-1.5 rounded-full bg-overlay/30 px-3 py-1.5 text-xs font-bold`,
+                children: [I(r.amount), ` baada ya meseji 10`],
               }),
             (0, K.jsx)(`button`, {
               onClick: t,
@@ -464,6 +450,10 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 (0, K.jsxs)(`div`, {
                   className: `flex-1 space-y-3 overflow-y-auto bg-background/60 p-4`,
                   children: [
+                    exchangeCompleted && (0, K.jsx)(`p`, { role: `status`, className: `text-sm text-muted-foreground`, children: `Umefikisha meseji 10 na umelipwa ${I(r.amount)}. Funga chat kisha ufungue tena kuanza exchange mpya.` }),
+        sessionError && (0, K.jsx)(`p`, { role: `alert`, className: `text-sm text-destructive`, children: sessionError }),
+        active && !exchangeCompleted && (0, K.jsx)(`p`, { role: `status`, className: `text-xs text-muted-foreground`, children: `Meseji ${exchangeProgress}/10 — malipo yatatolewa baada ya kukamilisha meseji 10.` }),
+                    active && !chatSessionId && !sessionError && (0, K.jsx)(`p`, { role: `status`, className: `text-sm text-muted-foreground`, children: `Tunaandaa chat yako...` }),
                     replyError && (0, K.jsx)(`p`, { role: `alert`, className: `text-sm text-destructive`, children: replyError }),
                     a.map((e) =>
                       (0, K.jsx)(
@@ -517,12 +507,12 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                       onChange: (e) => c(e.target.value),
                       onKeyDown: (e) => e.key === `Enter` && !e.nativeEvent.isComposing && e.keyCode !== 229 && v(),
                       placeholder: `Andika ujumbe wako...`,
-                      disabled: (active && f === 0) || u,
+                      disabled: (active && !chatSessionId) || u,
                       className: `flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary`,
                     }),
                     (0, K.jsx)(`button`, {
                       onClick: v,
-                      disabled: (active && f === 0) || u,
+                      disabled: (active && !chatSessionId) || u,
                       "aria-label": `Tuma`,
                       className: `grad-brand rounded-xl p-3 text-on-color disabled:opacity-50`,
                       children: (0, K.jsx)(w, { className: `size-5` }),
@@ -531,41 +521,9 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                 }),
               ],
             })
-          : (0, K.jsxs)(`div`, {
-              className: `flex-1 overflow-y-auto p-5`,
-              children: [
-                (0, K.jsx)(`h4`, {
-                  className: `text-center text-base font-bold`,
-                  children: `Chagua muda na kiasi cha malipo`,
-                }),
-                (0, K.jsx)(`p`, {
-                  className: `mt-1 text-center text-xs text-muted-foreground`,
-                  children: `Utalipwa mara baada ya mazungumzo kukamilika.`,
-                }),
-                (0, K.jsx)(`div`, {
-                  className: `mt-5 grid gap-3`,
-                  children: M.map((e) =>
-                    (0, K.jsxs)(
-                      `button`,
-                      {
-                        onClick: () => i(e),
-                        className: `flex items-center justify-between rounded-2xl border border-border bg-secondary/60 px-4 py-4 text-left transition hover:border-primary active:scale-[0.98]`,
-                        children: [
-                          (0, K.jsx)(`span`, {
-                            className: `font-semibold`,
-                            children: e.label,
-                          }),
-                          (0, K.jsx)(`span`, {
-                            className: `grad-profit rounded-lg px-3 py-1.5 text-sm font-bold text-on-color`,
-                            children: I(e.amount),
-                          }),
-                        ],
-                      },
-                      e.label,
-                    ),
-                  ),
-                }),
-              ],
+          : (0, K.jsx)(`div`, {
+              className: `flex flex-1 items-center justify-center p-5 text-sm text-muted-foreground`,
+              children: `Tunaandaa chat yako...`,
             }),
         activationOpen && !active && (0, K.jsx)(ActivationRequiredDialog, { open: true, onClose: () => setActivationOpen(false) }),
       ],
@@ -993,21 +951,13 @@ function de() {
     setNotifications((items) => items.map((item) => item.id === id ? { ...item, read_at: new Date().toISOString() } : item));
     setBannerNotification((current) => current?.id === id ? null : current);
   };
-  let U = (0, l.useCallback)(async (e, sessionId = null) => {
-      s(null);
-      if (!accountActive) { f({ open: !0, amount: e }); return; }
-      const { data: { user } } = await platform.auth.getUser();
-      if (!user) { h({ id: `earned-error-${Date.now()}`, text: `Ingia kwenye akaunti yako ili kuhifadhi mapato.` }); setTimeout(() => h(null), 5000); return; }
-      if (!sessionId) { h({ id: `earned-error-${Date.now()}`, text: `Kipindi hakikuthibitishwa. Mapato hayajaongezwa.` }); setTimeout(() => h(null), 7000); return; }
-      const { data: savedBalance, error } = await platform.rpc("gochati_complete_earning_session", { p_session_id: sessionId });
-      if (error) { h({ id: `earned-error-${Date.now()}`, text: `Mapato hayajaongezwa: ${error.message}` }); setTimeout(() => h(null), 7000); return; }
-      const nextBalance = Number(savedBalance || 0);
+  let U = (0, l.useCallback)((savedBalance, amount) => {
+      const nextBalance = Number(savedBalance);
+      if (!Number.isFinite(nextBalance)) return;
       a(nextBalance); w(nextBalance);
-      const { data: profile } = await platform.from("profiles").select("balance").eq("id", user.id).single();
-      if (profile) a(Number(profile.balance || 0));
-      f({ open: true, amount: e });
+      h({ id: `earned-${Date.now()}`, text: `Exchange imekamilika. Umepata ${I(Number(amount))}.` });
       setTimeout(() => h(null), 5000);
-    }, [accountActive]),
+    }, []),
     J = (e) => {
       if (!accountReady) return;
       if (!e.online) {
