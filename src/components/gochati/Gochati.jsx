@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
 import { Button } from "@/components/ui/button";
 import { ActivationRequiredDialog } from "./ActivationRequiredDialog";
+import { GuestSignupDialog } from "./GuestSignupDialog";
 
 const FREE_MESSAGES_BEFORE_ACTIVATION = 2;
 import { logoUrl, portraits, portraitFallback } from "@/lib/gochati-media";
@@ -306,7 +307,7 @@ function q({ person: e, onChat: t, onCall: n }) {
     ],
   });
 }
-function oe({ person: e, onClose: t, onPaid: n, active = false }) {
+function oe({ person: e, onClose: t, onPaid: n, active = false, guest = false }) {
   let [r, i] = (0, l.useState)(active ? { label: `Exchange kamili`, amount: e.rate?.amount ?? chatExchangePrice(Number(e.id)) } : { label: `Mazungumzo ya bure`, amount: 0 }),
     [a, o] = (0, l.useState)([]),
     [s, c] = (0, l.useState)(``),
@@ -319,6 +320,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
     mountedRef = (0, l.useRef)(true),
     [replyError, setReplyError] = (0, l.useState)(``),
     [activationOpen, setActivationOpen] = (0, l.useState)(false),
+    [guestSignupOpen, setGuestSignupOpen] = (0, l.useState)(false),
     g = (0, l.useRef)(null);
   ((0, l.useEffect)(() => {
     if (!r) return;
@@ -359,13 +361,27 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
       const body = s.trim();
       if (!body || (active && !chatSessionId) || requestRef.current) return;
       if (body.length > 2000) { setReplyError(`Ujumbe usizidi herufi 2,000.`); return; }
-      if (!active && a.filter((item) => item.from === `me`).length >= FREE_MESSAGES_BEFORE_ACTIVATION) { setActivationOpen(true); return; }
+      if (!active && a.filter((item) => item.from === `me`).length >= FREE_MESSAGES_BEFORE_ACTIVATION) { guest ? setGuestSignupOpen(true) : setActivationOpen(true); return; }
       const exchangeId = pendingExchangeId || crypto.randomUUID();
       if (active && !pendingExchangeId) setPendingExchangeId(exchangeId);
       const history = [...a, { id: crypto.randomUUID(), from: `me`, text: body }];
       const controller = new AbortController();
       requestRef.current = controller;
       o(history); c(``); d(true); setReplyError(``);
+      if (guest) {
+        const sentCount = history.filter((item) => item.from === `me`).length;
+        const guestReply = sentCount === 1
+          ? `Asante kwa ujumbe wako! Mimi ni ${e.name}. Ungependa kuzungumza kuhusu nini?`
+          : `Nimefurahia mazungumzo haya ya majaribio. Jisajili ili uendelee kuchat na ${e.name}.`;
+        window.setTimeout(() => {
+          if (!mountedRef.current || controller.signal.aborted) return;
+          o([...history, { id: crypto.randomUUID(), from: `them`, text: guestReply }]);
+          requestRef.current = null;
+          d(false);
+          if (sentCount >= FREE_MESSAGES_BEFORE_ACTIVATION) setGuestSignupOpen(true);
+        }, 300);
+        return;
+      }
   try {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !session?.access_token) throw new Error(`Tafadhali ingia tena kwenye akaunti yako.`);
@@ -409,7 +425,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
         }
       };
   return (0, K.jsx)(`div`, {
-    className: `fixed inset-0 z-[70] flex items-end justify-center bg-overlay/60 p-0 backdrop-blur-sm sm:items-center sm:p-4`,
+    className: `fixed inset-0 z-[40] flex items-end justify-center bg-overlay/60 p-0 backdrop-blur-sm sm:items-center sm:p-4`,
     children: (0, K.jsxs)(`div`, {
       className: `card-soft flex h-[92vh] w-full max-w-lg flex-col overflow-hidden sm:h-[80vh]`,
       children: [
@@ -510,12 +526,12 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
                       onChange: (e) => c(e.target.value),
                       onKeyDown: (e) => e.key === `Enter` && !e.nativeEvent.isComposing && e.keyCode !== 229 && v(),
                       placeholder: `Andika ujumbe wako...`,
-                      disabled: (active && !chatSessionId) || u,
+                      disabled: (active && !chatSessionId) || u || (guest && a.filter((item) => item.from === `me`).length >= FREE_MESSAGES_BEFORE_ACTIVATION),
                       className: `flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary`,
                     }),
                     (0, K.jsx)(`button`, {
                       onClick: v,
-                      disabled: (active && !chatSessionId) || u,
+                      disabled: (active && !chatSessionId) || u || (guest && a.filter((item) => item.from === `me`).length >= FREE_MESSAGES_BEFORE_ACTIVATION),
                       "aria-label": `Tuma`,
                       className: `grad-brand rounded-xl p-3 text-on-color disabled:opacity-50`,
                       children: (0, K.jsx)(w, { className: `size-5` }),
@@ -550,6 +566,7 @@ function oe({ person: e, onClose: t, onPaid: n, active = false }) {
           }),
         }),
         activationOpen && !active && (0, K.jsx)(ActivationRequiredDialog, { open: true, onClose: () => setActivationOpen(false) }),
+        guest && (0, K.jsx)(GuestSignupDialog, { open: guestSignupOpen, onOpenChange: setGuestSignupOpen }),
       ],
     }),
   });
@@ -888,12 +905,27 @@ function de() {
   }, [e]),
     (0, l.useEffect)(() => {
       let mounted = true;
+      let accountRequestActive = false;
       const loadAccount = async () => {
-        const { data: { user } } = await platform.auth.getUser();
-        if (!user) { if (mounted) { setAccountSignedIn(false); setAccountReady(true); } return; }
-        if (mounted) setAccountSignedIn(true);
-        const { data } = await platform.from("gochati_users").select("id,balance,account_status,activation_paid,is_premium,is_vip,username,referral_count").eq("id", user.id).maybeSingle();
-        if (mounted) {
+        if (accountRequestActive) return;
+        accountRequestActive = true;
+        let timeoutId;
+        try {
+          const authResult = await Promise.race([
+            platform.auth.getUser(),
+            new Promise((resolve) => {
+              timeoutId = window.setTimeout(() => resolve({ data: { user: null } }), 4000);
+            }),
+          ]);
+          window.clearTimeout(timeoutId);
+          const user = authResult?.data?.user;
+          if (!user) {
+            if (mounted) { setAccountSignedIn(false); setAccountActive(false); setAccountReady(true); }
+            return;
+          }
+          if (mounted) { setAccountSignedIn(true); setAccountReady(true); }
+          const { data, error } = await platform.from("gochati_users").select("id,balance,account_status,activation_paid,is_premium,is_vip,username,referral_count").eq("id", user.id).maybeSingle();
+          if (!mounted || error) return;
           setReferralCode(data?.username || "");
           setReferralCount(Number(data?.referral_count || 0));
           setAccountActive(hasActivationAccess(data));
@@ -902,7 +934,11 @@ function de() {
           const savedBalance = Number(data?.balance || 0);
           a(savedBalance);
           w(savedBalance);
-          setAccountReady(true);
+        } catch {
+          if (mounted) { setAccountSignedIn(false); setAccountActive(false); setAccountReady(true); }
+        } finally {
+          window.clearTimeout(timeoutId);
+          accountRequestActive = false;
         }
       };
       void loadAccount();
@@ -1103,6 +1139,22 @@ function de() {
                 "aria-label": `Notifications`,
                 className: `relative rounded-xl border border-border bg-card p-2.5`,
                 children: [ (0, K.jsx)(p, { className: `size-5` }), notifications.some((item) => !item.read_at) && (0, K.jsx)(`span`, { className: `absolute -right-1 -top-1 size-2.5 rounded-full bg-red-500` }) ],
+              }),
+            ],
+          }),
+          !accountSignedIn && (0, K.jsxs)(`nav`, {
+            "aria-label": `Akaunti`,
+            className: `mb-3 flex gap-2`,
+            children: [
+              (0, K.jsx)(`a`, {
+                href: `/register`,
+                className: `grad-brand flex flex-1 items-center justify-center rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-md`,
+                children: `Jisajili`,
+              }),
+              (0, K.jsx)(`a`, {
+                href: `/login`,
+                className: `flex flex-1 items-center justify-center rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground`,
+                children: `Ingia`,
               }),
             ],
           }),
@@ -1426,7 +1478,7 @@ function de() {
         ],
       }),
       notificationOpen && (0, K.jsx)(`div`, { className: `fixed inset-0 z-[100] flex items-center justify-center bg-overlay/70 p-4`, onMouseDown: (event) => { if (event.target === event.currentTarget) setNotificationOpen(false); }, children: (0, K.jsxs)(`section`, { role: `dialog`, "aria-modal": true, "aria-label": `Notifications`, className: `card-soft max-h-[80vh] w-full max-w-lg overflow-y-auto p-5`, children: [ (0, K.jsxs)(`div`, { className: `mb-4 flex items-center justify-between gap-3`, children: [ (0, K.jsx)(`h2`, { className: `text-xl font-black`, children: `Notifications` }), (0, K.jsx)(`button`, { onClick: () => setNotificationOpen(false), "aria-label": `Funga`, className: `rounded-lg p-2`, children: (0, K.jsx)(j, { className: `size-5` }) }) ] }), notifications.length ? notifications.map((item) => (0, K.jsxs)(`article`, { className: `mb-3 rounded-xl border border-border p-3`, children: [ (0, K.jsx)(`p`, { className: `text-sm`, children: item.message }), (0, K.jsx)(`p`, { className: `mt-2 text-xs text-muted-foreground`, children: new Date(item.created_at).toLocaleString() }), !item.read_at && (0, K.jsx)(`button`, { onClick: () => void dismissNotification(item.id), className: `mt-2 text-xs font-bold text-primary`, children: `Dismiss` }) ] }, item.id)) : (0, K.jsx)(`p`, { className: `text-sm text-muted-foreground`, children: `Bado hakuna notification.` }) ] }) }),
-      o && (0, K.jsx)(oe, { person: o, active: accountActive, onClose: () => s(null), onPaid: U }),
+      o && (0, K.jsx)(oe, { person: o, active: accountActive, guest: !accountSignedIn, onClose: () => s(null), onPaid: U }),
       c &&
         (0, K.jsx)(se, {
           person: c.person,
