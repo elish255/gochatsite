@@ -2,6 +2,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdminSms } from "@/components/gochati/AdminSms";
 
+const mocks = vi.hoisted(() => ({
+  getSession: vi.fn().mockResolvedValue({ data: { session: { access_token: "test-token" } } }),
+}));
+vi.mock("@/integrations/supabase/platform", () => ({
+  platform: { auth: { getSession: mocks.getSession } },
+}));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
