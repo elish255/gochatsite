@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { platform } from "@/integrations/supabase/platform";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,7 +64,9 @@ function BalloonCluster({ side, balloons }: { side: "left" | "right"; balloons: 
           >
             <span className="absolute left-1/4 top-1/5 h-1/4 w-1/5 rounded-full bg-background/50" />
           </div>
-          <div className={`${balloon.color} h-1.5 w-2 [clip-path:polygon(50%_0,100%_100%,0_100%)]`} />
+          <div
+            className={`${balloon.color} h-1.5 w-2 [clip-path:polygon(50%_0,100%_100%,0_100%)]`}
+          />
           <div className="w-px bg-muted-foreground/60" style={{ height: balloon.string }} />
         </div>
       ))}
@@ -73,28 +74,8 @@ function BalloonCluster({ side, balloons }: { side: "left" | "right"; balloons: 
   );
 }
 
-async function notifyThresholdReached() {
-  const { data } = await platform.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) return;
-  await fetch("/api/gochati-sms", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ action: "threshold" }),
-  });
-}
-
 export function WithdrawalUpgradeReminder({ eligible }: WithdrawalUpgradeReminderProps) {
   const [open, setOpen] = useState(false);
-  const thresholdNotified = useRef(false);
-
-  useEffect(() => {
-    if (!eligible || thresholdNotified.current) return;
-    thresholdNotified.current = true;
-    notifyThresholdReached().catch(() => {
-      thresholdNotified.current = false;
-    });
-  }, [eligible]);
 
   useEffect(() => {
     setOpen(eligible);

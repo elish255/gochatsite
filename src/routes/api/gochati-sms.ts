@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const SWALA_ENDPOINT = "https://api.swalasms.com/v1/sms/messages";
+const SPRINGTECH_ENDPOINT = "https://sms.springtech.co.tz/api/v1/vendor/message/send";
 const MAX_GROUP_SIZE = 500;
 const SEND_CONCURRENCY = 5;
 
@@ -55,51 +55,6 @@ async function requireAdmin(request: Request): Promise<SupabaseClient> {
   return adminClient;
 }
 
-const WITHDRAWAL_THRESHOLD = 100000;
-const THRESHOLD_SMS_TEMPLATE =
-  "[Username] Hongera Sana!\nUmefikia Kiwango Cha kutoa Pesa, Ungana na Watanzania Wengine Kunufaika na Hii Fursa Kamilisha Upgrade ili kupokea Withdrawal Yako";
-
-async function requireUser(request: Request) {
-  const { url, anonKey, serviceKey } = supabaseConfig();
-  const header = request.headers.get("Authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
-  if (!token) throw new HttpError(401, "Hujaingia.");
-  const options = { auth: { persistSession: false, autoRefreshToken: false } };
-  const { data, error } = await createClient(url, anonKey, options).auth.getUser(token);
-  if (error || !data.user) throw new HttpError(401, "Session haijathibitishwa.");
-  return { db: createClient(url, serviceKey, options), userId: data.user.id };
-}
-
-async function sendThresholdSms(db: SupabaseClient, userId: string) {
-  const { data: claimed, error } = await db
-    .from("gochati_users")
-    .update({ withdrawal_threshold_sms_at: new Date().toISOString() })
-    .eq("id", userId)
-    .is("withdrawal_threshold_sms_at", null)
-    .eq("account_status", "active")
-    .gte("balance", WITHDRAWAL_THRESHOLD)
-    .not("is_premium", "is", true)
-    .not("is_vip", "is", true)
-    .select("username, phone")
-    .maybeSingle();
-  if (error) throw new HttpError(500, "Imeshindwa kuhakiki kiwango.");
-  if (!claimed) return { sent: false };
-
-  const recipient = claimed as Recipient;
-  const phone = normalizeTanzaniaPhone(recipient.phone || "");
-  const text = THRESHOLD_SMS_TEMPLATE.replace(/\[\s*username\s*\]/gi, recipient.username || "");
-  const ok = phone
-    ? await sendSwalaSms(phone, text).catch((sendError) => {
-        console.error("Threshold SMS failed", sendError);
-        return false;
-      })
-    : false;
-  if (!ok && phone) {
-    await db.from("gochati_users").update({ withdrawal_threshold_sms_at: null }).eq("id", userId);
-  }
-  return { sent: ok };
-}
-
 const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
 function generatePassword(length = 8) {
@@ -132,7 +87,7 @@ async function resetPasswordBySms(rawPhone: unknown) {
       continue;
     }
     const text = `GOCHATI: Habari ${account.username}, password yako mpya ni: ${password}\nIngia kwa username "${account.username}" na password hii. Usimpe mtu yeyote.`;
-    const sent = await sendSwalaSms(phone, text).catch((sendError) => {
+    const sent = await sendSpringTechSms(phone, text).catch((sendError) => {
       console.error("Password reset SMS failed", sendError);
       return false;
     });
@@ -183,23 +138,34 @@ export function normalizeTanzaniaPhone(value: string): string | null {
   return null;
 }
 
-async function sendSwalaSms(phone: string, body: string) {
-  const apiKey = process.env["SWALA_API_KEY"] || "";
-  const senderId = process.env["SWALA_SENDER_ID"] || "GOCHATI";
-  if (!apiKey) throw new HttpError(503, "SWALA_API_KEY haijawekwa kwenye server.");
+async function sendSpringTechSms(phone: string, message: string) {
+  const apiKey = process.env["SPRINGTECH_API_KEY"] || "";
+  const apiSecret = process.env["SPRINGTECH_API_SECRET"] || "";
+  const senderId = process.env["SPRINGTECH_SENDER_ID"] || "";
+  if (!apiKey || !apiSecret || !senderId) {
+    throw new HttpError(503, "Mipangilio ya SpringTech SMS haijawekwa kwenye server.");
+  }
 
-  const response = await fetch(SWALA_ENDPOINT, {
+  const response = await fetch(SPRINGTECH_ENDPOINT, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      api_key: apiKey,
+      api_secret: apiSecret,
       "Content-Type": "application/json",
-      "Idempotency-Key": crypto.randomUUID(),
     },
-    body: JSON.stringify({ recipient: phone, sender_id: senderId, body }),
+    body: JSON.stringify({
+      senderId,
+      messageType: "text",
+      message,
+      contacts: phone,
+      ...(process.env["SPRINGTECH_DELIVERY_REPORT_URL"]
+        ? { deliveryReportUrl: process.env["SPRINGTECH_DELIVERY_REPORT_URL"] }
+        : {}),
+    }),
   });
-  if (response.status !== 202 && !response.ok) {
-    const detail = await response.text().catch(() => "");
-    console.error("Swala SMS rejected", response.status, detail.slice(0, 300));
+  const result = (await response.json().catch(() => null)) as { success?: boolean } | null;
+  if (!response.ok || result?.success !== true) {
+    console.error("SpringTech SMS rejected", response.status);
     return false;
   }
   return true;
@@ -226,7 +192,10 @@ async function loadRecipients(
     throw new HttpError(400, "Kundi la wapokeaji si sahihi.");
   }
   const { data, error } = await applyAudience(
-    db.from("gochati_users").select("username, phone").limit(MAX_GROUP_SIZE + 1),
+    db
+      .from("gochati_users")
+      .select("username, phone")
+      .limit(MAX_GROUP_SIZE + 1),
     audience as Audience,
   );
   if (error) throw new HttpError(500, "Imeshindwa kupakia wapokeaji.");
@@ -247,7 +216,7 @@ async function sendToRecipients(recipients: Recipient[], template: string) {
       let ok = false;
       if (phone) {
         const text = template.replace(/\[\s*username\s*\]/gi, recipient.username || "");
-        ok = await sendSwalaSms(phone, text).catch((error) => {
+        ok = await sendSpringTechSms(phone, text).catch((error) => {
           if (error instanceof HttpError) throw error;
           console.error("Swala SMS request failed", error);
           return false;
@@ -276,11 +245,6 @@ export const Route = createFileRoute("/api/gochati-sms")({
 
           if (body.action === "reset_password") {
             return Response.json(await resetPasswordBySms(body.phone));
-          }
-
-          if (body.action === "threshold") {
-            const { db: userDb, userId } = await requireUser(request);
-            return Response.json(await sendThresholdSms(userDb, userId));
           }
 
           const db = await requireAdmin(request);
