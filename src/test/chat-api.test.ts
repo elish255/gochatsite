@@ -146,6 +146,7 @@ it("generates a fluent, contextual reply using the AI Gateway model", async () =
   expect(generation.instructions).toContain("fictional AI chat character");
   expect(generation.instructions).toContain("one short, relevant follow-up question");
   expect(generation.instructions).toContain("If the user answers a question you just asked");
+  expect(generation.instructions).toContain("Never use the stock phrase 'I hear you'");
 });
 
 it("rejects unauthenticated access before contacting the model", async () => {
@@ -243,6 +244,34 @@ it("keeps English fallback replies in English", async () => {
     expect.objectContaining({ reply: expect.stringMatching(/I'm doing well|Pretty good/i) }),
   );
 });
+
+it.each([
+  { message: "I like to sing", match: /sing|music/i },
+  { message: "Where are you come from", match: /Germany/i },
+])(
+  "answers English messages with relevant, non-repeated fallback replies: $message",
+  async ({ message, match }) => {
+    mocks.generateText.mockRejectedValueOnce(new Error("provider failure"));
+    const previousReply =
+      "I hear you. live music is something I enjoy too. What part of that matters most to you?";
+
+    const result = await invoke({
+      ...input,
+      messages: [
+        { role: "assistant", content: "Hey! I'm Emma, an AI character from Germany." },
+        { role: "user", content: "I like music" },
+        { role: "assistant", content: previousReply },
+        { role: "user", content: message },
+      ],
+    });
+
+    const reply = (result.body as { reply: string }).reply;
+    expect(result.statusCode).toBe(200);
+    expect(reply).toMatch(match);
+    expect(reply).not.toBe(previousReply);
+    expect(reply).not.toContain("I hear you.");
+  },
+);
 
 it("uses a safe conversational fallback if AI generation is unavailable", async () => {
   mocks.generateText.mockRejectedValueOnce(new Error("provider failure"));
