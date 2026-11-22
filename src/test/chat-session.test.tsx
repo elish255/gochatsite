@@ -145,7 +145,7 @@ it("credits each complete exchange without starting a countdown", async () => {
   expect(mocks.rpc).toHaveBeenCalledWith("gochati_start_exchange_session", {
     p_partner: "person-1",
   });
-  expect(screen.getByText("TZS 48,500 baada ya meseji 10")).toBeInTheDocument();
+  expect(screen.queryByText(/baada ya meseji \d+/i)).not.toBeInTheDocument();
   expect(screen.queryByText("00:59")).not.toBeInTheDocument();
   for (let messageNumber = 1; messageNumber <= 10; messageNumber += 1) {
     vi.mocked(fetch).mockResolvedValueOnce(
@@ -163,7 +163,8 @@ it("credits each complete exchange without starting a countdown", async () => {
     expect(onPaid).toHaveBeenCalledTimes(messageNumber === 10 ? 1 : 0);
   }
 
-  expect(screen.getByText("Umefikisha meseji 10 na umelipwa TZS 48,500. Funga chat kisha ufungue tena kuanza exchange mpya.")).toBeInTheDocument();
+  expect(screen.getByText("Malipo ya TZS 48,500 yameongezwa kwenye salio lako. Fungua chat mpya kuendelea.")).toBeInTheDocument();
+  expect(screen.queryByText(/meseji \d+|baada ya kukamilisha/i)).not.toBeInTheDocument();
   expect(input).toBeDisabled();
 });
 
