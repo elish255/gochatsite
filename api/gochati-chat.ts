@@ -636,6 +636,7 @@ export default async function handler(req: Request, res: Response) {
     const body = (req.body || {}) as {
       personId?: unknown;
       sessionId?: unknown;
+      exchangeId?: unknown;
       messages?: unknown;
     };
     const personId = Number(body.personId);
@@ -645,6 +646,13 @@ export default async function handler(req: Request, res: Response) {
       typeof body.sessionId === "string" &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.sessionId)
         ? body.sessionId
+        : null;
+    const exchangeId =
+      typeof body.exchangeId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        body.exchangeId,
+      )
+        ? body.exchangeId
         : null;
     const messages = body.messages;
     if (!persona || !Array.isArray(messages) || messages.length === 0 || messages.length > 24)
@@ -686,34 +694,31 @@ export default async function handler(req: Request, res: Response) {
           code: "activation_required",
           message: "Umefikia mwisho wa mazungumzo ya bure. Lipia Activation Fee kuendelea.",
         });
-    } else if (!sessionId) {
-      return error(res, 403, "Anza kipindi cha chat kabla ya kutuma ujumbe.");
+    } else if (!sessionId || !exchangeId) {
+      return error(res, 403, "Anza session ya exchange kabla ya kutuma ujumbe.");
     }
 
     if (activationComplete) {
       const { data: session, error: sessionError } = await supabase
-        .from("gochati_chat_sessions")
-        .select("id,partner_id,started_at,duration_minutes,status")
+        .from("gochati_exchange_sessions")
+        .select("id,partner_id,expires_at,status")
         .eq("id", sessionId)
         .eq("user_id", data.user.id)
         .eq("partner_id", `person-${persona.id}`)
         .maybeSingle();
 
       if (sessionError) {
-        console.error("[v0] gochati-chat session verification failed", sessionError.code);
-        return error(res, 503, "Kipindi cha chat hakikuthibitishwa. Jaribu tena.");
+        console.error("[v0] gochati-chat exchange session verification failed", sessionError.code);
+        return error(res, 503, "Kipindi cha exchange hakikuthibitishwa. Jaribu tena.");
       }
 
-      const sessionEndsAt = session
-        ? Date.parse(session.started_at) + Number(session.duration_minutes) * 60_000
-        : Number.NaN;
       if (
         !session ||
         session.status !== "active" ||
-        !Number.isFinite(sessionEndsAt) ||
-        Date.now() >= sessionEndsAt
+        !Number.isFinite(Date.parse(session.expires_at)) ||
+        Date.now() >= Date.parse(session.expires_at)
       )
-        return error(res, 403, "Kipindi cha chat hakijaidhinishwa au kimeisha.");
+        return error(res, 403, "Session ya exchange haijaidhinishwa au imeisha.");
     }
 
     let reply = "";
@@ -739,6 +744,24 @@ export default async function handler(req: Request, res: Response) {
     }
 
     if (!reply) reply = replyFor(latest.content, persona, conversation);
+
+    if (activationComplete) {
+      const { data: balance, error: creditError } = await supabase.rpc(
+        "gochati_complete_chat_exchange",
+        {
+          p_user_id: data.user.id,
+          p_session_id: sessionId,
+          p_exchange_id: exchangeId,
+          p_partner: `person-${persona.id}`,
+        },
+      );
+      if (creditError || balance === null) {
+        console.error("[v0] gochati-chat exchange credit failed", creditError?.code);
+        return error(res, 503, "Jibu limetengenezwa lakini malipo hayakukamilika. Jaribu tena.");
+      }
+      return res.status(200).json({ reply, balance });
+    }
+
     return res.status(200).json({ reply });
   } catch (cause) {
     if (cause instanceof Error && cause.message === "invalid_message")

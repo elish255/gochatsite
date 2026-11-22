@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   from: vi.fn(),
+  rpc: vi.fn(),
   select: vi.fn(),
   eq: vi.fn(),
   maybeSingle: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock("@supabase/supabase-js", () => ({
 
     return {
       auth: { getUser: (...args: unknown[]) => mocks.getUser(...args) },
+      rpc: (...args: unknown[]) => mocks.rpc(...args),
       from: (...args: unknown[]) => {
         mocks.from(...args);
         return query;
@@ -54,6 +56,7 @@ const sessionId = "11111111-1111-4111-8111-111111111111";
 const input = {
   personId: 1,
   sessionId,
+  exchangeId: "22222222-2222-4222-8222-222222222222",
   messages: [
     { role: "assistant", content: "Hey! I'm Emma, an AI character from Germany." },
     { role: "user", content: "Unapenda muziki gani?" },
@@ -92,12 +95,12 @@ beforeEach(() => {
       data: {
         id: sessionId,
         partner_id: "person-1",
-        started_at: new Date(Date.now() - 1000).toISOString(),
-        duration_minutes: 1,
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
         status: "active",
       },
       error: null,
     });
+  mocks.rpc.mockResolvedValue({ data: 10000, error: null });
   mocks.generateText.mockResolvedValue({
     text: "I love live music, especially small jazz shows. What kind of music do you enjoy?",
   });
@@ -109,9 +112,16 @@ it("generates a fluent, contextual reply using the AI Gateway model", async () =
   expect(result.statusCode).toBe(200);
   expect(result.body).toEqual({
     reply: "I love live music, especially small jazz shows. What kind of music do you enjoy?",
+    balance: 10000,
   });
   expect(mocks.from).toHaveBeenNthCalledWith(1, "gochati_users");
-  expect(mocks.from).toHaveBeenNthCalledWith(2, "gochati_chat_sessions");
+  expect(mocks.from).toHaveBeenNthCalledWith(2, "gochati_exchange_sessions");
+  expect(mocks.rpc).toHaveBeenCalledWith("gochati_complete_chat_exchange", {
+    p_user_id: "user-one",
+    p_session_id: sessionId,
+    p_exchange_id: input.exchangeId,
+    p_partner: "person-1",
+  });
   expect(mocks.eq.mock.calls).toEqual([
     ["id", "user-one"],
     ["id", sessionId],

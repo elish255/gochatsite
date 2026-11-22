@@ -159,6 +159,23 @@ export default async function handler(req: Request, res: Response) {
     if (body.rpc) {
       const args = body.args || {};
 
+      // RPC ya kuanzisha session ya malipo kwa kila exchange.
+      if (body.rpc === "gochati_start_exchange_session") {
+        const partner = args.p_partner;
+        if (typeof partner !== "string" || !/^person-(?:[1-9]|[1-4][0-9]|5[0-2])$/.test(partner)) {
+          return sendError(res, 400, "Chat partner si sahihi.");
+        }
+
+        const { data, error } = await userClient.rpc("gochati_start_exchange_session", {
+          p_partner: partner,
+        });
+        if (error) {
+          console.error("START EXCHANGE SESSION ERROR:", error);
+          return sendError(res, 400, error.message);
+        }
+        return res.status(200).json({ data });
+      }
+
       // RPC ya kuanzisha kipindi cha kulipia chat.
       if (body.rpc === "gochati_start_earning_session") {
         if (

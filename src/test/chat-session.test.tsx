@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ActivationRequiredDialog } from "@/components/gochati/ActivationRequiredDialog";
 import { ChatSession, CallDialog } from "@/components/gochati/Gochati.jsx";
+import { chatExchangePrice } from "@/lib/chat-exchange-prices";
 
 const sessionId = "11111111-1111-4111-8111-111111111111";
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), getUser: vi.fn(), getSession: vi.fn() }));
@@ -17,6 +18,14 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 const person = { id: 1, name: "Mia", photo: "/avatar.jpg", flag: "GB" };
+
+it("assigns each guest the matching completed-exchange rate", () => {
+  expect(Array.from({ length: 12 }, (_, index) => chatExchangePrice(index + 1))).toEqual([
+    48500, 42500, 42000, 44500, 53000, 45500, 45000, 41000, 48500, 50500, 49500, 52000,
+  ]);
+  expect(chatExchangePrice(13)).toBe(48500);
+});
+
 beforeEach(() => {
   vi.useFakeTimers();
   mocks.getUser.mockResolvedValue({ data: { user: { id: "user-one" } }, error: null });
@@ -27,7 +36,11 @@ beforeEach(() => {
   mocks.rpc.mockResolvedValue({ data: sessionId });
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockImplementation(() => Response.json({ reply: "Habari! Una swali gani kuhusu muziki?" })),
+    vi
+      .fn()
+      .mockImplementation(() =>
+        Response.json({ reply: "Habari! Una swali gani kuhusu muziki?", balance: 10000 }),
+      ),
   );
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -43,8 +56,9 @@ it("answers questions through the chat endpoint with conversation context", asyn
   fetchMock.mockResolvedValueOnce(Response.json({ reply: "Ninapenda jazz, hasa saxophone." }));
   render(<ChatSession person={person} active onClose={vi.fn()} onPaid={vi.fn()} />);
   await act(async () => {
-    fireEvent.click(screen.getByText("Dakika 5"));
+    await Promise.resolve();
   });
+  expect(screen.getByPlaceholderText("Andika ujumbe wako...")).toBeEnabled();
   fireEvent.change(screen.getByPlaceholderText("Andika ujumbe wako..."), {
     target: { value: "Unapenda muziki gani?" },
   });
@@ -101,8 +115,9 @@ it("restores a failed message for retry without adding a fabricated reply", asyn
   );
   render(<ChatSession person={person} active onClose={vi.fn()} onPaid={vi.fn()} />);
   await act(async () => {
-    fireEvent.click(screen.getByText("Dakika 5"));
+    await Promise.resolve();
   });
+  expect(screen.getByPlaceholderText("Andika ujumbe wako...")).toBeEnabled();
   fireEvent.change(screen.getByPlaceholderText("Andika ujumbe wako..."), {
     target: { value: "Unaishi wapi?" },
   });
@@ -114,31 +129,26 @@ it("restores a failed message for retry without adding a fabricated reply", asyn
   expect(screen.getByRole("button", { name: "Tuma" })).toBeEnabled();
 });
 
-it("starts an active chat, accepts messages, and completes once after the countdown", async () => {
+it("credits each complete exchange without starting a countdown", async () => {
   const onPaid = vi.fn();
   render(<ChatSession person={person} active onClose={vi.fn()} onPaid={onPaid} />);
+  const input = screen.getByPlaceholderText("Andika ujumbe wako...");
   await act(async () => {
-    fireEvent.click(screen.getByText("Dakika 1"));
+    await Promise.resolve();
   });
-  expect(mocks.rpc).toHaveBeenCalledWith("gochati_start_earning_session", {
-    p_amount: 5000,
-    p_minutes: 1,
+  expect(input).toBeEnabled();
+  expect(mocks.rpc).toHaveBeenCalledWith("gochati_start_exchange_session", {
     p_partner: "person-1",
   });
-  const input = screen.getByPlaceholderText("Andika ujumbe wako...");
-  expect(input).toBeEnabled();
+  expect(screen.getByText("TZS 48,500 / exchange kamili")).toBeInTheDocument();
+  expect(screen.queryByText("00:59")).not.toBeInTheDocument();
   fireEvent.change(input, { target: { value: "Habari yako" } });
-  fireEvent.click(screen.getByRole("button", { name: "Tuma" }));
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Tuma" }));
+  });
   expect(screen.getByText("Habari yako")).toBeInTheDocument();
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(1000);
-  });
-  expect(screen.getByText("00:59")).toBeInTheDocument();
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(59000);
-  });
-  expect(onPaid).toHaveBeenCalledExactlyOnceWith(5000, sessionId);
-  expect(input).toBeDisabled();
+  expect(onPaid).toHaveBeenCalledExactlyOnceWith(10000, 48500);
+  expect(input).toBeEnabled();
 });
 
 it.each(["voice", "video"])("ends an active %s call after three seconds", async (kind) => {
