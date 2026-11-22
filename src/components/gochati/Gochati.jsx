@@ -114,7 +114,7 @@ const N = [
       photo: portraits[portraitKey],
       fallbackPhoto: portraitFallback(portraitKey),
       online: true,
-      rate: { label: `Kwa exchange kamili`, amount: chatExchangePrice(t + 1) },
+      rate: { label: `Baada ya meseji 10`, amount: chatExchangePrice(t + 1) },
     };
   }),
   I = (e) => `TZS ` + e.toLocaleString(`en-US`),
