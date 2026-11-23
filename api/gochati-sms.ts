@@ -118,18 +118,20 @@ async function resetPasswordBySms(rawPhone: unknown) {
 
   for (const account of (data ?? []) as { id: string; username: string }[]) {
     const password = generatePassword();
-    const { error: updateError } = await db.auth.admin.updateUserById(account.id, { password });
-    if (updateError) {
-      console.error("Password reset update failed", updateError.message);
-      await db.from("gochati_users").update({ password_reset_sms_at: null }).eq("id", account.id);
-      continue;
-    }
     const text = `GOCHATI: Habari ${account.username}, password yako mpya ni: ${password}\nIngia kwa username "${account.username}" na password hii. Usimpe mtu yeyote.`;
     const sent = await sendSwalaSms(phone, text).catch((sendError) => {
       console.error("Password reset SMS failed", sendError);
       return false;
     });
-    if (!sent) await db.from("gochati_users").update({ password_reset_sms_at: null }).eq("id", account.id);
+    if (!sent) {
+      await db.from("gochati_users").update({ password_reset_sms_at: null }).eq("id", account.id);
+      continue;
+    }
+    const { error: updateError } = await db.auth.admin.updateUserById(account.id, { password });
+    if (updateError) {
+      console.error("Password reset update failed", updateError.message);
+      await db.from("gochati_users").update({ password_reset_sms_at: null }).eq("id", account.id);
+    }
   }
   return { ok: true };
 }
