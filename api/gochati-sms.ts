@@ -1,11 +1,11 @@
-/** Vercel Serverless Function for POST /api/gochati-sms (admin-only Swala SMS sender). */
+/** Vercel Serverless Function for POST /api/gochati-sms. */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 type VercelRequest = { method?: string; body?: unknown; headers: Record<string, string | string[] | undefined> };
 type VercelResponse = { status(code: number): VercelResponse; json(body: unknown): void; send(body: string): void; setHeader(name: string, value: string): void };
 
-const SWALA_ENDPOINT = "https://api.swalasms.com/v1/sms/messages";
+const SPRINGTECH_ENDPOINT = "https://sms.springtech.co.tz/api/v1/vendor/message/send";
 const MAX_GROUP_SIZE = 500;
 const SEND_CONCURRENCY = 5;
 const USERNAME_PLACEHOLDER = /\[\s*username\s*\]/gi;
@@ -84,7 +84,7 @@ async function sendThresholdSms(db: SupabaseClient, userId: string) {
   const recipient = claimed as Recipient;
   const phone = normalizeTanzaniaPhone(recipient.phone || "");
   const ok = phone
-    ? await sendSwalaSms(phone, THRESHOLD_SMS_TEMPLATE.replace(USERNAME_PLACEHOLDER, recipient.username || "")).catch(
+    ? await sendSpringTechSms(phone, THRESHOLD_SMS_TEMPLATE.replace(USERNAME_PLACEHOLDER, recipient.username || "")).catch(
         (sendError) => {
           console.error("Threshold SMS failed", sendError);
           return false;
@@ -119,7 +119,7 @@ async function resetPasswordBySms(rawPhone: unknown) {
   for (const account of (data ?? []) as { id: string; username: string }[]) {
     const password = generatePassword();
     const text = `GOCHATI: Habari ${account.username}, password yako mpya ni: ${password}\nIngia kwa username "${account.username}" na password hii. Usimpe mtu yeyote.`;
-    const sent = await sendSwalaSms(phone, text).catch((sendError) => {
+    const sent = await sendSpringTechSms(phone, text).catch((sendError) => {
       console.error("Password reset SMS failed", sendError);
       return false;
     });
@@ -176,19 +176,31 @@ function normalizeTanzaniaPhone(value: string): string | null {
   return null;
 }
 
-async function sendSwalaSms(phone: string, body: string) {
-  const apiKey = process.env.SWALA_API_KEY || "";
-  const senderId = process.env.SWALA_SENDER_ID || "GOCHATI";
-  if (!apiKey) throw new HttpError(503, "SWALA_API_KEY haijawekwa kwenye server.");
+async function sendSpringTechSms(phone: string, message: string) {
+  const apiKey = process.env.SPRINGTECH_API_KEY || "";
+  const apiSecret = process.env.SPRINGTECH_API_SECRET || "";
+  const senderId = process.env.SPRINGTECH_SENDER_ID || "";
+  if (!apiKey || !apiSecret || !senderId) {
+    throw new HttpError(503, "Mipangilio ya SpringTech SMS haijawekwa kwenye server.");
+  }
 
-  const response = await fetch(SWALA_ENDPOINT, {
+  const response = await fetch(SPRINGTECH_ENDPOINT, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "Idempotency-Key": randomUUID() },
-    body: JSON.stringify({ recipient: phone, sender_id: senderId, body }),
+    headers: {
+      api_key: apiKey,
+      api_secret: apiSecret,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      senderId,
+      messageType: "text",
+      message,
+      contacts: phone,
+    }),
   });
-  if (response.status !== 202 && !response.ok) {
-    const detail = await response.text().catch(() => "");
-    console.error("Swala SMS rejected", response.status, detail.slice(0, 300));
+  const result = (await response.json().catch(() => null)) as { success?: boolean } | null;
+  if (!response.ok || result?.success !== true) {
+    console.error("SpringTech SMS rejected", response.status);
     return false;
   }
   return true;
@@ -223,9 +235,9 @@ async function sendToRecipients(recipients: Recipient[], template: string) {
       let ok = false;
       if (phone) {
         const text = template.replace(USERNAME_PLACEHOLDER, recipient.username || "");
-        ok = await sendSwalaSms(phone, text).catch((error) => {
+        ok = await sendSpringTechSms(phone, text).catch((error) => {
           if (error instanceof HttpError) throw error;
-          console.error("Swala SMS request failed", error);
+          console.error("SpringTech SMS request failed", error);
           return false;
         });
       }
