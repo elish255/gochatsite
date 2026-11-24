@@ -1142,7 +1142,7 @@ function de() {
               }),
             ],
           }),
-          !accountSignedIn && (0, K.jsxs)(`nav`, {
+          accountReady && !accountSignedIn && (0, K.jsxs)(`nav`, {
             "aria-label": `Akaunti`,
             className: `mb-3 flex gap-2`,
             children: [
@@ -1241,6 +1241,47 @@ function de() {
               }),
             ],
           }),
+          accountReady && !accountActive && (0, K.jsxs)(`div`, {
+            className: `mt-3 flex w-full items-center gap-2`,
+            children: [
+              (0, K.jsxs)(`a`, {
+                href: L,
+                className: `grad-brand flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-center text-xs font-bold text-on-color shadow-lg`,
+                children: [
+                  (0, K.jsx)(ne, { className: `size-4 shrink-0` }),
+                  `Fungua Account Hapa`,
+                ],
+              }),
+              !accountSignedIn && (0, K.jsx)(`a`, {
+                href: `/login`,
+                className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-2 py-3 text-center text-xs font-bold text-foreground shadow-sm`,
+                children: `Ingia Hapa`,
+              }),
+            ],
+          }),
+          (0, K.jsxs)(`section`, {
+            className: `mt-7`,
+            children: [
+              (0, K.jsx)(`h2`, {
+                className: `mb-3 text-lg font-bold`,
+                children: `Chagua Mzungu wa Kuchati naye`,
+              }),
+              (0, K.jsx)(`div`, {
+                className: `flex flex-col gap-3`,
+                children: re.map((e) =>
+                  (0, K.jsx)(
+                    q,
+                    {
+                      person: e,
+                      onChat: () => J(e),
+                      onCall: (t) => u({ person: e, kind: t }),
+                    },
+                    e.id,
+                  ),
+                ),
+              }),
+            ],
+          }),
           accountSignedIn && referralCode && (0, K.jsxs)(`section`, {
             className: `mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm`,
             children: [
@@ -1290,47 +1331,6 @@ function de() {
                 ],
               }),
               (0, K.jsx)(`p`, { className: `mt-2 text-xs leading-relaxed text-muted-foreground`, children: `Rafiki akisajili kupitia kiungo hiki, ataunganishwa na akaunti yako na kuonekana kwenye idadi ya referrals.` }),
-            ],
-          }),
-          accountReady && !accountActive && (0, K.jsxs)(`div`, {
-            className: `mt-3 flex w-full items-center gap-2`,
-            children: [
-              (0, K.jsxs)(`a`, {
-                href: L,
-                className: `grad-brand flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-center text-xs font-bold text-on-color shadow-lg`,
-                children: [
-                  (0, K.jsx)(ne, { className: `size-4 shrink-0` }),
-                  `Fungua Account Hapa`,
-                ],
-              }),
-              (0, K.jsx)(`a`, {
-                href: `/login`,
-                className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-2 py-3 text-center text-xs font-bold text-foreground shadow-sm`,
-                children: `Ingia Hapa`,
-              }),
-            ],
-          }),
-          (0, K.jsxs)(`section`, {
-            className: `mt-7`,
-            children: [
-              (0, K.jsx)(`h2`, {
-                className: `mb-3 text-lg font-bold`,
-                children: `Chagua Mzungu wa Kuchati naye`,
-              }),
-              (0, K.jsx)(`div`, {
-                className: `flex flex-col gap-3`,
-                children: re.map((e) =>
-                  (0, K.jsx)(
-                    q,
-                    {
-                      person: e,
-                      onChat: () => J(e),
-                      onCall: (t) => u({ person: e, kind: t }),
-                    },
-                    e.id,
-                  ),
-                ),
-              }),
             ],
           }),
           (0, K.jsxs)(`section`, {
