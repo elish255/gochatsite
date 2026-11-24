@@ -1049,6 +1049,11 @@ function de() {
                 "aria-label": `Download Gochati App`,
                 children: (0, K.jsxs)(`span`, { className: `inline-flex items-center gap-2`, children: [(0, K.jsx)(g, { className: `size-4` }), (0, K.jsx)(`span`, { children: `Pakua App` })] }),
               }),
+              !accountSignedIn && (0, K.jsx)(`a`, {
+                href: `/login`,
+                className: `home-header-login`,
+                children: `Ingia hapa`,
+              }),
               (0, K.jsx)(`button`, {
                 onClick: () => t((e) => !e),
                 "aria-label": `Badili mwonekano`,

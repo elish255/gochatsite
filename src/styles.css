@@ -180,6 +180,8 @@
   --ring:oklch(72% .18 45);
   --balance:oklch(70% .2 48);
   --balance-2:oklch(61% .22 35);
+  --chat-action:oklch(49% .15 150);
+  --chat-action-foreground:oklch(99% .005 150);
   --color-background:var(--background);
   --color-foreground:var(--foreground);
   --color-card:var(--card);
@@ -199,12 +201,14 @@
 .gochati-home .home-header img{width:2.75rem;height:2.75rem;border-radius:9999px}
 .gochati-home .home-header h1{font-size:1.25rem;letter-spacing:-.03em}
 .gochati-home .home-header-download{display:flex;align-items:center;gap:.4rem;flex-shrink:0;border-radius:9999px;background:var(--primary);padding:.65rem .85rem;color:var(--primary-foreground);font-size:.68rem;font-weight:850;text-transform:uppercase;letter-spacing:.04em}
-.gochati-home .home-header-download:focus-visible,.gochati-home .home-join-button:focus-visible,.gochati-home .home-visitor-chat:focus-visible,.gochati-home .home-visitor-call:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
+.gochati-home .home-header-login{display:inline-flex;min-height:2.75rem;flex-shrink:0;align-items:center;justify-content:center;border:1px solid var(--primary);border-radius:9999px;background:var(--primary);padding:.55rem .8rem;color:var(--primary-foreground);font-size:.75rem;font-weight:900;text-decoration:underline;text-underline-offset:3px}
+.gochati-home .home-header-download:focus-visible,.gochati-home .home-header-login:focus-visible,.gochati-home .home-join-button:focus-visible,.gochati-home .home-visitor-chat:focus-visible,.gochati-home .home-visitor-call:focus-visible{outline:2px solid var(--ring);outline-offset:3px}
 .gochati-home .home-intro{border:1px solid var(--border);border-radius:1.5rem;background:var(--card)}
 .gochati-home .home-eyebrow{color:var(--primary);font-size:.68rem;font-weight:850;letter-spacing:.17em}
 .gochati-home .home-join-cta{display:grid;gap:.55rem}
 .gochati-home .home-join-button{display:flex;min-height:4.5rem;align-items:center;justify-content:center;border-radius:1.35rem;background-image:linear-gradient(110deg,var(--primary),var(--balance-2));padding:.85rem 1.1rem;color:var(--primary-foreground);text-align:center;font-size:clamp(1rem,3vw,1.35rem);font-weight:900;letter-spacing:.06em;box-shadow:0 16px 36px -22px var(--primary)}
-.gochati-home .home-join-note{text-align:center;font-size:.78rem;color:var(--muted-foreground)}
+.gochati-home .home-join-note{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.55rem;text-align:center;font-size:.95rem;line-height:1.5;color:var(--foreground)}
+.gochati-home .home-join-note a{display:inline-flex;min-height:2.5rem;align-items:center;border-radius:9999px;background:var(--primary);padding:.45rem 1rem;color:var(--primary-foreground);font-weight:900;text-decoration:underline;text-underline-offset:3px;box-shadow:0 5px 16px -10px var(--primary)}
 .gochati-home .home-live-status{display:flex;min-height:2.65rem;align-items:center;justify-content:center;gap:.55rem;border:1px solid color-mix(in srgb,var(--success) 32%,transparent);border-radius:9999px;background:color-mix(in srgb,var(--success) 9%,var(--background));padding:.5rem .8rem;color:var(--success);font-size:.75rem;font-weight:750}
 .gochati-home .home-live-dot{width:.55rem;height:.55rem;border-radius:9999px;background:var(--success);box-shadow:0 0 0 .22rem color-mix(in srgb,var(--success) 18%,transparent)}
 .gochati-home .home-live-divider{height:1rem;width:1px;background:color-mix(in srgb,var(--success) 40%,transparent)}
@@ -215,9 +219,10 @@
 .gochati-home .home-visitor-detail span{font-size:.58rem;font-weight:800;letter-spacing:.17em;color:var(--muted-foreground)}
 .gochati-home .home-visitor-detail strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.86rem}
 .gochati-home .home-visitor-rate{display:flex;min-height:3.25rem;align-items:center;justify-content:center;border-radius:9999px;background-image:linear-gradient(110deg,var(--primary),var(--balance-2));color:var(--primary-foreground);font-size:1.1rem;font-weight:900;letter-spacing:.02em}
-.gochati-home .home-visitor-chat{display:flex;min-height:3rem;align-items:center;gap:.5rem;border:1px solid var(--primary);border-radius:9999px;background:transparent;padding:.65rem 1rem;color:var(--foreground);font-size:.8rem;font-weight:850;letter-spacing:0;transition:background-color .18s ease,color .18s ease}
-.gochati-home .home-visitor-chat:hover{background:var(--primary);color:var(--primary-foreground)}
+.gochati-home .home-visitor-chat{display:flex;min-height:3rem;align-items:center;gap:.5rem;border:1px solid var(--chat-action);border-radius:9999px;background:var(--chat-action);padding:.65rem 1rem;color:var(--chat-action-foreground);font-size:.8rem;font-weight:850;letter-spacing:0;animation:chat-action-pulse 1.8s ease-in-out infinite;transition:filter .18s ease,transform .18s ease}
+.gochati-home .home-visitor-chat:hover{filter:brightness(1.12);transform:translateY(-1px)}
+@keyframes chat-action-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--chat-action) 45%,transparent)}50%{box-shadow:0 0 0 .3rem color-mix(in srgb,var(--chat-action) 55%,transparent)}}
 .gochati-home .home-visitor-call{display:grid;min-width:3rem;place-items:center;border:1px solid var(--border);border-radius:9999px;background:var(--secondary);color:var(--foreground)}
 .gochati-home .home-visitor-call:hover{border-color:var(--primary);color:var(--primary)}
 @media(max-width:420px){.gochati-home .home-header{gap:.55rem;padding-inline:.75rem}.gochati-home .home-header-download{padding:.65rem}.gochati-home .home-header-download span{display:none}.gochati-home .home-header h1{font-size:1.1rem}}
-@media(prefers-reduced-motion:reduce){.gochati-home .home-visitor-chat,.gochati-home .home-visitor-call{transition:none}}
+@media(prefers-reduced-motion:reduce){.gochati-home .home-visitor-chat,.gochati-home .home-visitor-call{transition:none}.gochati-home .home-visitor-chat{animation:none}}
