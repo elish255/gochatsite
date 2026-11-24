@@ -19,7 +19,7 @@ export default defineConfig({
   vite: {
     server: {
       allowedHosts: [
-        "sb-2fvq3kdrtde7.vercel.run",
+        "sb-a35cbru6utpc.vercel.run",
       ],
     },
   },
