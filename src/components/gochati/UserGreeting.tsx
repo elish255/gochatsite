@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { platform } from "@/integrations/supabase/platform";
 import { supabase } from "@/integrations/supabase/client";
+import { UserPushSettings } from "./UserPushSettings";
 
 type GreetingProfile = { username: string } | null;
 
@@ -74,6 +75,7 @@ export function UserGreeting() {
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
         Karibu tena. Tayari kuendelea na mazungumzo yako?
       </p>
+      <UserPushSettings />
     </section>
   );
 }

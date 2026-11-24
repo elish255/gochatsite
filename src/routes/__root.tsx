@@ -1,4 +1,5 @@
 import { AuthCallbacks } from "@/components/gochati/AuthCallbacks";
+import { PresenceTracker } from "@/components/gochati/PresenceTracker";
 import { AccountBlockGuard } from "@/components/gochati/AccountBlockGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -127,6 +128,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <AuthCallbacks />
+      <PresenceTracker />
       <Outlet />
       <AccountBlockGuard />
     </QueryClientProvider>
