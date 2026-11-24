@@ -1266,6 +1266,11 @@ function de() {
                 className: `mt-3 flex flex-wrap items-center gap-2`,
                 children: [
                   (0, K.jsx)(`code`, { className: `rounded-lg border border-border bg-background px-3 py-2 text-sm font-bold tracking-wide`, children: referralCode }),
+                  (0, K.jsx)(`span`, {
+                    role: `note`,
+                    className: `min-w-0 basis-full rounded-full bg-primary/10 px-3 py-2 text-center text-sm font-extrabold leading-relaxed text-primary motion-safe:animate-bounce sm:basis-auto sm:flex-1`,
+                    children: `GUSA CHAT KUANZA KUCHATI NA KULIPWA`,
+                  }),
                   (0, K.jsx)(`button`, {
                     type: `button`,
                     onClick: async () => {
