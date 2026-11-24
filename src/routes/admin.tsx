@@ -168,69 +168,86 @@ function AdminPage() {
   }
 
   async function load() {
-    const {
-      data: { user: current },
-    } = await platform.auth.getUser();
-    setUser(current);
-    if (!current) {
-      setReady(true);
+    let authTimeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const { data: { user: current } } = await Promise.race([
+        platform.auth.getUser(),
+        new Promise<Awaited<ReturnType<typeof platform.auth.getUser>>>(
+          (_, reject) => {
+            authTimeout = setTimeout(
+              () => reject(new Error("Uthibitishaji umechukua muda mrefu. Jaribu kuingia tena.")),
+              10000,
+            );
+          },
+        ),
+      ]);
+      setUser(current);
+      if (!current) {
+        setAuthorized(false);
+        return;
+      }
+      const { data: admin, error: adminError } = await platform
+        .from("gochati_admins")
+        .select("user_id")
+        .eq("user_id", current.id)
+        .maybeSingle();
+      if (adminError || !admin) {
+        console.error("GOCHATI ADMIN CHECK:", {
+          userId: current.id,
+          email: current.email,
+          adminError,
+          admin,
+        });
+        setNotice(
+          adminError
+            ? "Admin check error: " + adminError.message
+            : "User ID haijapatikana kwenye gochati_admins: " + current.id,
+        );
+        setAuthorized(false);
+        return;
+      }
+      setAuthorized(true);
+      const [u, w] = await Promise.all([
+        platform
+          .from("gochati_users")
+          .select(
+            "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked,payment_push_attempts,referral_count,balance,created_at",
+          )
+          .order("created_at", { ascending: false })
+          .limit(1000),
+        platform
+          .from("gochati_withdrawals")
+          .select("id,user_id,username,amount,status,created_at,phone")
+          .order("created_at", { ascending: false })
+          .limit(1000),
+      ]);
+      const paymentsResult = await platform
+        .from("gochati_payments")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      setPayments(paymentsResult.data || []);
+      if (u.error || w.error || paymentsResult.error)
+        setNotice(
+          u.error?.message ||
+            w.error?.message ||
+            paymentsResult.error?.message ||
+            "Imeshindwa kupakia data.",
+        );
+      setRows(u.data || []);
+      setWithdrawals(w.data || []);
+    } catch (error) {
+      setUser(null);
       setAuthorized(false);
-      return;
-    }
-    const { data: admin, error: adminError } = await platform
-      .from("gochati_admins")
-      .select("user_id")
-      .eq("user_id", current.id)
-      .maybeSingle();
-    if (adminError || !admin) {
-  console.error("GOCHATI ADMIN CHECK:", {
-    userId: current.id,
-    email: current.email,
-    adminError,
-    admin,
-  });
-
-  setNotice(
-    adminError
-      ? "Admin check error: " + adminError.message
-      : "User ID haijapatikana kwenye gochati_admins: " + current.id
-  );
-
-  setReady(true);
-  setAuthorized(false);
-  return;
-}
-    setAuthorized(true);
-    const [u, w] = await Promise.all([
-      platform
-        .from("gochati_users")
-        .select(
-          "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked,payment_push_attempts,referral_count,balance,created_at",
-        )
-        .order("created_at", { ascending: false })
-        .limit(1000),
-      platform
-        .from("gochati_withdrawals")
-        .select("id,user_id,username,amount,status,created_at,phone")
-        .order("created_at", { ascending: false })
-        .limit(1000),
-    ]);
-    const paymentsResult = await platform
-      .from("gochati_payments")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1000);
-    setPayments(paymentsResult.data || []);
-    if (u.error || w.error || paymentsResult.error)
       setNotice(
-        u.error?.message ||
-          w.error?.message ||
-          paymentsResult.error?.message ||
-          "Imeshindwa kupakia data.",
+        error instanceof Error
+          ? error.message
+          : "Imeshindwa kuthibitisha akaunti ya admin.",
       );
-    setRows(u.data || []);
-    setWithdrawals(w.data || []);
-    setReady(true);
+    } finally {
+      if (authTimeout) clearTimeout(authTimeout);
+      setReady(true);
+    }
   }
   const [careUserId, setCareUserId] = useState<string | undefined>();
   useEffect(() => {
