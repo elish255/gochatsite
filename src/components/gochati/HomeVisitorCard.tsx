@@ -70,7 +70,7 @@ export function HomeVisitorCard({ person, onChat, onCall }: HomeVisitorCardProps
       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
         <button type="button" onClick={onChat} className="home-visitor-chat">
           <MessageCircle className="size-4" aria-hidden="true" />
-          Chat
+          Anza Chat
           <ArrowRight className="ml-auto size-4" aria-hidden="true" />
         </button>
         <button

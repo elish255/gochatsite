@@ -175,11 +175,11 @@
   --muted:oklch(22% .035 278);
   --muted-foreground:oklch(72% .025 275);
   --border:oklch(30% .045 278);
-  --primary:oklch(63% .22 282);
-  --primary-foreground:oklch(99% .004 275);
-  --ring:oklch(68% .2 282);
-  --balance:oklch(65% .22 286);
-  --balance-2:oklch(63% .24 305);
+  --primary:oklch(68% .2 45);
+  --primary-foreground:oklch(99% .004 55);
+  --ring:oklch(72% .18 45);
+  --balance:oklch(70% .2 48);
+  --balance-2:oklch(61% .22 35);
   --color-background:var(--background);
   --color-foreground:var(--foreground);
   --color-card:var(--card);
@@ -215,7 +215,7 @@
 .gochati-home .home-visitor-detail span{font-size:.58rem;font-weight:800;letter-spacing:.17em;color:var(--muted-foreground)}
 .gochati-home .home-visitor-detail strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.86rem}
 .gochati-home .home-visitor-rate{display:flex;min-height:3.25rem;align-items:center;justify-content:center;border-radius:9999px;background-image:linear-gradient(110deg,var(--primary),var(--balance-2));color:var(--primary-foreground);font-size:1.1rem;font-weight:900;letter-spacing:.02em}
-.gochati-home .home-visitor-chat{display:flex;min-height:3rem;align-items:center;gap:.5rem;border:1px solid var(--primary);border-radius:9999px;background:transparent;padding:.65rem 1rem;color:var(--foreground);font-size:.8rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;transition:background-color .18s ease,color .18s ease}
+.gochati-home .home-visitor-chat{display:flex;min-height:3rem;align-items:center;gap:.5rem;border:1px solid var(--primary);border-radius:9999px;background:transparent;padding:.65rem 1rem;color:var(--foreground);font-size:.8rem;font-weight:850;letter-spacing:0;transition:background-color .18s ease,color .18s ease}
 .gochati-home .home-visitor-chat:hover{background:var(--primary);color:var(--primary-foreground)}
 .gochati-home .home-visitor-call{display:grid;min-width:3rem;place-items:center;border:1px solid var(--border);border-radius:9999px;background:var(--secondary);color:var(--foreground)}
 .gochati-home .home-visitor-call:hover{border-color:var(--primary);color:var(--primary)}
