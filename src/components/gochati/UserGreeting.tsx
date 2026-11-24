@@ -65,7 +65,12 @@ export function UserGreeting() {
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         DASHBOARD
       </p>
-      <h2 className="mt-1 text-xl font-bold text-foreground">Welcome, @{profile.username}</h2>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <h2 className="text-xl font-bold text-foreground">Welcome, @{profile.username}</h2>
+        <span className="max-w-full rounded-full bg-primary/10 px-3 py-2 text-center text-sm font-extrabold leading-relaxed text-primary motion-safe:animate-bounce">
+          GUSA CHAT KUANZA KUCHATI NA KULIPWA
+        </span>
+      </div>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
         Karibu tena. Tayari kuendelea na mazungumzo yako?
       </p>
