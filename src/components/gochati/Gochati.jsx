@@ -2,8 +2,8 @@ import { hasActivationAccess } from "@/lib/activation-policy";
 import * as l from "react";
 import { chatPersona, chatOpening } from "@/lib/chat-personas";
 import { chatExchangePrice } from "@/lib/chat-exchange-prices";
-import { SupportButton } from "./SupportButton";
 import { UserGreeting } from "./UserGreeting";
+import { HomeVisitorCard } from "./HomeVisitorCard";
 import { WithdrawalUpgradeReminder } from "./WithdrawalUpgradeReminder";
 import { platform } from "@/integrations/supabase/platform";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ import { GuestSignupDialog } from "./GuestSignupDialog";
 
 const FREE_MESSAGES_BEFORE_ACTIVATION = 2;
 import { logoUrl, portraits, portraitFallback } from "@/lib/gochati-media";
-import { ArrowRight as f, BellRing as p, CircleCheck as m, Download as g, EllipsisVertical as _, Headphones as v, MessageCircle as y, MessageSquare as b, LogOut as Lt, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
+import { ArrowRight as f, BellRing as p, CircleCheck as m, Download as g, EllipsisVertical as _, LogOut as Lt, Moon as ee, PhoneOff as x, Phone as S, Plus as C, Send as w, Share as T, ShieldCheck as E, Star as D, Sun as O, TrendingUp as te, UserPlus as ne, Video as k, Wallet as A, X as j } from "lucide-react";
 function render(factory, type, props, key) {
  if (type === "button") return factory(Button, { ...props, variant: "reference", size: "reference" }, key);
  if (type === "a") return factory(Button, { variant: "reference", size: "reference", asChild: true, children: factory("a", props) }, key);
@@ -237,76 +237,6 @@ var G = [
     },
   ],
   K = runtime;
-function q({ person: e, onChat: t, onCall: n }) {
-  return (0, K.jsxs)(`div`, {
-    className: `card-soft flex flex-col gap-3 p-4 md:flex-row md:items-center`,
-    children: [
-      (0, K.jsxs)(`div`, {
-        className: `flex items-center gap-4`,
-        children: [
-          (0, K.jsxs)(`div`, {
-            className: `relative shrink-0`,
-            children: [
-              (0, K.jsx)(`img`, {
-                src: e.photo,
-                onError: (event) => { if (event.currentTarget.getAttribute("src") !== e.fallbackPhoto) event.currentTarget.src = e.fallbackPhoto; },
-                alt: `${e.name} kutoka ${e.country}`,
-                loading: `lazy`,
-                className: `size-16 rounded-full border-2 border-primary/40 object-cover`,
-              }),
-              (0, K.jsx)(`span`, {
-                className: `absolute bottom-0.5 right-0.5 size-4 rounded-full border-2 border-card ${e.online ? `animate-pulse bg-success` : `bg-muted-foreground`}`,
-              }),
-            ],
-          }),
-          (0, K.jsxs)(`div`, {
-            className: `min-w-0 flex-1`,
-            children: [
-              (0, K.jsxs)(`p`, {
-                className: `truncate font-bold`,
-                children: [e.name, `, `, e.age],
-              }),
-              (0, K.jsxs)(`p`, {
-                className: `text-xs text-muted-foreground`,
-                children: [
-                  (0, K.jsx)(`span`, {
-                    className: `mr-1 text-base`,
-                    children: e.flag,
-                  }),
-                  e.country,
-                ],
-              }),
-              (0, K.jsxs)(`div`, {
-                className: `mt-2 inline-block rounded-lg border border-border bg-secondary/70 px-2.5 py-1 text-[11px] font-semibold`,
-                children: [e.topic, ` · `, I(e.rate.amount)],
-              }),
-            ],
-          }),
-        ],
-      }),
-      (0, K.jsxs)(`div`, {
-        className: `flex w-full flex-row items-center gap-2 md:ml-auto md:w-auto`,
-        children: [
-          (0, K.jsxs)(`button`, {
-            onClick: t,
-            className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-bold text-primary-foreground transition active:scale-95 md:flex-none`,
-            children: [(0, K.jsx)(y, { className: `size-4` }), ` Chat`],
-          }),
-          (0, K.jsxs)(`button`, {
-            onClick: () => n(`voice`),
-            className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-voice px-3 py-2.5 text-xs font-bold text-on-color transition active:scale-95 md:flex-none`,
-            children: [(0, K.jsx)(S, { className: `size-4` }), ` Voice Call`],
-          }),
-          (0, K.jsxs)(`button`, {
-            onClick: () => n(`video`),
-            className: `flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-video px-3 py-2.5 text-xs font-bold text-on-color transition active:scale-95 md:flex-none`,
-            children: [(0, K.jsx)(k, { className: `size-4` }), ` Video Call`],
-          }),
-        ],
-      }),
-    ],
-  });
-}
 function oe({ person: e, onClose: t, onPaid: n, active = false, guest = false }) {
   let [r, i] = (0, l.useState)(active ? { label: `Exchange kamili`, amount: e.rate?.amount ?? chatExchangePrice(Number(e.id)) } : { label: `Mazungumzo ya bure`, amount: 0 }),
     [a, o] = (0, l.useState)([]),
@@ -900,7 +830,29 @@ function de() {
     [notifications, setNotifications] = (0, l.useState)([]),
     [bannerNotification, setBannerNotification] = (0, l.useState)(null),
     [notificationOpen, setNotificationOpen] = (0, l.useState)(false);
+  const [visitorList, setVisitorList] = (0, l.useState)(() => re.map((person, index) => ({ ...person, online: index % 4 !== 0 })));
+  const onlineVisitorCount = visitorList.reduce((count, person) => count + Number(person.online), 0);
   ((0, l.useEffect)(() => {
+    const presenceTimer = window.setInterval(() => {
+      setVisitorList((current) => {
+        const next = [...current];
+        const changedIds = new Set();
+        const changes = 1 + Math.floor(Math.random() * 3);
+        for (let change = 0; change < changes; change += 1) {
+          const currentOnline = next.reduce((count, person) => count + Number(person.online), 0);
+          const candidates = next.filter((person) => !changedIds.has(person.id) && (person.online ? currentOnline > 14 : currentOnline < next.length - 5));
+          if (!candidates.length) break;
+          const selected = candidates[Math.floor(Math.random() * candidates.length)];
+          changedIds.add(selected.id);
+          const index = next.findIndex((person) => person.id === selected.id);
+          next[index] = { ...selected, online: !selected.online };
+        }
+        return next;
+      });
+    }, 12000);
+    return () => window.clearInterval(presenceTimer);
+  }, []),
+    (0, l.useEffect)(() => {
     document.documentElement.classList.toggle(`dark`, e);
   }, [e]),
     (0, l.useEffect)(() => {
@@ -1022,7 +974,7 @@ function de() {
       if (!accountReady) return;
       if (!e.online) {
         (y(
-          `${e.name} yupo Offline kwa sasa. Huwezi kuchati wala kulipwa mpaka awe Online.`,
+          `${e.name} hayupo Online. Huwezi kuchati naye sasa.`,
         ),
           setTimeout(() => y(null), 4e3));
         return;
@@ -1052,7 +1004,7 @@ function de() {
       }
     };
   return (0, K.jsxs)(`main`, {
-    className: `min-h-screen bg-background pb-10`,
+    className: `gochati-home min-h-screen bg-background pb-10`,
     children: [
       (0, K.jsx)(WithdrawalUpgradeReminder, { eligible: accountReady && accountActive && !isPremium && !isVip && i >= 100000 }),
       m &&
@@ -1085,10 +1037,10 @@ function de() {
           children: _,
         }),
       (0, K.jsxs)(`div`, {
-        className: `mx-auto max-w-3xl px-4`,
+        className: `mx-auto max-w-6xl px-4 pb-8`,
         children: [
           (0, K.jsxs)(`header`, {
-            className: `flex items-center gap-3 py-5`,
+            className: `home-header mt-4 flex items-center gap-3 px-4 py-3`,
             children: [
               (0, K.jsx)(`img`, {
                 src: logoUrl,
@@ -1110,6 +1062,19 @@ function de() {
                     children: `Chati • Lipwa • Toa Pesa`,
                   }),
                 ],
+              }),
+              (0, K.jsxs)(`button`, {
+                onClick: Y,
+                type: `button`,
+                className: `home-header-download`,
+                title: `Pakua Gochati App`,
+                "aria-label": `Download Gochati App`,
+                children: (0, K.jsxs)(`span`, { className: `inline-flex items-center gap-2`, children: [(0, K.jsx)(g, { className: `size-4` }), (0, K.jsx)(`span`, { children: `Pakua App` })] }),
+              }),
+              !accountSignedIn && (0, K.jsx)(`a`, {
+                href: `/login`,
+                className: `home-header-login`,
+                children: `Ingia hapa`,
               }),
               (0, K.jsx)(`button`, {
                 onClick: () => t((e) => !e),
@@ -1142,56 +1107,31 @@ function de() {
               }),
             ],
           }),
-          accountReady && !accountSignedIn && (0, K.jsxs)(`nav`, {
-            "aria-label": `Akaunti`,
-            className: `mb-3 flex gap-2`,
+          (0, K.jsxs)(`section`, {
+            className: `home-intro mt-4 p-5 sm:p-6`,
             children: [
-              (0, K.jsx)(`a`, {
-                href: `/register`,
-                className: `grad-brand flex flex-1 items-center justify-center rounded-xl px-4 py-3 text-sm font-bold text-on-color shadow-md`,
-                children: `Jisajili`,
-              }),
-              (0, K.jsx)(`a`, {
-                href: `/login`,
-                className: `flex flex-1 items-center justify-center rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground`,
-                children: `Ingia`,
-              }),
+              (0, K.jsx)(`p`, { className: `home-eyebrow`, children: `ANZA NA GOCHATI` }),
+              (0, K.jsx)(`h2`, { className: `mt-2 text-2xl font-black leading-tight sm:text-3xl`, children: `Gumza, jifunze, na upate kipato.` }),
+              (0, K.jsx)(`p`, { className: `mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base`, children: `Shiriki mazungumzo na watu kutoka duniani kote, jifunze lugha na tamaduni, na upate malipo kwa muda wako.` }),
             ],
           }),
           (0, K.jsx)(UserGreeting, {}),
-          (0, K.jsxs)(`div`, {
-            className: `grid grid-cols-2 gap-3`,
+          accountReady && !accountSignedIn && (0, K.jsxs)(`section`, {
+            className: `home-join-cta mt-4`,
+            "aria-label": `Jiunge na Gochati`,
             children: [
-              (0, K.jsxs)(`button`, {
-                onClick: Y,
-                className: `grad-profit flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-bold text-on-color shadow-lg`,
-                children: [
-                  (0, K.jsx)(g, { className: `size-4` }),
-                  ` Download Gochati App`,
-                  E &&
-                    (0, K.jsx)(`span`, {
-                      className: `size-2 animate-ping rounded-full bg-on-color`,
-                    }),
-                ],
-              }),
-              (0, K.jsxs)(`button`, {
-                onClick: () => document.querySelector('[aria-label="Customer services"]')?.click(),
-                type: `button`,
-                className: `grad-withdraw flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-xs font-bold text-on-color shadow-lg`,
-                children: [
-                  (0, K.jsx)(v, { className: `size-4` }),
-                  ` Customer Service`,
-                ],
-              }),
+              (0, K.jsx)(`a`, { href: L, className: `home-join-button`, children: `GUSA HAPA KUJISAJILI` }),
+              (0, K.jsxs)(`p`, { className: `home-join-note`, children: [`Tayari una akaunti? `, (0, K.jsx)(`a`, { href: `/login`, className: `font-bold text-primary`, children: `Ingia hapa` })] }),
             ],
           }),
           (0, K.jsxs)(`div`, {
-            className: `mt-4 flex items-center justify-center gap-2 rounded-full border border-success/30 bg-success/10 py-2 text-xs font-semibold text-success`,
+            className: `home-live-status mt-4`,
+            role: `status`,
             children: [
-              (0, K.jsx)(`span`, {
-                className: `size-2.5 animate-ping rounded-full bg-success`,
-              }),
-              `Wageni kutoka duniani kote wako tayari kuzungumza`,
+              (0, K.jsx)(`span`, { className: `home-live-dot`, "aria-hidden": true }),
+              (0, K.jsx)(`span`, { children: `Live sasa hivi` }),
+              (0, K.jsx)(`span`, { className: `home-live-divider`, "aria-hidden": true }),
+              (0, K.jsx)(`span`, { children: `${onlineVisitorCount} watu online` }),
             ],
           }),
           bannerNotification && (0, K.jsxs)(`div`, {
@@ -1218,7 +1158,7 @@ function de() {
                 value: I(i),
               }),
               (0, K.jsxs)(`div`, {
-                className: `${isVip ? `vip-diamond` : isPremium ? `premium-gold` : `grad-sunset`} flex min-h-[132px] flex-col justify-between rounded-2xl p-3 text-on-color shadow-lg sm:p-4`,
+                className: `${isVip ? `vip-diamond` : isPremium ? `premium-gold` : `grad-sunset`} flex min-h-[164px] flex-col justify-between rounded-3xl p-4 text-on-color shadow-lg sm:p-5`,
                 children: [
                   (0, K.jsxs)(`div`, {
                     className: `flex items-center gap-1.5 text-[11px] font-semibold opacity-90 sm:text-xs`,
@@ -1241,7 +1181,7 @@ function de() {
               }),
             ],
           }),
-          accountReady && !accountActive && (0, K.jsxs)(`div`, {
+          accountReady && accountSignedIn && !accountActive && (0, K.jsxs)(`div`, {
             className: `mt-3 flex w-full items-center gap-2`,
             children: [
               (0, K.jsxs)(`a`, {
@@ -1259,24 +1199,31 @@ function de() {
               }),
             ],
           }),
+          (0, K.jsx)(`p`, { className: `home-payment-note mt-4`, children: `Malipo hufanyika kupitia M-Pesa, Airtel, Halopesa na Mix by Yas ndani ya dakika chache.` }),
           (0, K.jsxs)(`section`, {
-            className: `mt-7`,
+            className: `home-visitors mt-10`,
             children: [
-              (0, K.jsx)(`h2`, {
-                className: `mb-3 text-lg font-bold`,
-                children: `Chagua Mzungu wa Kuchati naye`,
+              (0, K.jsxs)(`div`, {
+                className: `mb-5 flex items-end justify-between gap-4`,
+                children: [
+                  (0, K.jsxs)(`div`, { children: [
+                    (0, K.jsx)(`p`, { className: `home-eyebrow`, children: `CHAGUA WA KUCHAT NAYE` }),
+                    (0, K.jsx)(`h2`, { className: `mt-1 text-2xl font-black`, children: `Wageni wa kuchat` }),
+                  ] }),
+                  (0, K.jsx)(`p`, { className: `shrink-0 text-right text-xs font-semibold text-muted-foreground`, children: `${onlineVisitorCount} watu online` }),
+                ],
               }),
               (0, K.jsx)(`div`, {
-                className: `flex flex-col gap-3`,
-                children: re.map((e) =>
+                className: `grid gap-4 md:grid-cols-2`,
+                children: visitorList.map((person) =>
                   (0, K.jsx)(
-                    q,
+                    HomeVisitorCard,
                     {
-                      person: e,
-                      onChat: () => J(e),
-                      onCall: (t) => u({ person: e, kind: t }),
+                      person,
+                      onChat: () => J(person),
+                      onCall: (kind) => u({ person, kind }),
                     },
-                    e.id,
+                    person.id,
                   ),
                 ),
               }),
@@ -1328,64 +1275,6 @@ function de() {
               (0, K.jsx)(`p`, { className: `mt-2 text-xs leading-relaxed text-muted-foreground`, children: `Rafiki akisajili kupitia kiungo hiki, ataunganishwa na akaunti yako na kuonekana kwenye idadi ya referrals.` }),
             ],
           }),
-          (0, K.jsxs)(`section`, {
-            className: `mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2`,
-            children: [
-              (0, K.jsxs)(`div`, {
-                className: `card-soft grad-balance p-4 text-on-color`,
-                children: [
-                  (0, K.jsx)(`h3`, {
-                    className: `text-sm font-black`,
-                    children: `Download Gochati App`,
-                  }),
-                  (0, K.jsx)(`p`, {
-                    className: `mt-1 text-[11px] opacity-90`,
-                    children: `Weka app kwenye home screen ya simu yako.`,
-                  }),
-                  (0, K.jsxs)(`button`, {
-                    onClick: Y,
-                    className: `mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-overlay/30 px-3 py-2.5 text-xs font-bold`,
-                    children: [
-                      (0, K.jsx)(g, { className: `size-4` }),
-                      ` Download App`,
-                    ],
-                  }),
-                ],
-              }),
-              (0, K.jsxs)(`div`, {
-                className: `card-soft grad-profit p-4 text-on-color`,
-                children: [
-                  (0, K.jsxs)(`div`, {
-                    className: `flex items-center gap-2`,
-                    children: [
-                      (0, K.jsx)(`span`, {
-                        className: `animate-lop text-2xl`,
-                        children: `💬`,
-                      }),
-                      (0, K.jsx)(`h3`, {
-                        className: `text-sm font-black`,
-                        children: `Huduma kwa Wateja`,
-                      }),
-                    ],
-                  }),
-                  (0, K.jsxs)(`div`, {
-                    className: `mt-3 grid gap-2`,
-                    children: [
-                      (0, K.jsxs)(`a`, {
-                        href: `sms:${B}`,
-                        className: `flex items-center justify-center gap-2 rounded-xl bg-overlay/40 px-3 py-2.5 text-center text-xs font-bold`,
-                        children: [
-                          (0, K.jsx)(b, { className: `size-4` }),
-                          ` Tuma SMS: `,
-                          B,
-                        ],
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
-          }),
           (0, K.jsx)(`section`, {
             className: `mt-8 overflow-hidden rounded-2xl border border-border bg-card py-3`,
             children: (0, K.jsx)(`div`, {
@@ -1404,6 +1293,34 @@ function de() {
                 ),
               ),
             }),
+          }),
+          (0, K.jsxs)(`section`, {
+            className: `mt-8`,
+            children: [
+              (0, K.jsx)(`h2`, {
+                className: `mb-3 text-sm font-bold text-muted-foreground`,
+                children: `Miamala ya Waliotoa Pesa`,
+              }),
+              (0, K.jsx)(`div`, {
+                className: `card-soft h-40 overflow-hidden p-3`,
+                children: (0, K.jsx)(`div`, {
+                  className: `animate-ticker space-y-2`,
+                  children: [...x, ...x].map((e, t) =>
+                    (0, K.jsxs)(
+                      `p`,
+                      {
+                        className:
+                          e.kind === `upgrade`
+                            ? `rounded-lg bg-upgrade px-3 py-2 text-[11px] font-semibold text-upgrade-foreground`
+                            : `rounded-lg bg-secondary px-3 py-2 text-[11px] font-semibold`,
+                        children: [`💸 `, e.text],
+                      },
+                      e.id + `v` + t,
+                    ),
+                  ),
+                }),
+              }),
+            ],
           }),
           (0, K.jsxs)(`section`, {
             className: `mt-8`,
@@ -1447,34 +1364,6 @@ function de() {
               }),
             ],
           }),
-          (0, K.jsxs)(`section`, {
-            className: `mt-8`,
-            children: [
-              (0, K.jsx)(`h2`, {
-                className: `mb-3 text-sm font-bold text-muted-foreground`,
-                children: `Miamala ya Waliotoa Pesa`,
-              }),
-              (0, K.jsx)(`div`, {
-                className: `card-soft h-40 overflow-hidden p-3`,
-                children: (0, K.jsx)(`div`, {
-                  className: `animate-ticker space-y-2`,
-                  children: [...x, ...x].map((e, t) =>
-                    (0, K.jsxs)(
-                      `p`,
-                      {
-                        className:
-                          e.kind === `upgrade`
-                            ? `rounded-lg bg-upgrade px-3 py-2 text-[11px] font-semibold text-upgrade-foreground`
-                            : `rounded-lg bg-secondary px-3 py-2 text-[11px] font-semibold`,
-                        children: [`💸 `, e.text],
-                      },
-                      e.id + `v` + t,
-                    ),
-                  ),
-                }),
-              }),
-            ],
-          }),
         ],
       }),
       notificationOpen && (0, K.jsx)(`div`, { className: `fixed inset-0 z-[100] flex items-center justify-center bg-overlay/70 p-4`, onMouseDown: (event) => { if (event.target === event.currentTarget) setNotificationOpen(false); }, children: (0, K.jsxs)(`section`, { role: `dialog`, "aria-modal": true, "aria-label": `Notifications`, className: `card-soft max-h-[80vh] w-full max-w-lg overflow-y-auto p-5`, children: [ (0, K.jsxs)(`div`, { className: `mb-4 flex items-center justify-between gap-3`, children: [ (0, K.jsx)(`h2`, { className: `text-xl font-black`, children: `Notifications` }), (0, K.jsx)(`button`, { onClick: () => setNotificationOpen(false), "aria-label": `Funga`, className: `rounded-lg p-2`, children: (0, K.jsx)(j, { className: `size-5` }) }) ] }), notifications.length ? notifications.map((item) => (0, K.jsxs)(`article`, { className: `mb-3 rounded-xl border border-border p-3`, children: [ (0, K.jsx)(`p`, { className: `text-sm`, children: item.message }), (0, K.jsx)(`p`, { className: `mt-2 text-xs text-muted-foreground`, children: new Date(item.created_at).toLocaleString() }), !item.read_at && (0, K.jsx)(`button`, { onClick: () => void dismissNotification(item.id), className: `mt-2 text-xs font-bold text-primary`, children: `Dismiss` }) ] }, item.id)) : (0, K.jsx)(`p`, { className: `text-sm text-muted-foreground`, children: `Bado hakuna notification.` }) ] }) }),
@@ -1507,7 +1396,7 @@ function de() {
 }
 function $({ grad: e, icon: t, label: n, value: r }) {
   return (0, K.jsxs)(`div`, {
-    className: `${e} flex min-h-[132px] flex-col justify-between rounded-2xl p-3 text-on-color shadow-lg sm:p-4`,
+    className: `${e} flex min-h-[164px] flex-col justify-between rounded-3xl p-4 text-on-color shadow-lg sm:p-5`,
     children: [
       (0, K.jsxs)(`div`, {
         className: `flex items-center gap-1.5 text-[11px] font-semibold opacity-90 sm:text-xs`,

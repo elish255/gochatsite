@@ -3,6 +3,7 @@ import { AdminCareNotifications, AdminCustomerCare, AdminPhoneBans } from "@/com
 import { logoUrl } from "@/lib/gochati-media";
 import { PasswordHelp } from "@/components/gochati/AuthCallbacks";
 import { AdminOverview } from "@/components/gochati/AdminOverview";
+import { AdminDataPanels } from "@/components/gochati/AdminDataPanels";
 import { AdminSupportDialog } from "@/components/gochati/AdminSupportDialog";
 import {
   Sheet,
@@ -46,6 +47,11 @@ import {
   LogOut,
   ArrowUpRight,
   Eye,
+  BarChart3,
+  Radio,
+  UserRound,
+  Megaphone,
+  Smartphone,
 } from "lucide-react";
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 type Audience = "all" | "premium" | "normal" | "active" | "inactive";
@@ -607,6 +613,11 @@ function AdminPage() {
           { id: "customer-care", label: "Customer care", icon: MessageSquare },
           { id: "phone-bans", label: "Namba zilizozuiwa", icon: Ban },
           { id: "payments", label: "Malipo", icon: CreditCard },
+          { id: "payment-numbers", label: "Lipa Namba", icon: Smartphone },
+          { id: "stats", label: "Analytics", icon: BarChart3 },
+          { id: "sessions", label: "Online sessions", icon: Radio },
+          { id: "guests", label: "Wageni", icon: UserRound },
+          { id: "announcements", label: "Matangazo / Push", icon: Megaphone },
           { id: "messages", label: "Notifications", icon: Bell },
           { id: "sms", label: "SMS", icon: MessageSquare },
           { id: "withdrawals", label: "Withdrawal", icon: Wallet },
@@ -718,9 +729,19 @@ function AdminPage() {
                     ? "Watumiaji"
                     : section === "payments"
                       ? "Malipo ya huduma"
-                      : section === "messages" || section === "sms" || section === "customer-care" || section === "phone-bans"
-                        ? "Mawasiliano"
-                        : "Maombi ya withdrawal"}
+                        : section === "messages" || section === "sms" || section === "customer-care" || section === "phone-bans"
+                          ? "Mawasiliano"
+                          : section === "stats"
+                            ? "Analytics"
+                            : section === "sessions"
+                              ? "Online sessions"
+                              : section === "guests"
+                                ? "Wageni wa tovuti"
+                                : section === "announcements"
+                                  ? "Matangazo na push"
+                                  : section === "payment-numbers"
+                                    ? "Lipa Namba"
+                                    : "Maombi ya withdrawal"}
               </h1>
               <p className="text-sm text-muted-foreground mt-2">
                 {section === "dashboard"
@@ -755,6 +776,9 @@ function AdminPage() {
                   payments={payments}
                   onUsers={(nextFilter) => navigate("users", nextFilter)}
                 />
+              )}
+              {(section === "stats" || section === "sessions" || section === "guests" || section === "announcements" || section === "payment-numbers") && user?.id && (
+                <AdminDataPanels section={section} adminId={user.id} users={rows} payments={payments} />
               )}
               {section === "sms" && (
                 <>

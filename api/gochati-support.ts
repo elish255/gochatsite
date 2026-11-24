@@ -444,13 +444,6 @@ async function handleAction(body: any, identity: any) {
 
   // PUSH PUBLIC KEY
   if (action === "push-key") {
-    if (!isAdmin) {
-      throw createError(
-        "Admin pekee ndiye anaruhusiwa.",
-        403
-      );
-    }
-
     const publicKey = process.env.VAPID_PUBLIC_KEY;
 
     if (!publicKey) {
@@ -464,98 +457,95 @@ async function handleAction(body: any, identity: any) {
 
   // SUBSCRIBE PUSH
   if (action === "subscribe") {
-    if (!isAdmin) {
-      throw createError(
-        "Admin pekee ndiye anaruhusiwa.",
-        403
-      );
-    }
-
     const subscription = body.subscription;
-
-    if (
-      !subscription?.endpoint ||
-      !subscription?.keys?.p256dh ||
-      !subscription?.keys?.auth
-    ) {
-      throw new Error(
-        "Push subscription si sahihi."
-      );
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+      throw new Error("Push subscription si sahihi.");
     }
 
+    const table = isAdmin ? "gochati_push_subscriptions" : "gochati_user_push_subscriptions";
+    const ownerColumn = isAdmin ? "admin_id" : "user_id";
     const { data: existing, error: findError } = await db
-      .from("gochati_push_subscriptions")
+      .from(table)
       .select("id, subscription")
-      .eq("admin_id", user.id);
-
+      .eq(ownerColumn, user.id);
     if (findError) throw findError;
-
-    const current = (existing || []).find(
-      (item: any) =>
-        item.subscription?.endpoint === subscription.endpoint
-    );
-
+    const current = (existing || []).find((item) => item.subscription?.endpoint === subscription.endpoint);
     if (current) {
-      const { error } = await db
-        .from("gochati_push_subscriptions")
-        .update({ subscription })
-        .eq("id", current.id);
-
+      const { error } = await db.from(table).update(isAdmin ? { subscription } : { subscription, updated_at: new Date().toISOString() }).eq("id", current.id);
       if (error) throw error;
     } else {
-      const { error } = await db
-        .from("gochati_push_subscriptions")
-        .insert({
-          admin_id: user.id,
-          subscription,
-        });
-
+      const { error } = await db.from(table).insert({ [ownerColumn]: user.id, subscription });
       if (error) throw error;
     }
-
     return { success: true };
   }
 
   // UNSUBSCRIBE PUSH
   if (action === "unsubscribe") {
-    if (!isAdmin) {
-      throw createError(
-        "Admin pekee ndiye anaruhusiwa.",
-        403
-      );
-    }
-
     const endpoint = body.subscription?.endpoint;
-
-    if (!endpoint) {
-      throw new Error(
-        "Push subscription haijatambulika."
-      );
-    }
-
+    if (!endpoint) throw new Error("Push subscription haijatambulika.");
+    const table = isAdmin ? "gochati_push_subscriptions" : "gochati_user_push_subscriptions";
+    const ownerColumn = isAdmin ? "admin_id" : "user_id";
     const { data: subscriptions, error: findError } = await db
-      .from("gochati_push_subscriptions")
+      .from(table)
       .select("id, subscription")
-      .eq("admin_id", user.id);
-
+      .eq(ownerColumn, user.id);
     if (findError) throw findError;
-
-    const matching = (subscriptions || []).filter(
-      (item: any) =>
-        item.subscription?.endpoint === endpoint
-    );
-
-    for (const item of matching) {
-      const { error } = await db
-        .from("gochati_push_subscriptions")
-        .delete()
-        .eq("id", item.id)
-        .eq("admin_id", user.id);
-
+    for (const item of (subscriptions || []).filter((row) => row.subscription?.endpoint === endpoint)) {
+      const { error } = await db.from(table).delete().eq("id", item.id).eq(ownerColumn, user.id);
       if (error) throw error;
     }
-
     return { success: true };
+  }
+
+  // BROADCAST PUSH TO SUBSCRIBED USERS
+  if (action === "broadcast-push") {
+    if (!isAdmin) throw createError("Admin pekee ndiye anaruhusiwa.", 403);
+    const title = String(body.title || "").trim().slice(0, 120);
+    const message = String(body.message || "").trim().slice(0, 2000);
+    const audience = String(body.audience || "all");
+    if (!title || !message || !["all", "premium", "normal", "active", "inactive"].includes(audience)) {
+      throw createError("Taarifa za tangazo si sahihi.", 400);
+    }
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    const privateKey = process.env.VAPID_PRIVATE_KEY;
+    const subject = process.env.VAPID_SUBJECT;
+    if (!publicKey || !privateKey || !subject) throw new Error("VAPID haijawekwa.");
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+
+    let usersQuery = db.from("gochati_users").select("id").limit(10000);
+    if (audience === "premium") usersQuery = usersQuery.eq("is_premium", true);
+    if (audience === "normal") usersQuery = usersQuery.or("is_premium.is.null,is_premium.eq.false");
+    if (audience === "active") usersQuery = usersQuery.eq("account_status", "active");
+    if (audience === "inactive") usersQuery = usersQuery.neq("account_status", "active");
+    const { data: recipients, error: recipientError } = await usersQuery;
+    if (recipientError) throw recipientError;
+    const userIds = (recipients || []).map((recipient) => recipient.id);
+    if (!userIds.length) return { sent: 0, failed: 0 };
+    const { data: subscriptions, error: subscriptionError } = await db
+      .from("gochati_user_push_subscriptions")
+      .select("id, user_id, subscription")
+      .in("user_id", userIds);
+    if (subscriptionError) throw subscriptionError;
+    let sent = 0;
+    let failed = 0;
+    await Promise.all((subscriptions || []).map(async (item) => {
+      try {
+        await webpush.sendNotification(item.subscription, JSON.stringify({ title, body: message, url: "/", icon: "/icon-192.png" }));
+        sent += 1;
+      } catch (error) {
+        failed += 1;
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "statusCode" in error &&
+          (error.statusCode === 404 || error.statusCode === 410)
+        ) {
+          await db.from("gochati_user_push_subscriptions").delete().eq("id", item.id);
+        }
+      }
+    }));
+    return { sent, failed };
   }
 
   // ADMIN EVENTS
