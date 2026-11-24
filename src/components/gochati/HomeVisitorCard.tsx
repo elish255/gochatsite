@@ -45,8 +45,13 @@ export function HomeVisitorCard({ person, onChat, onCall }: HomeVisitorCardProps
             <h3 className="truncate text-base font-bold">
               {person.flag} {person.name}
             </h3>
-            <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-success">
-              <span className="size-2 rounded-full bg-success" aria-hidden="true" />
+            <p
+              className={`mt-1 flex items-center gap-1.5 text-xs font-semibold ${person.online ? "text-success" : "text-muted-foreground"}`}
+            >
+              <span
+                className={`size-2 rounded-full ${person.online ? "bg-success" : "bg-muted-foreground"}`}
+                aria-hidden="true"
+              />
               {person.online ? "Online" : "Offline"}
             </p>
             <p className="mt-1 truncate text-xs text-muted-foreground">Miaka {person.age}</p>

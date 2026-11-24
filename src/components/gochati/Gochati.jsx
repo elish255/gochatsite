@@ -830,7 +830,29 @@ function de() {
     [notifications, setNotifications] = (0, l.useState)([]),
     [bannerNotification, setBannerNotification] = (0, l.useState)(null),
     [notificationOpen, setNotificationOpen] = (0, l.useState)(false);
+  const [visitorList, setVisitorList] = (0, l.useState)(() => re.map((person, index) => ({ ...person, online: index % 4 !== 0 })));
+  const onlineVisitorCount = visitorList.reduce((count, person) => count + Number(person.online), 0);
   ((0, l.useEffect)(() => {
+    const presenceTimer = window.setInterval(() => {
+      setVisitorList((current) => {
+        const next = [...current];
+        const changedIds = new Set();
+        const changes = 1 + Math.floor(Math.random() * 3);
+        for (let change = 0; change < changes; change += 1) {
+          const currentOnline = next.reduce((count, person) => count + Number(person.online), 0);
+          const candidates = next.filter((person) => !changedIds.has(person.id) && (person.online ? currentOnline > 14 : currentOnline < next.length - 5));
+          if (!candidates.length) break;
+          const selected = candidates[Math.floor(Math.random() * candidates.length)];
+          changedIds.add(selected.id);
+          const index = next.findIndex((person) => person.id === selected.id);
+          next[index] = { ...selected, online: !selected.online };
+        }
+        return next;
+      });
+    }, 12000);
+    return () => window.clearInterval(presenceTimer);
+  }, []),
+    (0, l.useEffect)(() => {
     document.documentElement.classList.toggle(`dark`, e);
   }, [e]),
     (0, l.useEffect)(() => {
@@ -952,7 +974,7 @@ function de() {
       if (!accountReady) return;
       if (!e.online) {
         (y(
-          `${e.name} yupo Offline kwa sasa. Huwezi kuchati wala kulipwa mpaka awe Online.`,
+          `${e.name} hayupo Online. Huwezi kuchati naye sasa.`,
         ),
           setTimeout(() => y(null), 4e3));
         return;
@@ -1109,7 +1131,7 @@ function de() {
               (0, K.jsx)(`span`, { className: `home-live-dot`, "aria-hidden": true }),
               (0, K.jsx)(`span`, { children: `Live sasa hivi` }),
               (0, K.jsx)(`span`, { className: `home-live-divider`, "aria-hidden": true }),
-              (0, K.jsx)(`span`, { children: `${re.length} watu wanapatikana` }),
+              (0, K.jsx)(`span`, { children: `${onlineVisitorCount} watu online` }),
             ],
           }),
           bannerNotification && (0, K.jsxs)(`div`, {
@@ -1186,14 +1208,14 @@ function de() {
                 children: [
                   (0, K.jsxs)(`div`, { children: [
                     (0, K.jsx)(`p`, { className: `home-eyebrow`, children: `CHAGUA WA KUCHAT NAYE` }),
-                    (0, K.jsx)(`h2`, { className: `mt-1 text-2xl font-black`, children: `Wageni waliopo online` }),
+                    (0, K.jsx)(`h2`, { className: `mt-1 text-2xl font-black`, children: `Wageni wa kuchat` }),
                   ] }),
-                  (0, K.jsx)(`p`, { className: `shrink-0 text-right text-xs font-semibold text-muted-foreground`, children: `${re.length} watu wanapatikana` }),
+                  (0, K.jsx)(`p`, { className: `shrink-0 text-right text-xs font-semibold text-muted-foreground`, children: `${onlineVisitorCount} watu online` }),
                 ],
               }),
               (0, K.jsx)(`div`, {
                 className: `grid gap-4 md:grid-cols-2`,
-                children: re.map((person) =>
+                children: visitorList.map((person) =>
                   (0, K.jsx)(
                     HomeVisitorCard,
                     {
