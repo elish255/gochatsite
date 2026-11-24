@@ -847,7 +847,17 @@ function de() {
           const index = next.findIndex((person) => person.id === selected.id);
           next[index] = { ...selected, online: !selected.online };
         }
-        return next;
+        const previousOnlineIds = current.filter((person) => person.online).map((person) => person.id);
+        const onlineVisitors = next.filter((person) => person.online);
+        const offlineVisitors = next.filter((person) => !person.online);
+        for (let index = onlineVisitors.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(Math.random() * (index + 1));
+          [onlineVisitors[index], onlineVisitors[swapIndex]] = [onlineVisitors[swapIndex], onlineVisitors[index]];
+        }
+        if (onlineVisitors.length > 1 && onlineVisitors.every((person, index) => person.id === previousOnlineIds[index])) {
+          onlineVisitors.push(onlineVisitors.shift());
+        }
+        return [...onlineVisitors, ...offlineVisitors];
       });
     }, 12000);
     return () => window.clearInterval(presenceTimer);
@@ -971,14 +981,11 @@ function de() {
       setTimeout(() => h(null), 5000);
     }, []),
     J = (e) => {
-      if (!accountReady) return;
       if (!e.online) {
-        (y(
-          `${e.name} hayupo Online. Huwezi kuchati naye sasa.`,
-        ),
-          setTimeout(() => y(null), 4e3));
+        y(`${e.name} hayupo Online. Huwezi kuchati naye sasa.`);
         return;
       }
+      if (!accountReady) return;
       s(e);
     },
     Y = async () => {
@@ -1033,8 +1040,25 @@ function de() {
         }),
       _ &&
         (0, K.jsx)(`div`, {
-          className: `fixed bottom-4 left-1/2 z-[95] w-[92%] max-w-sm -translate-x-1/2 rounded-xl bg-foreground px-4 py-3 text-center text-xs font-semibold text-background shadow-xl`,
-          children: _,
+          className: `fixed inset-0 z-[110] grid place-items-center bg-overlay/70 p-4 backdrop-blur-sm`,
+          onMouseDown: (event) => { if (event.target === event.currentTarget) y(null); },
+          children: (0, K.jsxs)(`section`, {
+            role: `alertdialog`,
+            "aria-modal": true,
+            "aria-labelledby": `offline-popup-title`,
+            className: `w-full max-w-sm rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-2xl`,
+            children: [
+              (0, K.jsxs)(`div`, {
+                className: `flex items-start justify-between gap-4`,
+                children: [
+                  (0, K.jsx)(`h2`, { id: `offline-popup-title`, className: `text-lg font-bold`, children: `Mgeni hayupo online` }),
+                  (0, K.jsx)(`button`, { type: `button`, onClick: () => y(null), className: `rounded-lg p-1 text-muted-foreground hover:bg-secondary`, "aria-label": `Funga`, children: (0, K.jsx)(j, { className: `size-5` }) }),
+                ],
+              }),
+              (0, K.jsx)(`p`, { className: `mt-3 text-sm leading-relaxed text-muted-foreground`, children: _ }),
+              (0, K.jsx)(`button`, { type: `button`, onClick: () => y(null), className: `mt-5 w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground`, children: `Sawa` }),
+            ],
+          }),
         }),
       (0, K.jsxs)(`div`, {
         className: `mx-auto max-w-6xl px-4 pb-8`,
