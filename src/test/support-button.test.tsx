@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ getUser: vi.fn(), api: vi.fn() }));
-vi.mock("@/integrations/netlify/client", () => ({
+vi.mock("@/integrations/supabase/platform", () => ({
   platform: { auth: { getUser: mocks.getUser } },
 }));
 vi.mock("@/components/gochati/customer-care-api", () => ({ careApi: mocks.api }));
@@ -16,6 +16,7 @@ beforeEach(() => {
 });
 it("directs visitors to the existing customer service number", async () => {
   render(<SupportButton floating />);
+  expect(screen.getByRole("button", { name: "Customer services" })).toHaveClass("z-30");
   fireEvent.click(screen.getByRole("button", { name: "Customer services" }));
   expect(await screen.findByRole("link", { name: "Tuma SMS" })).toHaveAttribute(
     "href",

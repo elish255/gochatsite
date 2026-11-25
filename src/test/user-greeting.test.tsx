@@ -67,6 +67,7 @@ it("welcomes a signed-in user by their profile username", async () => {
   renderGreeting();
 
   expect(await screen.findByRole("heading", { name: "Welcome, @amina" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /matangazo ya push/i })).not.toBeInTheDocument();
   expect(mocks.from).toHaveBeenCalledWith("gochati_users");
   expect(mocks.select).toHaveBeenCalledWith("username");
 });
