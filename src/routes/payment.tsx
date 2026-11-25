@@ -147,7 +147,7 @@ function UpgradePaymentPage({
       const { data, error } = await platform
         .from("gochati_users")
         .select(
-          "account_status,activation_paid,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked"
+          "account_status,activation_paid,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked,payments_enabled"
         )
         .eq("id", user.id)
         .maybeSingle();
@@ -171,6 +171,12 @@ function UpgradePaymentPage({
         setNotice(
           error?.message || "Taarifa za akaunti hazijapatikana."
         );
+        return;
+      }
+
+      if (data.payments_enabled === false) {
+        setBlocked(true);
+        setNotice("Malipo na activation zimezimwa kwa akaunti yako. Wasiliana na huduma kwa wateja.");
         return;
       }
 

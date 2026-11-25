@@ -76,9 +76,11 @@ export function AdminSupportDialog({
         </DialogHeader>
 
         <Alert>
-          <AlertTitle>Support view — kusoma tu</AlertTitle>
+          <AlertTitle>Support mode — session ya Admin inabaki salama</AlertTitle>
           <AlertDescription>
-            Ufikiaji huu unawekwa kwenye kumbukumbu ya Admin. Huwezi kubadilisha akaunti au kuomba withdrawal hapa.
+            Hii si kuingia kama mtumiaji: session na ruhusa zako za Admin hazibadilishwi. Ufunguzi
+            huu unawekwa kwenye audit log; dashboard ni ya kusoma tu. Tumia controls maalum kwenye
+            kadi ya mtumiaji kubadili huduma zilizoidhinishwa.
           </AlertDescription>
         </Alert>
 
@@ -100,7 +102,8 @@ export function AdminSupportDialog({
               <CardHeader>
                 <CardTitle>{profile.full_name || profile.username || "Mtumiaji"}</CardTitle>
                 <CardDescription>
-                  {profile.username ? `@${profile.username}` : "Mtumiaji"} · {profile.country || "—"}
+                  {profile.username ? `@${profile.username}` : "Mtumiaji"} ·{" "}
+                  {profile.country || "—"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -112,7 +115,9 @@ export function AdminSupportDialog({
                   <div>
                     <dt className="text-muted-foreground">Mpango</dt>
                     <dd className="mt-1">
-                      <Badge variant={profile.is_vip || profile.is_premium ? "default" : "secondary"}>
+                      <Badge
+                        variant={profile.is_vip || profile.is_premium ? "default" : "secondary"}
+                      >
                         {plan}
                       </Badge>
                     </dd>
@@ -123,11 +128,15 @@ export function AdminSupportDialog({
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Tax Paid</dt>
-                    <dd className="mt-1 font-medium">{profile.vip_tax_paid ? "Imelipwa" : "Haijawekwa"}</dd>
+                    <dd className="mt-1 font-medium">
+                      {profile.vip_tax_paid ? "Imelipwa" : "Haijawekwa"}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Activation</dt>
-                    <dd className="mt-1 font-medium">{profile.activation_paid ? "Imelipwa" : "Haijalipwa"}</dd>
+                    <dd className="mt-1 font-medium">
+                      {profile.activation_paid ? "Imelipwa" : "Haijalipwa"}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Amejiunga</dt>
@@ -146,9 +155,14 @@ export function AdminSupportDialog({
               ) : (
                 <ul className="flex flex-col gap-2">
                   {data.withdrawals.map((withdrawal) => (
-                    <li key={withdrawal.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+                    <li
+                      key={withdrawal.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+                    >
                       <span className="font-medium">{formatMoney(withdrawal.amount)}</span>
-                      <span className="text-muted-foreground">Net: {formatMoney(withdrawal.net_amount)}</span>
+                      <span className="text-muted-foreground">
+                        Net: {formatMoney(withdrawal.net_amount)}
+                      </span>
                       <Badge variant={withdrawal.status === "paid" ? "default" : "secondary"}>
                         {withdrawal.status}
                       </Badge>

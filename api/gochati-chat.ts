@@ -726,10 +726,11 @@ export default async function handler(req: Request, res: Response) {
 
     const { data: account, error: accountError } = await supabase
       .from("gochati_users")
-      .select("account_status,activation_paid")
+      .select("account_status,activation_paid,chat_enabled")
       .eq("id", data.user.id)
       .maybeSingle();
     if (accountError) return error(res, 503, "Akaunti haikuthibitishwa. Jaribu tena.");
+    if (account?.chat_enabled === false) return error(res, 403, "Chat imezimwa kwa akaunti yako.");
     if (account?.account_status === "banned" || account?.account_status === "deactivated")
       return error(res, 403, "Akaunti yako imesimamishwa. Wasiliana na huduma kwa wateja.");
 

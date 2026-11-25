@@ -821,6 +821,9 @@ function de() {
     [P, F] = (0, l.useState)(null),
     [V, H] = (0, l.useState)(`desktop`),
     [accountActive, setAccountActive] = (0, l.useState)(false),
+    [chatEnabled, setChatEnabled] = (0, l.useState)(true),
+    [callsEnabled, setCallsEnabled] = (0, l.useState)(true),
+    [referralsEnabled, setReferralsEnabled] = (0, l.useState)(true),
     [accountSignedIn, setAccountSignedIn] = (0, l.useState)(false),
     [accountReady, setAccountReady] = (0, l.useState)(false),
     [isPremium, setIsPremium] = (0, l.useState)(false),
@@ -882,14 +885,24 @@ function de() {
           window.clearTimeout(timeoutId);
           const user = authResult?.data?.user;
           if (!user) {
-            if (mounted) { setAccountSignedIn(false); setAccountActive(false); setAccountReady(true); }
+            if (mounted) {
+              setAccountSignedIn(false);
+              setAccountActive(false);
+              setChatEnabled(true);
+              setCallsEnabled(true);
+              setReferralsEnabled(true);
+              setAccountReady(true);
+            }
             return;
           }
           if (mounted) { setAccountSignedIn(true); setAccountReady(true); }
-          const { data, error } = await platform.from("gochati_users").select("id,balance,account_status,activation_paid,is_premium,is_vip,username,referral_count").eq("id", user.id).maybeSingle();
+          const { data, error } = await platform.from("gochati_users").select("id,balance,account_status,activation_paid,is_premium,is_vip,username,referral_count,chat_enabled,calls_enabled,referrals_enabled").eq("id", user.id).maybeSingle();
           if (!mounted || error) return;
           setReferralCode(data?.username || "");
           setReferralCount(Number(data?.referral_count || 0));
+          setChatEnabled(data?.chat_enabled !== false);
+          setCallsEnabled(data?.calls_enabled !== false);
+          setReferralsEnabled(data?.referrals_enabled !== false);
           setAccountActive(hasActivationAccess(data));
           setIsPremium(Boolean(data?.is_premium || data?.is_vip));
           setIsVip(Boolean(data?.is_vip));
@@ -1244,6 +1257,8 @@ function de() {
                     HomeVisitorCard,
                     {
                       person,
+                      chatEnabled,
+                      callsEnabled,
                       onChat: () => J(person),
                       onCall: (kind) => u({ person, kind }),
                     },
@@ -1253,7 +1268,7 @@ function de() {
               }),
             ],
           }),
-          accountSignedIn && referralCode && (0, K.jsxs)(`section`, {
+          accountSignedIn && referralCode && referralsEnabled && (0, K.jsxs)(`section`, {
             className: `mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm`,
             children: [
               (0, K.jsxs)(`div`, {

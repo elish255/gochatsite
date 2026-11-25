@@ -19,6 +19,7 @@ type WithdrawalAccount = {
   is_premium: boolean | null;
   is_vip: boolean | null;
   vip_tax_paid: boolean | null;
+  withdrawals_enabled?: boolean;
 };
 
 type WithdrawalRecord = {
@@ -115,7 +116,7 @@ function WithdrawalPage() {
     const [profile, withdrawals] = await Promise.all([
       platform
         .from("gochati_users")
-        .select("balance, phone, account_status, activation_paid, is_premium, is_vip, vip_tax_paid, vip_amount_override")
+        .select("balance, phone, account_status, activation_paid, is_premium, is_vip, vip_tax_paid, vip_amount_override, withdrawals_enabled")
         .eq("id", user.id)
         .single(),
 
@@ -182,6 +183,11 @@ function WithdrawalPage() {
     if (!ready || busy || !account) return;
 
     setNotice("");
+
+    if (account.withdrawals_enabled === false) {
+      setNotice("Withdrawal zimezimwa kwa akaunti yako. Wasiliana na huduma kwa wateja.");
+      return;
+    }
 
     if (!hasAccountAccess(account)) {
       setNotice("Akaunti yako haijawezeshwa.");
@@ -277,9 +283,15 @@ function WithdrawalPage() {
       <section className="auth-content">
         <h1>Withdrawal</h1>
 
-        <p>
-          Salio: <strong>TZS {balance.toLocaleString()}</strong>
-        </p>
+        {account?.withdrawals_enabled === false ? (
+          <p role="status" className="auth-message">
+            Withdrawal zimezimwa kwa akaunti yako. Wasiliana na huduma kwa wateja.
+          </p>
+        ) : (
+          <p>
+            Salio: <strong>TZS {balance.toLocaleString()}</strong>
+          </p>
+        )}
 
         <div className="my-4 rounded-2xl bg-secondary p-4 text-sm">
           <p className="font-bold">Hali ya akaunti</p>
@@ -341,7 +353,7 @@ function WithdrawalPage() {
         )}
         <Button
           className="auth-submit"
-          disabled={busy || !ready || !account}
+          disabled={busy || !ready || !account || account.withdrawals_enabled === false}
           onClick={() => void request()}
         >
           {busy ? "Inahifadhi..." : "Withdrawal"}

@@ -211,7 +211,7 @@ function AdminPage() {
         platform
           .from("gochati_users")
           .select(
-            "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked,payment_push_attempts,referral_count,balance,created_at",
+            "id,full_name,username,phone,country,account_status,activation_paid,is_premium,is_vip,vip_tax_paid,vip_amount_override,payment_blocked,payment_push_attempts,referral_count,balance,created_at,withdrawals_enabled,calls_enabled,chat_enabled,referrals_enabled,payments_enabled",
           )
           .order("created_at", { ascending: false })
           .limit(1000),
@@ -324,6 +324,48 @@ function AdminPage() {
     );
     await load();
   }
+  async function toggleUserFeature(
+    userId: string,
+    feature: "withdrawals_enabled" | "calls_enabled" | "chat_enabled" | "referrals_enabled" | "payments_enabled",
+    enabled: boolean,
+  ) {
+    const labels = {
+      withdrawals_enabled: "Withdrawal",
+      calls_enabled: "Sauti/video",
+      chat_enabled: "Chat na ujumbe",
+      referrals_enabled: "Referral/mapato",
+      payments_enabled: "Malipo/activation",
+    } as const;
+    const { data: sessionData, error: sessionError } = await platform.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (sessionError || !token) {
+      setNotice("Session ya Admin imeisha. Ingia tena.");
+      return;
+    }
+
+    const response = await fetch("/api/gochati-admin-support", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        action: "feature_update",
+        targetUserId: userId,
+        feature,
+        enabled: !enabled,
+      }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) {
+      setNotice(`Imeshindwa kubadilisha ${labels[feature]}: ${result?.message || "hitilafu ya seva"}`);
+      return;
+    }
+    setRows((current) => current.map((row) => row.id === userId ? { ...row, [feature]: !enabled } : row));
+    setSearchRows((current) => current?.map((row) => row.id === userId ? { ...row, [feature]: !enabled } : row) ?? null);
+    setNotice(`${labels[feature]} ${!enabled ? "imewashwa" : "imezimwa"} kwa akaunti hii.`);
+  }
+
   async function adjustBalance(id: string, current: number, mode: "add" | "subtract") {
     const amount = Number(balanceAdjustments[id] || 0);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -1113,6 +1155,32 @@ function AdminPage() {
                                 {u.referral_count || 0} · Balance: TZS{" "}
                                 {Number(u.balance || 0).toLocaleString()}
                               </p>
+                              <section className="mt-3 rounded-lg border p-3" aria-label={`Vizuizi vya huduma kwa ${u.username}`}>
+                                <h3 className="mb-2 text-sm font-semibold">Huduma za mtumiaji</h3>
+                                <div className="flex flex-wrap gap-2">
+                                  {([
+                                    ["withdrawals_enabled", "Withdrawal"],
+                                    ["calls_enabled", "Sauti/video"],
+                                    ["chat_enabled", "Chat na ujumbe"],
+                                    ["referrals_enabled", "Referral/mapato"],
+                                    ["payments_enabled", "Malipo/activation"],
+                                  ] as const).map(([feature, label]) => {
+                                    const enabled = u[feature] !== false;
+                                    return (
+                                      <Button
+                                        key={feature}
+                                        size="sm"
+                                        variant={enabled ? "outline" : "destructive"}
+                                        aria-pressed={enabled}
+                                        aria-label={`${enabled ? "Zima" : "Washa"} ${label} kwa ${u.username}`}
+                                        onClick={() => void toggleUserFeature(u.id, feature, enabled)}
+                                      >
+                                        {label}: {enabled ? "Imewashwa" : "Imezimwa"}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              </section>
                               {u.payment_blocked ? (
                                 <p className="font-bold text-destructive">
                                   Malipo yamezuiwa (amepush mara {u.payment_push_attempts || 0} bila kulipa)

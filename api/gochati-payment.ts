@@ -258,7 +258,7 @@ export default async function handler(req: any, res: any) {
         await admin
           .from("gochati_users")
           .select(
-            "full_name,username,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override,activation_paid,account_status"
+            "full_name,username,balance,is_premium,is_vip,vip_tax_paid,vip_amount_override,activation_paid,account_status,payments_enabled"
           )
           .eq("id", user.id)
           .maybeSingle();
@@ -267,6 +267,13 @@ export default async function handler(req: any, res: any) {
         return send(res, 404, {
           message:
             "Taarifa za akaunti hazijapatikana.",
+        });
+      }
+
+      if (profile.payments_enabled === false) {
+        return send(res, 403, {
+          code: "payments_disabled",
+          message: "Malipo na activation zimezimwa kwa akaunti yako.",
         });
       }
 
