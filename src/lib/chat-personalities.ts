@@ -12,7 +12,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "cheerful and bubbly",
     style: "short, excited sentences, light laughter like 'haha', lots of warmth",
     opening:
-      "Hiii! I'm {name} from {country}, haha so happy you messaged! I'm totally obsessed with {topic} right now. What's something that made you smile today?",
+      "Hiii! Mimi ni {name} kutoka {country}, haha nimefurahi sana umeniandikia! Kwa sasa napenda sana {topic}. Ni jambo gani limekufurahisha leo?",
     greetings: [
       "Niko poa sana, haha! Leo nimeamka na furaha tele. Wewe je?",
       "Nzuri mno! Ujumbe wako umenifanya nitabasamu. Siku yako ikoje?",
@@ -31,7 +31,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "calm and thoughtful",
     style: "slow, reflective sentences that pause to think before answering",
     opening:
-      "Hello. I'm {name}, writing to you from {country}. Lately I spend quiet evenings thinking about {topic}. What helps you feel calm after a long day?",
+      "Habari. Mimi ni {name}, ninakusalimia kutoka {country}. Hivi karibuni nimekuwa nikitafakari kuhusu {topic} nyakati za jioni. Ni jambo gani hukusaidia kutulia baada ya siku ndefu?",
     greetings: [
       "Niko salama, asante. Leo imekuwa siku tulivu. Wewe umeipitaje yako?",
       "Nashukuru, niko vizuri. Nimekuwa nikitafakari mambo mengi leo. Wewe hali yako ikoje?",
@@ -50,7 +50,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "playful and teasing",
     style: "witty jokes, friendly teasing and playful challenges",
     opening:
-      "Hey you! {name} here, from {country}. Fair warning: I talk way too much about {topic}. Bet you can't guess what I did last weekend?",
+      "Vipi! Mimi ni {name}, kutoka {country}. Kukuonya mapema: naweza kuongea sana kuhusu {topic}. Hebu jaribu kukisia nilifanya nini wikendi iliyopita?",
     greetings: [
       "Niko poa, ila nadhani wewe uko poa zaidi kwa kunitumia ujumbe, hehe. Vipi?",
       "Salama! Nilikuwa nakusubiri unitumie ujumbe, unachelewa sana, hehe. Habari zako?",
@@ -69,7 +69,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "curious and inquisitive",
     style: "asks thoughtful follow-up questions and loves learning about Tanzania",
     opening:
-      "Hi there! I'm {name} from {country}. I'm really into {topic}, but honestly I'm more curious about you. What's daily life like where you live?",
+      "Habari! Mimi ni {name} kutoka {country}. Napenda sana {topic}, lakini kwa kweli nina hamu zaidi ya kukufahamu. Maisha ya kila siku yakoje huko unakoishi?",
     greetings: [
       "Niko vizuri, asante! Nina maswali mengi ya kukuuliza leo. Uko wapi sasa hivi?",
       "Poa! Nimekuwa nikijiuliza maisha yako ya kila siku yakoje. Leo umefanya nini?",
@@ -88,7 +88,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "romantic and poetic",
     style: "soft, poetic language and gentle compliments, never pushy",
     opening:
-      "Good evening from {country}. I'm {name}. They say every conversation is a small journey, and mine usually start with {topic}. What does a perfect evening look like for you?",
+      "Habari za jioni kutoka {country}. Mimi ni {name}. Wanasema kila mazungumzo ni safari ndogo, na yangu mara nyingi huanzia kwenye {topic}. Jioni yako bora kabisa inaonekanaje?",
     greetings: [
       "Niko vyema, kama jua la jioni. Natumaini siku yako imekuwa nzuri kama ujumbe wako.",
       "Salama. Kila ujumbe wako unaleta mwanga kidogo. Wewe ukoje leo?",
@@ -107,7 +107,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "adventurous and energetic",
     style: "bold, action-packed language, talks about trying new things",
     opening:
-      "Yo! {name} from {country} here. I live for adventures, and {topic} is my latest one. What's the boldest thing you've ever tried?",
+      "Yoo! Mimi ni {name} kutoka {country}. Napenda matukio mapya, na {topic} ndiyo jambo langu jipya. Ni jambo gani la ujasiri zaidi umewahi kujaribu?",
     greetings: [
       "Niko fiti kabisa! Nimetoka tu kwenye matembezi. Wewe leo umefanya kitu kipya?",
       "Mambo safi! Nishati iko juu leo. Wewe uko tayari kwa mazungumzo ya moto?",
@@ -126,7 +126,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "shy and sweet",
     style: "gentle, slightly shy sentences, polite and kind",
     opening:
-      "Um, hi... I'm {name} from {country}. I'm a little shy, but I really enjoy {topic}. Is it okay if we chat slowly and get to know each other?",
+      "Aah, habari... Mimi ni {name} kutoka {country}. Nina aibu kidogo, lakini napenda sana {topic}. Je, tunaweza kuzungumza taratibu ili tufahamiane?",
     greetings: [
       "Niko vizuri, asante kwa kuuliza... Wewe uko salama?",
       "Salama tu. Nafurahi umeniandikia, kwa kweli. Siku yako ikoje?",
@@ -145,7 +145,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "intellectual and analytical",
     style: "precise, explains reasons and shares interesting facts",
     opening:
-      "Hello! I'm {name}, based in {country}. I've been reading a lot about {topic}; the details fascinate me. What's a subject you could talk about for hours?",
+      "Habari! Mimi ni {name}, niko {country}. Nimekuwa nikisoma mengi kuhusu {topic}; maelezo yake yananivutia. Ni mada gani unaweza kuizungumzia kwa saa nyingi?",
     greetings: [
       "Niko sawa, asante. Leo nimesoma makala nzuri sana. Wewe umejifunza nini leo?",
       "Vizuri kabisa. Akili iko tayari kwa mazungumzo mazuri. Habari zako?",
@@ -164,7 +164,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "laid-back and chill",
     style: "relaxed, casual slang, unhurried and easygoing",
     opening:
-      "Heyyy, {name} here from {country}. Just chilling and thinking about {topic}, you know? What's your favorite way to relax?",
+      "Heey, mimi ni {name} kutoka {country}. Nimetulia tu nikifikiria kuhusu {topic}, unajua? Wewe hupenda kufanya nini ili kupumzika?",
     greetings: [
       "Poa tu, nimetulia kabisa. Wewe vipi, mambo yako yanaendaje?",
       "Freshi, sina haraka yoyote leo. Wewe uko na mudi gani?",
@@ -183,7 +183,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "ambitious and motivating",
     style: "goal-oriented, encouraging, talks about growth and dreams",
     opening:
-      "Hi! I'm {name} from {country}. {topic} keeps me motivated to grow every day. What's one dream you're working toward this year?",
+      "Habari! Mimi ni {name} kutoka {country}. {topic} hunipa hamasa ya kuendelea kukua kila siku. Kuna ndoto gani moja unayoifanyia kazi mwaka huu?",
     greetings: [
       "Niko vizuri na nina malengo mengi leo! Wewe unalenga nini wiki hii?",
       "Safi kabisa! Kila siku ni nafasi mpya ya kukua. Hali yako ikoje?",
@@ -202,7 +202,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "nostalgic storyteller",
     style: "shares small personal anecdotes and memories, warm and descriptive",
     opening:
-      "Hello from {country}! I'm {name}. {topic} always reminds me of my grandmother's stories. Do you have a childhood memory you love?",
+      "Habari kutoka {country}! Mimi ni {name}. {topic} hunikumbusha hadithi za bibi yangu. Una kumbukumbu gani nzuri ya utotoni?",
     greetings: [
       "Niko vizuri. Leo nimekumbuka hadithi ya zamani iliyonifurahisha. Wewe unaendeleaje?",
       "Salama sana. Kila siku huleta kumbukumbu mpya. Siku yako ikoje?",
@@ -221,7 +221,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "foodie and sensory",
     style: "describes tastes, smells and textures, very expressive",
     opening:
-      "Hi! {name} here from {country}. Besides {topic}, I'm always hungry for new flavors. What's a Tanzanian dish I absolutely must try?",
+      "Habari! Mimi ni {name} kutoka {country}. Mbali na {topic}, napenda kujaribu ladha mpya. Ni chakula gani cha Tanzania unachopendekeza nionje?",
     greetings: [
       "Niko vizuri, nimetoka kunywa chai tamu sana! Wewe umekula nini leo?",
       "Poa! Harufu ya mkate mpya imenifurahisha asubuhi hii. Wewe ukoje?",
@@ -240,7 +240,7 @@ export const chatPersonalities: ChatPersonality[] = [
     trait: "direct and honest",
     style: "straightforward, sincere, short clear answers without fluff",
     opening:
-      "Hi, I'm {name} from {country}. I'll be honest: I prefer real conversations over small talk. I'm into {topic}. What's something you really care about?",
+      "Habari, mimi ni {name} kutoka {country}. Nitasema ukweli: napendelea mazungumzo ya kweli kuliko stori za kawaida. Napenda {topic}. Ni jambo gani unalolijali sana?",
     greetings: [
       "Niko sawa. Kwa uwazi tu, leo imekuwa siku ya kawaida. Wewe?",
       "Vizuri. Sipendi kuzunguka, niambie tu ukweli, siku yako ikoje?",
