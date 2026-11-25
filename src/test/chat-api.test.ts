@@ -210,6 +210,34 @@ it.each([
   expect(mocks.generateText).not.toHaveBeenCalled();
 });
 
+it.each([
+  {
+    message: "Unapenda kupika nini",
+    expected: /wali wa nazi|mapishi ya ugali/i,
+  },
+  {
+    message: "Huku Tanzania tunapika Ugali je utaweza kupika",
+    expected: /Ugali|ugali/i,
+  },
+])(
+  "answers Swahili cooking questions directly in its fallback: $message",
+  async ({ message, expected }) => {
+    mocks.generateText.mockRejectedValueOnce(new Error("provider failure"));
+
+    const result = await invoke({
+      ...input,
+      messages: [
+        { role: "assistant", content: "Habari yako?" },
+        { role: "user", content: message },
+      ],
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect((result.body as { reply: string }).reply).toMatch(expected);
+    expect((result.body as { reply: string }).reply).toMatch(/AI|kimwili/i);
+  },
+);
+
 it("recognizes a Swahili answer to a greeting in its fallback", async () => {
   mocks.generateText.mockRejectedValueOnce(new Error("provider failure"));
 
