@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ActivationRequiredDialog } from "@/components/gochati/ActivationRequiredDialog";
 import { ChatSession, CallDialog } from "@/components/gochati/Gochati.jsx";
 import { chatExchangePrice } from "@/lib/chat-exchange-prices";
+import { chatOpening } from "@/lib/chat-personas";
 
 const sessionId = "11111111-1111-4111-8111-111111111111";
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), getUser: vi.fn(), getSession: vi.fn() }));
@@ -18,6 +19,16 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 const person = { id: 1, name: "Mia", photo: "/avatar.jpg", flag: "GB" };
+
+it("starts every foreign guest chat with a Swahili opening", () => {
+  const openings = Array.from({ length: 52 }, (_, index) => chatOpening(index + 1));
+
+  expect(openings).toHaveLength(52);
+  expect(openings.every((opening) => /\b(habari|hiii|vipi|yoo|aah|heey)\b/i.test(opening))).toBe(
+    true,
+  );
+  expect(openings.join(" ")).not.toMatch(/\b(?:hello|hi|hey|good evening|i'm|what's)\b/i);
+});
 
 it("assigns each guest the matching completed-exchange rate", () => {
   expect(Array.from({ length: 12 }, (_, index) => chatExchangePrice(index + 1))).toEqual([

@@ -1131,7 +1131,7 @@ function de() {
               }),
             ],
           }),
-          (0, K.jsxs)(`section`, {
+          !accountSignedIn && (0, K.jsxs)(`section`, {
             className: `home-intro mt-4 p-5 sm:p-6`,
             children: [
               (0, K.jsx)(`p`, { className: `home-eyebrow`, children: `ANZA NA GOCHATI` }),

@@ -68,7 +68,7 @@ export function SupportButton({ floating = false }: { floating?: boolean }) {
         aria-label="Customer services"
         className={
           floating
-            ? "gochat-float fixed bottom-5 right-5 z-50 rounded-full border-2 border-primary shadow-lg"
+            ? "gochat-float fixed bottom-5 right-5 z-30 rounded-full border-2 border-primary shadow-lg"
             : "relative"
         }
       >

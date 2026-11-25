@@ -624,6 +624,16 @@ function replyFor(
       `Ninatoka ${persona.country}, na kwa sasa napenda kuzungumza kuhusu ${topic}. Umewahi kutembelea nchi nyingine?`,
       `Nimezoea maisha ya huku kwetu, lakini napenda kusikia watu wanavyoishi sehemu nyingine. Wewe unaishi wapi?`,
     ]);
+  if (has("unapenda kupika nini", "unapenda kupika", "chakula gani unapenda"))
+    return choose([
+      "Kama ningechagua, ningependa kujaribu wali wa nazi na maharage. Mimi ni mhusika wa AI, kwa hiyo siwezi kupika kimwili—lakini wewe hupika chakula gani zaidi?",
+      "Ningependa kujifunza mapishi ya ugali na samaki wa nazi! Kwa kuwa mimi ni AI siwezi kupika mwenyewe, lakini naweza kuzungumza nawe kuhusu mapishi. Wewe unapenda kupika nini?",
+    ]);
+  if (has("utaweza kupika", "unaweza kupika", "je utapika", "kupika ugali"))
+    return choose([
+      "Ugali unasikika vizuri! Siwezi kupika kimwili kwa kuwa mimi ni mhusika wa AI, lakini naweza kujifunza kuhusu mapishi yenu. Wewe hupika ugali kwa njia gani?",
+      "Ningependa kujaribu kama ningeweza! Mimi ni AI, hivyo siwezi kutumia jiko, lakini naweza kufuatilia maelezo ya mapishi. Mnapenda kula ugali na nini?",
+    ]);
   if (has("unapenda nini", "hobby yako", "unapenda kufanya nini", "unapenda nini kufanya"))
     return choose([
       `Nikipata muda napenda ${topic}. Nilianza kuipenda baada ya kuijaribu na marafiki. Wewe unapenda nini?`,
@@ -641,7 +651,7 @@ function replyFor(
       "Sawa, uwe na siku njema. Tuendelee wakati mwingine!",
       "Tutaonana! Asante kwa mazungumzo mazuri.",
     ]);
-  if (text.includes("?"))
+  if (text.includes("?") || /(?:^|\s)(?:je|nani|nini|wapi|lini|vipi|gani)(?:\s|$)/.test(text))
     return choose([
       ...fill(persona.personality.questionReplies),
       `Hilo linanikumbusha mazungumzo kuhusu ${topic}. Umewahi kujaribu au kushiriki kwenye hilo?`,
