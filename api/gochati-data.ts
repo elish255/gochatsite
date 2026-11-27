@@ -68,7 +68,7 @@ async function sendWithdrawalPaidSms(withdrawal: Record<string, unknown>): Promi
 
   const amount = Number(withdrawal.amount || 0).toLocaleString("en-US");
   const username = account?.username || "";
-  const message = `GOCHATI: Hongera ${username}, ombi lako la withdrawal la TZS ${amount} limewekwa Paid. Ujumbe huu si uthibitisho wa kutumwa kwa pesa.`;
+  const message = `Hongera ${username} Withdrawal yako ya TZS ${amount} imekamilika. Utapokea Ujumbe Wa Uthibitisho hivi Punde. Hongera kwa Kuchagua GOCHATI.`;
 
   try {
     const response = await fetch(SPRINGTECH_ENDPOINT, {
