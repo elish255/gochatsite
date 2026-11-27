@@ -17,9 +17,17 @@ type HomeVisitorCardProps = {
   person: Visitor;
   onChat: () => void;
   onCall: (kind: "voice" | "video") => void;
+  chatEnabled: boolean;
+  callsEnabled: boolean;
 };
 
-export function HomeVisitorCard({ person, onChat, onCall }: HomeVisitorCardProps) {
+export function HomeVisitorCard({
+  person,
+  onChat,
+  onCall,
+  chatEnabled,
+  callsEnabled,
+}: HomeVisitorCardProps) {
   return (
     <article className="home-visitor-card">
       <header className="flex items-center gap-3">
@@ -73,17 +81,27 @@ export function HomeVisitorCard({ person, onChat, onCall }: HomeVisitorCardProps
       <div className="home-visitor-rate">TZS {person.rate.amount.toLocaleString("en-US")}</div>
 
       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
-        <button type="button" onClick={onChat} className="home-visitor-chat">
+        <button
+          type="button"
+          onClick={onChat}
+          className="home-visitor-chat"
+          disabled={!chatEnabled}
+        >
           <MessageCircle className="size-4" aria-hidden="true" />
-          Anza Chat
+          {chatEnabled ? "Anza Chat" : "Chat imezimwa"}
           <ArrowRight className="ml-auto size-4" aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={() => onCall("voice")}
           className="home-visitor-call"
-          aria-label={`Piga simu ya sauti kwa ${person.name}`}
-          title="Voice call"
+          disabled={!callsEnabled}
+          title={callsEnabled ? "Voice call" : "Sauti/video zimezimwa"}
+          aria-label={
+            callsEnabled
+              ? `Piga simu ya sauti kwa ${person.name}`
+              : `Sauti/video zimezimwa kwa ${person.name}`
+          }
         >
           <Phone className="size-4" aria-hidden="true" />
         </button>
@@ -91,8 +109,13 @@ export function HomeVisitorCard({ person, onChat, onCall }: HomeVisitorCardProps
           type="button"
           onClick={() => onCall("video")}
           className="home-visitor-call"
-          aria-label={`Piga simu ya video kwa ${person.name}`}
-          title="Video call"
+          disabled={!callsEnabled}
+          title={callsEnabled ? "Video call" : "Sauti/video zimezimwa"}
+          aria-label={
+            callsEnabled
+              ? `Piga simu ya video kwa ${person.name}`
+              : `Sauti/video zimezimwa kwa ${person.name}`
+          }
         >
           <Video className="size-4" aria-hidden="true" />
         </button>

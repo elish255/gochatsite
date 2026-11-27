@@ -55,19 +55,63 @@ export default async function handler(req: Request, res: Response) {
 
   if (adminError || !admin) return sendError(res, 403, "Ruhusa ya Admin inahitajika.");
 
-  const body = typeof req.body === "object" && req.body !== null
-    ? (req.body as Record<string, unknown>)
-    : {};
+  const body =
+    typeof req.body === "object" && req.body !== null ? (req.body as Record<string, unknown>) : {};
   const requestedTargetUserId = body["targetUserId"];
-  const targetUserId = typeof requestedTargetUserId === "string" ? requestedTargetUserId.trim() : "";
+  const targetUserId =
+    typeof requestedTargetUserId === "string" ? requestedTargetUserId.trim() : "";
 
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetUserId)) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(targetUserId)) {
     return sendError(res, 400, "Mtumiaji hajachaguliwa kwa usahihi.");
+  }
+
+  if (body["action"] === "feature_update") {
+    const feature = body["feature"];
+    const allowedFeatures = [
+      "withdrawals_enabled",
+      "calls_enabled",
+      "chat_enabled",
+      "referrals_enabled",
+      "payments_enabled",
+    ] as const;
+    const enabled = body["enabled"];
+
+    if (
+      !allowedFeatures.includes(feature as (typeof allowedFeatures)[number]) ||
+      typeof enabled !== "boolean"
+    ) {
+      return sendError(res, 400, "Mabadiliko ya huduma hayajakubaliwa.");
+    }
+
+    const { error: auditError } = await adminClient.from("gochati_admin_support_audit").insert({
+      admin_id: adminUser.id,
+      target_user_id: targetUserId,
+      action: "feature_update",
+      details: { feature, enabled },
+    });
+    if (auditError) return sendError(res, 500, "Imeshindwa kurekodi mabadiliko ya support.");
+
+    const { data, error } = await adminClient
+      .from("gochati_users")
+      .update({ [feature]: enabled })
+      .eq("id", targetUserId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) return sendError(res, 500, "Imeshindwa kuhifadhi huduma ya mtumiaji.");
+    if (!data) return sendError(res, 404, "Akaunti ya mtumiaji haijapatikana.");
+    return res.status(200).json({ ok: true, feature, enabled });
+  }
+
+  if (body["action"] !== undefined && body["action"] !== "view") {
+    return sendError(res, 400, "Aina ya ombi haijatambuliwa.");
   }
 
   const { error: auditError } = await adminClient.from("gochati_admin_support_audit").insert({
     admin_id: adminUser.id,
     target_user_id: targetUserId,
+    action: "view",
+    details: {},
   });
 
   if (auditError) return sendError(res, 500, "Imeshindwa kuhifadhi kumbukumbu ya support view.");

@@ -40,7 +40,8 @@ describe("AdminSupportDialog", () => {
     );
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("Support view — kusoma tu")).toBeInTheDocument();
+    expect(screen.getByText("Support mode — session ya Admin inabaki salama")).toBeInTheDocument();
+    expect(screen.getByText(/si kuingia kama mtumiaji/i)).toBeInTheDocument();
     expect(screen.getByText("TZS 450,000")).toBeInTheDocument();
     expect(screen.getByText("VIP")).toBeInTheDocument();
     expect(screen.getByText("Withdrawal za karibuni")).toBeInTheDocument();

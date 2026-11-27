@@ -39,6 +39,59 @@ const adminClient = createClient(supabaseUrl, serviceKey, {
   },
 });
 
+const SPRINGTECH_ENDPOINT = "https://sms.springtech.co.tz/api/v1/vendor/message/send";
+
+function normalizeTanzaniaPhone(value: string): string | null {
+  const digits = value.replace(/\D/g, "");
+  if (/^255[67]\d{8}$/.test(digits)) return `+${digits}`;
+  if (/^0[67]\d{8}$/.test(digits)) return `+255${digits.slice(1)}`;
+  if (/^[67]\d{8}$/.test(digits)) return `+255${digits}`;
+  return null;
+}
+
+async function sendWithdrawalPaidSms(withdrawal: Record<string, unknown>): Promise<boolean> {
+  const phone = normalizeTanzaniaPhone(String(withdrawal.phone || ""));
+  const apiKey = process.env.SPRINGTECH_API_KEY || "";
+  const apiSecret = process.env.SPRINGTECH_API_SECRET || "";
+  const senderId = process.env.SPRINGTECH_SENDER_ID || "";
+  if (!phone || !apiKey || !apiSecret || !senderId) return false;
+
+  const { data: account, error: accountError } = await adminClient
+    .from("gochati_users")
+    .select("username")
+    .eq("id", String(withdrawal.user_id || ""))
+    .maybeSingle();
+  if (accountError) {
+    console.error("Withdrawal SMS username lookup failed", accountError);
+    return false;
+  }
+
+  const amount = Number(withdrawal.amount || 0).toLocaleString("en-US");
+  const username = account?.username || "";
+  const message = `GOCHATI: Hongera ${username}, ombi lako la withdrawal la TZS ${amount} limewekwa Paid. Ujumbe huu si uthibitisho wa kutumwa kwa pesa.`;
+
+  try {
+    const response = await fetch(SPRINGTECH_ENDPOINT, {
+      method: "POST",
+      headers: {
+        api_key: apiKey,
+        api_secret: apiSecret,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ senderId, messageType: "text", message, contacts: phone }),
+    });
+    const result = (await response.json().catch(() => null)) as { success?: boolean } | null;
+    if (!response.ok || result?.success !== true) {
+      console.error("SpringTech withdrawal SMS rejected", response.status);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("SpringTech withdrawal SMS request failed", error);
+    return false;
+  }
+}
+
 const userColumns = [
   "id",
   "full_name",
@@ -811,6 +864,10 @@ export default async function handler(req: Request, res: Response) {
 
       query = adminClient.from(table).update(payload);
 
+      if (table === "gochati_withdrawals" && payload.status === "paid") {
+        query = query.eq("status", "pending");
+      }
+
       for (const [column, value] of filterEntries) {
         query = query.eq(column, value);
       }
@@ -868,6 +925,20 @@ export default async function handler(req: Request, res: Response) {
 
     if (error) throw error;
 
+    const withdrawalSmsStatuses: Record<string, "queued" | "failed"> = {};
+    if (
+      table === "gochati_withdrawals" &&
+      operation === "update" &&
+      isAdmin &&
+      body.payload?.status === "paid" &&
+      Array.isArray(data)
+    ) {
+      for (const withdrawal of data as Record<string, unknown>[]) {
+        const sent = await sendWithdrawalPaidSms(withdrawal);
+        withdrawalSmsStatuses[String(withdrawal.id)] = sent ? "queued" : "failed";
+      }
+    }
+
     const responseData =
       table === "gochati_withdrawals" && isAdmin && Array.isArray(data)
         ? data.map((withdrawal: Record<string, unknown>) => {
@@ -888,6 +959,9 @@ export default async function handler(req: Request, res: Response) {
               ...fields,
               username: profile?.username ?? null,
               full_name: profile?.full_name ?? null,
+              ...(withdrawalSmsStatuses[String(withdrawal.id)]
+                ? { sms_status: withdrawalSmsStatuses[String(withdrawal.id)] }
+                : {}),
             };
           })
         : data;

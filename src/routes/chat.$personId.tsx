@@ -33,6 +33,8 @@ function ChatPage() {
   const [sending, setSending] = useState(false);
   const [registrationRequired, setRegistrationRequired] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [chatEnabled, setChatEnabled] = useState(true);
+  const [chatFeatureReady, setChatFeatureReady] = useState(false);
 
   useEffect(() => {
     try { setRegistrationRequired(localStorage.getItem(firstMessageKey) === "true"); }
@@ -44,7 +46,24 @@ function ChatPage() {
     platform.auth.getUser().then(async ({ data }) => {
       if (!active) return;
       setUserId(data.user?.id ?? null);
+      if (!data.user) {
+        setChatEnabled(true);
+        setChatFeatureReady(true);
+        return;
+      }
       if (data.user) {
+        const { data: profile, error: profileError } = await platform
+          .from("gochati_users")
+          .select("chat_enabled")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (active && (profileError || !profile || profile.chat_enabled === false)) {
+          setChatEnabled(false);
+          setChatFeatureReady(true);
+          return;
+        }
+        setChatEnabled(true);
+        setChatFeatureReady(true);
         const { data: history } = await platform.from("chat_messages").select("id, sender, body, created_at").eq("partner_id", personId).order("created_at", { ascending: true });
         if (active && history) setMessages(history as Message[]);
       }
@@ -53,6 +72,8 @@ function ChatPage() {
   }, [personId]);
 
   if (!person) return <GochatShell><div className="mx-auto max-w-3xl px-4 py-24 text-center"><h1 className="font-display text-3xl font-bold">Mtu huyu hajapatikana.</h1><Button className="mt-6" asChild><Link to="/">Rudi nyumbani</Link></Button></div></GochatShell>;
+  if (!chatFeatureReady) return <GochatShell><main className="mx-auto max-w-3xl px-4 py-24 text-center" role="status">Inakagua ruhusa za chat...</main></GochatShell>;
+  if (!chatEnabled) return <GochatShell><main className="mx-auto max-w-3xl px-4 py-24 text-center"><h1 className="font-display text-3xl font-bold">Chat imezimwa</h1><p className="mt-3 text-muted-foreground">Chat na ujumbe zimezimwa kwa akaunti yako. Wasiliana na huduma kwa wateja.</p><Button className="mt-6" asChild><Link to="/">Rudi nyumbani</Link></Button></main></GochatShell>;
 
   async function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
