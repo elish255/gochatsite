@@ -13,7 +13,14 @@ type PresenceRow = {
   first_seen_at: string;
   last_seen_at: string;
 };
-type UserRow = { country?: string | null };
+type UserRow = {
+  id?: string;
+  country?: string | null;
+  full_name?: string | null;
+  username?: string | null;
+  is_premium?: boolean;
+  is_vip?: boolean;
+};
 type PaymentRow = { status?: string | null; amount?: number | string | null };
 type AnnouncementRow = {
   id: string;
@@ -22,6 +29,8 @@ type AnnouncementRow = {
   audience: (typeof audiences)[number];
   status: "draft" | "sent";
   created_at: string;
+  target_user_id?: string | null;
+  payment_amount?: number | null;
 };
 type PaymentNumberRow = {
   id: string;
@@ -32,13 +41,14 @@ type PaymentNumberRow = {
   enabled: boolean;
 };
 type Props = { section: Section; adminId: string; users: UserRow[]; payments: PaymentRow[] };
-const audiences = ["all", "premium", "normal", "active", "inactive"] as const;
+const audiences = ["all", "premium", "normal", "active", "inactive", "individual"] as const;
 const audienceLabels: Record<(typeof audiences)[number], string> = {
   all: "Watumiaji wote",
   premium: "Premium",
   normal: "Kawaida",
   active: "Active",
   inactive: "Inactive",
+  individual: "Mtumiaji mmoja",
 };
 
 function Panel({
@@ -65,6 +75,8 @@ export function AdminDataPanels({ section, adminId, users, payments }: Props) {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [audience, setAudience] = useState<(typeof audiences)[number]>("all");
+  const [targetUserId, setTargetUserId] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState("");
   const [provider, setProvider] = useState("M-Pesa");
   const [number, setNumber] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -91,7 +103,7 @@ export function AdminDataPanels({ section, adminId, users, payments }: Props) {
     queryFn: async () => {
       const { data, error } = await platform
         .from("gochati_admin_announcements")
-        .select("id,title,message,audience,status,created_at,sent_at")
+        .select("id,title,message,audience,status,created_at,sent_at,target_user_id,payment_amount")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -136,6 +148,23 @@ export function AdminDataPanels({ section, adminId, users, payments }: Props) {
       const cleanTitle = title.trim();
       const cleanMessage = message.trim();
       if (!cleanTitle || !cleanMessage) throw new Error("Jaza kichwa na ujumbe.");
+
+      if (audience === "individual") {
+        const amount = Number(paymentAmount);
+        if (!targetUserId) throw new Error("Chagua mtumiaji mmoja.");
+        if (!Number.isInteger(amount) || amount < 100 || amount > 10000000) {
+          throw new Error("Weka kiasi cha VIP kati ya TZS 100 na 10,000,000.");
+        }
+        const { data, error } = await platform.rpc("gochati_send_targeted_announcement", {
+          p_target_user_id: targetUserId,
+          p_title: cleanTitle,
+          p_message: cleanMessage,
+          p_payment_amount: amount,
+        });
+        if (error) throw error;
+        return { notifications: Number(data || 0), pushSent: 0, pushError: "", targeted: true };
+      }
+
       const { data: draft, error: insertError } = await platform
         .from("gochati_admin_announcements")
         .insert({ title: cleanTitle, message: cleanMessage, audience, created_by: adminId })
@@ -165,13 +194,17 @@ export function AdminDataPanels({ section, adminId, users, payments }: Props) {
       } catch (error) {
         pushError = error instanceof Error ? error.message : "Push haikutumwa.";
       }
-      return { notifications: Number(data || 0), pushSent, pushError };
+      return { notifications: Number(data || 0), pushSent, pushError, targeted: false };
     },
     onSuccess: async (result) => {
       setTitle("");
       setMessage("");
+      setTargetUserId("");
+      setPaymentAmount("");
       setFeedback(
-        `Notification ya ndani imetumwa kwa ${result.notifications}; push imefikishwa kwenye vifaa ${result.pushSent}.${result.pushError ? ` Push: ${result.pushError}` : ""}`,
+        result.targeted
+          ? "Tangazo limehifadhiwa na litaonekana kama popup kwa mtumiaji. Kiasi hicho kimewekwa kuwa ada yake ya VIP."
+          : `Notification ya ndani imetumwa kwa ${result.notifications}; push imefikishwa kwenye vifaa ${result.pushSent}.${result.pushError ? ` Push: ${result.pushError}` : ""}`,
       );
       await queryClient.invalidateQueries({ queryKey: ["gochati-admin-announcements"] });
     },
@@ -324,7 +357,7 @@ export function AdminDataPanels({ section, adminId, users, payments }: Props) {
     return (
       <Panel
         title="Matangazo na push"
-        description="Tangazo hutengeneza notification ya ndani kwa kundi lililochaguliwa; historia yake huhifadhiwa hapa."
+        description="Tuma ujumbe kwa kundi au mtu mmoja. Tangazo la mtu mmoja huonekana kama popup na linaweza kuelekeza kwenye malipo ya VIP."
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="space-y-1 text-sm">
@@ -352,6 +385,44 @@ export function AdminDataPanels({ section, adminId, users, payments }: Props) {
             </select>
           </label>
         </div>
+        {audience === "individual" && (
+          <div className="grid gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 sm:grid-cols-2">
+            <label className="space-y-1 text-sm">
+              Mtumiaji
+              <select
+                className="auth-input w-full"
+                value={targetUserId}
+                onChange={(event) => setTargetUserId(event.target.value)}
+                required
+              >
+                <option value="">Chagua mtumiaji</option>
+                {users.filter((item) => item.id && item.is_premium && !item.is_vip).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.full_name || item.username || item.id} {item.username ? `(@${item.username})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1 text-sm">
+              Kiasi cha VIP (TZS)
+              <input
+                className="auth-input w-full"
+                type="number"
+                min="100"
+                max="10000000"
+                step="1"
+                inputMode="numeric"
+                value={paymentAmount}
+                onChange={(event) => setPaymentAmount(event.target.value)}
+                placeholder="Weka bei ya VIP"
+                required
+              />
+            </label>
+            <p className="text-xs leading-relaxed text-muted-foreground sm:col-span-2">
+              Chagua mtumiaji wa Premium ambaye bado si VIP. Kiasi hiki kitawekwa kuwa bei yake binafsi ya VIP; popup itaonyesha kitufe cha Lipa sasa na kufungua ukurasa rasmi wa malipo.
+            </p>
+          </div>
+        )}
         <label className="block space-y-1 text-sm">
           Ujumbe
           <textarea
@@ -363,7 +434,13 @@ export function AdminDataPanels({ section, adminId, users, payments }: Props) {
           />
         </label>
         <div className="flex flex-wrap items-center gap-3">
-          <Button disabled={sendAnnouncement.isPending} onClick={() => sendAnnouncement.mutate()}>
+          <Button
+            disabled={
+              sendAnnouncement.isPending ||
+              (audience === "individual" && (!targetUserId || !paymentAmount))
+            }
+            onClick={() => sendAnnouncement.mutate()}
+          >
             <Send className="mr-2 size-4" />
             {sendAnnouncement.isPending ? "Inatuma..." : "Tuma tangazo"}
           </Button>
@@ -393,6 +470,14 @@ export function AdminDataPanels({ section, adminId, users, payments }: Props) {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{item.message}</p>
+                {item.audience === "individual" && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Kwa {users.find((person) => person.id === item.target_user_id)?.username || "mtumiaji"}
+                    {item.payment_amount
+                      ? ` · Ada ya VIP: TZS ${Number(item.payment_amount).toLocaleString("en-US")}`
+                      : ""}
+                  </p>
+                )}
               </article>
             ))
           )}

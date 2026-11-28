@@ -5,6 +5,7 @@ import { chatExchangePrice } from "@/lib/chat-exchange-prices";
 import { UserGreeting } from "./UserGreeting";
 import { HomeVisitorCard } from "./HomeVisitorCard";
 import { WithdrawalUpgradeReminder } from "./WithdrawalUpgradeReminder";
+import { UserAnnouncementPopup } from "./UserAnnouncementPopup";
 import { platform } from "@/integrations/supabase/platform";
 import { supabase } from "@/integrations/supabase/client";
 import { jsx as reactJsx, jsxs as reactJsxs, Fragment } from "react/jsx-runtime";
@@ -832,6 +833,7 @@ function de() {
     [referralCode, setReferralCode] = (0, l.useState)(""),
     [notifications, setNotifications] = (0, l.useState)([]),
     [bannerNotification, setBannerNotification] = (0, l.useState)(null),
+    [announcementNotification, setAnnouncementNotification] = (0, l.useState)(null),
     [notificationOpen, setNotificationOpen] = (0, l.useState)(false);
   const [visitorList, setVisitorList] = (0, l.useState)(() => re.map((person, index) => ({ ...person, online: index % 4 !== 0 })));
   const onlineVisitorCount = visitorList.reduce((count, person) => count + Number(person.online), 0);
@@ -972,19 +974,23 @@ function de() {
     const loadNotifications = async () => {
       const { data: { user } } = await platform.auth.getUser();
       if (!user) return;
-      const { data } = await platform.from("gochati_notifications").select("id,message,created_at,read_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50);
+      const { data } = await platform.from("gochati_notifications").select("id,title,message,payment_amount,created_at,read_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50);
       if (!mounted || !data) return;
       setNotifications(data);
-      setBannerNotification(data[0] && !data[0].read_at ? data[0] : null);
+      const latestUnread = data.find((item) => !item.read_at) || null;
+      setAnnouncementNotification(latestUnread?.title ? latestUnread : null);
+      setBannerNotification(latestUnread && !latestUnread.title ? latestUnread : null);
     };
     void loadNotifications();
     timer = setInterval(() => void loadNotifications(), 20000);
     return () => { mounted = false; clearInterval(timer); };
   }, []);
   const dismissNotification = async (id) => {
-    await platform.from("gochati_notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
-    setNotifications((items) => items.map((item) => item.id === id ? { ...item, read_at: new Date().toISOString() } : item));
+    const readAt = new Date().toISOString();
+    await platform.from("gochati_notifications").update({ read_at: readAt }).eq("id", id);
+    setNotifications((items) => items.map((item) => item.id === id ? { ...item, read_at: readAt } : item));
     setBannerNotification((current) => current?.id === id ? null : current);
+    setAnnouncementNotification((current) => current?.id === id ? null : current);
   };
   let U = (0, l.useCallback)((savedBalance, amount) => {
       const nextBalance = Number(savedBalance);
@@ -1178,6 +1184,10 @@ function de() {
               (0, K.jsx)(`p`, { className: `flex-1 text-sm font-semibold`, children: bannerNotification.message }),
               (0, K.jsx)(`button`, { onClick: () => void dismissNotification(bannerNotification.id), className: `rounded-lg p-1 text-muted-foreground`, "aria-label": `Funga notification`, children: (0, K.jsx)(j, { className: `size-4` }) }),
             ],
+          }),
+          announcementNotification && (0, K.jsx)(UserAnnouncementPopup, {
+            notification: announcementNotification,
+            onDismiss: dismissNotification,
           }),
           (0, K.jsxs)(`section`, {
             className: `mt-4 grid grid-cols-3 gap-2 sm:gap-3`,
