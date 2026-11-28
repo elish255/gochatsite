@@ -209,6 +209,130 @@ export default async function handler(req: Request, res: Response) {
 
     const body = req.body || {};
 
+    if (body.table === "gochati_payment_prices") {
+      const filters = body.filters || {};
+      const filterEntries = Object.entries(filters);
+      if (
+        !filters ||
+        typeof filters !== "object" ||
+        Array.isArray(filters) ||
+        filterEntries.some(([column]) => column !== "purpose") ||
+        (filters.purpose !== undefined && !["activation", "premium", "vip", "tax"].includes(String(filters.purpose)))
+      ) {
+        return sendError(res, 400, "Kichujio cha bei si sahihi.");
+      }
+
+      if (body.operation === "select") {
+        let query: any = adminClient.from("gochati_payment_prices").select("purpose,amount,updated_at");
+        if (filters.purpose) query = query.eq("purpose", filters.purpose);
+        if (body.one === true) query = query.maybeSingle();
+        const { data, error } = await query;
+        if (error) throw error;
+        return res.status(200).json({ data });
+      }
+
+      if (body.operation !== "update" || !isAdmin) {
+        return sendError(res, 403, "Admin pekee ndiye anaruhusiwa kubadilisha bei.");
+      }
+      const amount = body.payload?.amount;
+      if (
+        !filters.purpose ||
+        !Number.isInteger(amount) ||
+        amount < 100 ||
+        amount > 10000000
+      ) {
+        return sendError(res, 400, "Weka kiasi sahihi cha malipo.");
+      }
+      const { data, error } = await adminClient
+        .from("gochati_payment_prices")
+        .update({ amount, updated_at: new Date().toISOString() })
+        .eq("purpose", filters.purpose)
+        .select("amount")
+        .maybeSingle();
+      if (error) throw error;
+      return res.status(200).json({ data });
+    }
+
+    if (body.table === "gochati_admin_announcements") {
+      if (!isAdmin) return sendError(res, 403, "Admin pekee ndiye anaruhusiwa kuona matangazo.");
+      const filters = body.filters || {};
+      if (
+        !filters ||
+        typeof filters !== "object" ||
+        Array.isArray(filters) ||
+        Object.keys(filters).some((column) => column !== "id")
+      ) {
+        return sendError(res, 400, "Kichujio cha tangazo si sahihi.");
+      }
+
+      if (body.operation === "select") {
+        let query: any = adminClient
+          .from("gochati_admin_announcements")
+          .select("id,title,message,audience,status,created_at,sent_at,target_user_id,payment_amount");
+        if (filters.id) query = query.eq("id", filters.id);
+        if (body.sort?.column === "created_at") {
+          query = query.order("created_at", { ascending: body.sort.ascending !== false });
+        }
+        query = query.limit(Math.max(1, Math.min(Number(body.limit) || 100, 1000)));
+        if (body.one === true) query = query.maybeSingle();
+        const { data, error } = await query;
+        if (error) throw error;
+        return res.status(200).json({ data });
+      }
+
+      if (body.operation === "insert") {
+        const payload = body.payload;
+        const allowedAudiences = ["all", "premium", "normal", "active", "inactive"];
+        if (
+          !payload ||
+          typeof payload.title !== "string" ||
+          !payload.title.trim() ||
+          payload.title.length > 120 ||
+          typeof payload.message !== "string" ||
+          !payload.message.trim() ||
+          payload.message.length > 2000 ||
+          !allowedAudiences.includes(String(payload.audience))
+        ) {
+          return sendError(res, 400, "Taarifa za tangazo si sahihi.");
+        }
+        const { data, error } = await adminClient
+          .from("gochati_admin_announcements")
+          .insert({
+            title: payload.title.trim(),
+            message: payload.message.trim(),
+            audience: payload.audience,
+            created_by: user.id,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        return res.status(200).json({ data });
+      }
+
+      if (body.operation === "update") {
+        const payload = body.payload;
+        if (
+          !filters.id ||
+          !payload ||
+          payload.status !== "sent" ||
+          typeof payload.sent_at !== "string" ||
+          Number.isNaN(Date.parse(payload.sent_at)) ||
+          Object.keys(payload).some((key) => !["status", "sent_at"].includes(key))
+        ) {
+          return sendError(res, 400, "Mabadiliko ya tangazo si sahihi.");
+        }
+        const { data, error } = await adminClient
+          .from("gochati_admin_announcements")
+          .update({ status: "sent", sent_at: payload.sent_at })
+          .eq("id", filters.id)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        return res.status(200).json({ data });
+      }
+      return sendError(res, 400, "Operesheni ya tangazo hairuhusiwi.");
+    }
+
     if (body.table === "gochati_activation_settings") {
       if (!isAdmin) return sendError(res, 403, "Admin pekee ndiye anaruhusiwa.");
       if (body.operation === "select") {
@@ -381,6 +505,33 @@ export default async function handler(req: Request, res: Response) {
           403,
           "Huna ruhusa ya kutumia RPC hii.",
         );
+      }
+
+      if (body.rpc === "gochati_send_targeted_announcement") {
+        const targetUserId = String(args.p_target_user_id || "");
+        const title = String(args.p_title || "").trim();
+        const message = String(args.p_message || "").trim();
+        const rawAmount = args.p_payment_amount;
+        const paymentAmount = rawAmount === null || rawAmount === undefined ? null : Number(rawAmount);
+        if (
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetUserId) ||
+          !title ||
+          title.length > 120 ||
+          !message ||
+          message.length > 2000 ||
+          (paymentAmount !== null &&
+            (!Number.isInteger(paymentAmount) || paymentAmount < 100 || paymentAmount > 10000000))
+        ) {
+          return sendError(res, 400, "Taarifa za tangazo binafsi si sahihi.");
+        }
+        const { data, error } = await userClient.rpc("gochati_send_targeted_announcement", {
+          p_target_user_id: targetUserId,
+          p_title: title,
+          p_message: message,
+          p_payment_amount: paymentAmount,
+        });
+        if (error) throw error;
+        return res.status(200).json({ data });
       }
 
       if (body.rpc === "gochati_admin_adjust_balance") {
@@ -762,6 +913,7 @@ export default async function handler(req: Request, res: Response) {
           "is_premium",
           "is_vip",
           "vip_tax_paid",
+          "vip_amount_override",
           "payment_blocked",
           "payment_blocked_at",
           "payment_push_attempts",
@@ -808,12 +960,22 @@ export default async function handler(req: Request, res: Response) {
           );
         }
 
+        const vipOverride = payload.vip_amount_override;
+        if (
+          vipOverride !== undefined &&
+          vipOverride !== null &&
+          (!Number.isInteger(vipOverride) || vipOverride < 100 || vipOverride > 10000000)
+        ) {
+          return sendError(res, 400, "Kiasi cha VIP si sahihi.");
+        }
+
         for (const key of keys) {
           if (
             typeof payload[key] !== "boolean" &&
             key !== "account_status" &&
             key !== "payment_blocked_at" &&
-            key !== "payment_push_attempts"
+            key !== "payment_push_attempts" &&
+            key !== "vip_amount_override"
           ) {
             return sendError(
               res,
@@ -852,7 +1014,7 @@ export default async function handler(req: Request, res: Response) {
       if (
         filterEntries.length !== 1 ||
         !(allowedFilters[table] || []).includes(
-          filterEntries[0][0],
+          filterEntries[0]?.[0],
         )
       ) {
         return sendError(
@@ -873,6 +1035,7 @@ export default async function handler(req: Request, res: Response) {
       }
 
       query = query.select("*");
+      if (body.one === true) query = query.maybeSingle();
       }
     }
 

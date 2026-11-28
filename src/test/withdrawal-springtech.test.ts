@@ -123,7 +123,7 @@ describe("SpringTech withdrawal SMS", () => {
       senderId: "GOCHATI",
       messageType: "text",
       contacts: "+255712345678",
-      message: expect.stringContaining("withdrawal la TZS 150,000 limewekwa Paid"),
+      message: expect.stringContaining("Withdrawal yako ya TZS 150,000 imekamilika."),
     });
   });
 
